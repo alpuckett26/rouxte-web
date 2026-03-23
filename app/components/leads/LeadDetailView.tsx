@@ -8,8 +8,10 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import LeadLogTab from "./LeadLogTab";
+import LeadAIPanel from "./LeadAIPanel";
+import LeadTagsTab from "./LeadTagsTab";
 
-type Tab = "overview" | "notes" | "tags" | "log";
+type Tab = "overview" | "notes" | "tags" | "log" | "ai";
 
 interface Props {
   leadId: string;
@@ -105,6 +107,7 @@ export default function LeadDetailView({ leadId }: Props) {
     { key: "notes", label: `Notes (${notes.length})` },
     { key: "tags", label: `Tags (${tags.length})` },
     { key: "log", label: `Log (${logs.length})` },
+    { key: "ai", label: "AI Coach" },
   ];
 
   return (
@@ -247,6 +250,9 @@ export default function LeadDetailView({ leadId }: Props) {
                 </p>
               </div>
             )}
+            <div className="col-span-2">
+              <AssignRepField leadId={leadId} assignedTo={lead.assigned_to} onAssigned={(uid) => setLead((l) => l ? { ...l, assigned_to: uid } : l)} />
+            </div>
           </div>
         </Card>
       )}
@@ -280,19 +286,68 @@ export default function LeadDetailView({ leadId }: Props) {
       )}
 
       {tab === "tags" && (
-        <div className="flex flex-wrap gap-2">
-          {tags.length === 0 && (
-            <p className="text-sm text-gray-400">No tags assigned.</p>
-          )}
-          {tags.map((lt) => (
-            <Badge key={lt.id} label={lt.tag?.name ?? lt.tag_id} color="blue" />
-          ))}
-        </div>
+        <LeadTagsTab
+          leadId={leadId}
+          tags={tags}
+          onTagsChanged={setTags}
+        />
       )}
 
       {tab === "log" && (
         <LeadLogTab leadId={leadId} logs={logs} onLogAdded={(l) => setLogs((prev) => [l, ...prev])} />
       )}
+
+      {tab === "ai" && lead && (
+        <LeadAIPanel lead={lead} lastNote={notes[0]?.body} />
+      )}
+    </div>
+  );
+}
+
+// ── Inline assign-rep field ───────────────────────────────────────────────────
+function AssignRepField({
+  leadId,
+  assignedTo,
+  onAssigned,
+}: {
+  leadId: string;
+  assignedTo: string | null;
+  onAssigned: (uid: string | null) => void;
+}) {
+  const [reps, setReps] = useState<{ user_id: string; full_name: string }[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/team/members")
+      .then((r) => r.json())
+      .then((d) => setReps(d.data ?? []));
+  }, []);
+
+  async function assign(userId: string | null) {
+    setSaving(true);
+    await fetch(`/api/leads/${leadId}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assign_to: userId }),
+    });
+    onAssigned(userId);
+    setSaving(false);
+  }
+
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-1">Assigned Rep</p>
+      <select
+        value={assignedTo ?? ""}
+        disabled={saving}
+        onChange={(e) => assign(e.target.value || null)}
+        className="rounded-xl border border-gray-200 px-3 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white"
+      >
+        <option value="">Unassigned</option>
+        {reps.map((r) => (
+          <option key={r.user_id} value={r.user_id}>{r.full_name}</option>
+        ))}
+      </select>
     </div>
   );
 }
