@@ -29,7 +29,7 @@ export default function AuthPage() {
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/verify` },
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (err) throw err;
         router.push("/auth/verify");
