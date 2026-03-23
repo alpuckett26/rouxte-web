@@ -55,7 +55,10 @@ export default function ProfileSetupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ step: "complete", profile: form }),
       });
-      if (!res.ok) throw new Error("Failed to save profile.");
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error ?? `Server error ${res.status}`);
+      }
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
