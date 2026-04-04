@@ -4,8 +4,6 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { Lead, LeadFilters } from "@/lib/types";
 import CaptureLeadModal from "./CaptureLeadModal";
-import FCCPopup from "./FCCPopup";
-import type { FCCAvailabilityResult } from "@/app/api/fcc/availability/route";
 
 // Status → hex colour used in Mapbox paint expressions
 const STATUS_HEX: Record<string, string> = {
@@ -33,7 +31,7 @@ interface MapClickInfo {
   lat: number;
   lng: number;
   address?: string;
-  fccData?: FCCAvailabilityResult | null;
+  attAvailable?: boolean | null; // null = FCC data not loaded yet / unavailable
 }
 
 interface Props {
@@ -57,8 +55,7 @@ export default function MapboxMap({
   const [mapReady, setMapReady] = useState(false);
   const [styleLoaded, setStyleLoaded] = useState(false);
   const [captureInfo, setCaptureInfo] = useState<MapClickInfo | null>(null);
-  const [fccPopup, setFccPopup] = useState<MapClickInfo | null>(null);
-  const [fccLoading, setFccLoading] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -353,36 +350,40 @@ export default function MapboxMap({
     );
   }
 
-  // ── Right-click → FCC check → capture modal ───────────────────────────────
+  // ── Right-click → reverse geocode + FCC check → capture modal ───────────
   async function handleMapClick(lat: number, lng: number, map: mapboxgl.Map) {
-    setFccLoading(true);
-    setFccPopup({ lat, lng });
+    setGeocoding(true);
 
-    // Reverse geocode with Mapbox Geocoding
-    let address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-    if (token && token !== "pk.placeholder") {
-      try {
-        const geoRes = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address&access_token=${token}`
-        );
-        const geoJson = await geoRes.json();
-        address = geoJson.features?.[0]?.place_name ?? address;
-      } catch {
-        // ignore
-      }
-    }
+    // Run reverse geocode and FCC availability check in parallel
+    const [address, attAvailable] = await Promise.all([
+      // Reverse geocode
+      (async () => {
+        let addr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        if (token && token !== "pk.placeholder") {
+          try {
+            const geoRes = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address&access_token=${token}`
+            );
+            const geoJson = await geoRes.json();
+            addr = geoJson.features?.[0]?.place_name ?? addr;
+          } catch { /* ignore */ }
+        }
+        return addr;
+      })(),
+      // FCC AT&T availability
+      (async (): Promise<boolean | null> => {
+        try {
+          const res = await fetch(`/api/fcc/check?lat=${lat}&lng=${lng}`);
+          const d = await res.json();
+          return d.available ?? null;
+        } catch {
+          return null;
+        }
+      })(),
+    ]);
 
-    // Fetch FCC data
-    let fccData = null;
-    try {
-      const fccRes = await fetch(`/api/fcc/availability?lat=${lat}&lng=${lng}`);
-      fccData = await fccRes.json();
-    } catch {
-      // ignore
-    }
-
-    setFccLoading(false);
-    setFccPopup({ lat, lng, address, fccData });
+    setGeocoding(false);
+    setCaptureInfo({ lat, lng, address, attAvailable });
 
     // Add temporary marker
     new mapboxgl.Marker({ color: "#3b82f6" })
@@ -451,9 +452,9 @@ export default function MapboxMap({
           )}
         </button>
 
-        {/* FCC legend */}
+        {/* Map legend */}
         <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
-          <p className="font-semibold mb-1.5 text-gray-900">FCC Broadband</p>
+          <p className="font-semibold mb-1.5 text-gray-900">Legend</p>
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-3 h-3 rounded-full border-2 border-green-500 bg-transparent inline-block" />
             AT&T available
@@ -472,31 +473,9 @@ export default function MapboxMap({
       {/* Right-click hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <div className="rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 shadow-sm px-4 py-1.5 text-xs text-gray-500">
-          Right-click any point to check FCC coverage &amp; capture lead
+          {geocoding ? "Looking up address & checking FCC coverage…" : "Right-click any point to capture a lead"}
         </div>
       </div>
-
-      {/* Loading spinner */}
-      {fccLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg px-5 py-3 flex items-center gap-3">
-            <div className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium text-gray-700">Checking FCC coverage…</span>
-          </div>
-        </div>
-      )}
-
-      {/* FCC popup */}
-      {fccPopup && !fccLoading && (
-        <FCCPopup
-          info={fccPopup}
-          onClose={() => setFccPopup(null)}
-          onCaptureLeadClick={() => {
-            setCaptureInfo(fccPopup);
-            setFccPopup(null);
-          }}
-        />
-      )}
 
       {/* Capture lead modal */}
       {captureInfo && (
