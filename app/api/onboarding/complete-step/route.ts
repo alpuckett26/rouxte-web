@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
           role: profile.role,
           territory: profile.territory || null,
           carrier_focus: profile.carrier_focus || null,
-          onboarding_step: "complete",
-          onboarding_complete: true,
+          onboarding_step: "documents",
+          onboarding_complete: false,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,org_id" }

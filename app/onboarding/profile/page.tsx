@@ -59,7 +59,7 @@ export default function ProfileSetupPage() {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error ?? `Server error ${res.status}`);
       }
-      router.push("/dashboard");
+      router.push("/onboarding/documents");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {

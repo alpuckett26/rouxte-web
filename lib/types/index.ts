@@ -16,6 +16,7 @@ export type OnboardingStep =
   | "verify"
   | "promo"
   | "profile"
+  | "documents"
   | "complete";
 
 export type PaymentMethod = "card" | "cashapp" | "paypal" | "invoice" | "company_plan";

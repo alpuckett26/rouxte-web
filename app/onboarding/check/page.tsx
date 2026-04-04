@@ -30,6 +30,8 @@ export default async function OnboardingCheckPage() {
       redirect("/onboarding/promo");
     case "profile":
       redirect("/onboarding/profile");
+    case "documents":
+      redirect("/onboarding/documents");
     default:
       redirect("/dashboard");
   }
