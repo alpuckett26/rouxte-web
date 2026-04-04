@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npx next:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(curl -s \"https://broadbandmap.fcc.gov/api/public/map/listAvailabilityCount?latitude=30.2672&longitude=-97.7431&unit=location\" -H \"Accept: application/json\" -H \"User-Agent: Mozilla/5.0\")",
+      "Bash(curl:*)"
     ]
   }
 }

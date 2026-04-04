@@ -10,6 +10,7 @@ import Card from "@/components/ui/Card";
 import LeadLogTab from "./LeadLogTab";
 import LeadAIPanel from "./LeadAIPanel";
 import LeadTagsTab from "./LeadTagsTab";
+import LogSaleModal from "./LogSaleModal";
 
 type Tab = "overview" | "notes" | "tags" | "log" | "ai";
 
@@ -27,6 +28,7 @@ export default function LeadDetailView({ leadId }: Props) {
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [logSaleOpen, setLogSaleOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -54,6 +56,8 @@ export default function LeadDetailView({ leadId }: Props) {
     if (res.ok) {
       const d = await res.json();
       setLead(d.data);
+      // Prompt to log sale details when marked sold
+      if (newStatus === "sold") setLogSaleOpen(true);
     }
   }
 
@@ -299,6 +303,21 @@ export default function LeadDetailView({ leadId }: Props) {
 
       {tab === "ai" && lead && (
         <LeadAIPanel lead={lead} lastNote={notes[0]?.body} />
+      )}
+
+      {logSaleOpen && lead && (
+        <LogSaleModal
+          leadId={leadId}
+          address={lead.address}
+          onClose={() => setLogSaleOpen(false)}
+          onLogged={() => {
+            setLogSaleOpen(false);
+            // Refresh logs tab
+            fetch(`/api/logs?lead_id=${leadId}`)
+              .then((r) => r.json())
+              .then((d) => setLogs(d.data ?? []));
+          }}
+        />
       )}
     </div>
   );
