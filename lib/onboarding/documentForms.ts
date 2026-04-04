@@ -23,28 +23,28 @@ export interface DocumentFormDef {
 export const DOCUMENT_FORM_DEFS: Record<DocType, DocumentFormDef> = {
   company_policy: {
     type: "company_policy",
-    title: "Company Policy Acknowledgment",
-    subtitle: "Code of conduct & employment terms",
+    title: "Independent Contractor Agreement",
+    subtitle: "Contractor terms & code of conduct",
     description:
-      "By signing below you confirm you have read and agree to the company's policies, code of conduct, anti-harassment policy, and understand the terms of your employment.",
+      "By signing below you confirm you have read and agree to the independent contractor agreement, code of conduct, anti-harassment policy, and understand that you are engaged as a 1099 independent contractor, not an employee.",
     displayOrder: 0,
     defaultRequired: true,
     fields: [
       {
         key: "policy_ack",
-        label: "I have read and agree to abide by the company policies and code of conduct",
+        label: "I have read and agree to the independent contractor agreement and code of conduct",
         type: "checkbox",
         required: true,
       },
       {
-        key: "at_will_ack",
-        label: "I understand my employment is at-will and may be terminated by either party at any time",
+        key: "contractor_ack",
+        label: "I understand I am an independent contractor (1099) and am responsible for my own taxes, insurance, and benefits",
         type: "checkbox",
         required: true,
       },
       {
         key: "no_compete_ack",
-        label: "I agree not to solicit or recruit current company employees or clients for 12 months after separation",
+        label: "I agree not to solicit or recruit current company contractors or clients for 12 months after separation",
         type: "checkbox",
         required: true,
       },
@@ -82,7 +82,7 @@ export const DOCUMENT_FORM_DEFS: Record<DocType, DocumentFormDef> = {
     description:
       "Complete this form so your employer can withhold the correct federal income tax from your pay. This information is for payroll purposes only and is kept confidential.",
     displayOrder: 2,
-    defaultRequired: true,
+    defaultRequired: false,
     fields: [
       { key: "first_name",      label: "First Name & Middle Initial", type: "text",   required: true,  placeholder: "Jane A." },
       { key: "last_name",       label: "Last Name",                   type: "text",   required: true,  placeholder: "Smith" },
@@ -131,7 +131,7 @@ export const DOCUMENT_FORM_DEFS: Record<DocType, DocumentFormDef> = {
     description:
       "Federal law requires all employers to verify the identity and employment authorization of each person hired. Complete Section 1 by your first day of work. Your employer will complete Section 2 after reviewing your identity documents in person.",
     displayOrder: 3,
-    defaultRequired: true,
+    defaultRequired: false,
     fields: [
       { key: "first_name",       label: "First Name",          type: "text",   required: true,  placeholder: "Jane" },
       { key: "middle_initial",   label: "Middle Initial",      type: "text",   required: false, placeholder: "A" },
@@ -206,8 +206,8 @@ export const DOCUMENT_FORM_DEFS: Record<DocType, DocumentFormDef> = {
     subtitle: "For independent contractors (1099)",
     description:
       "Required if you are engaged as an independent contractor. Provides your taxpayer identification number for 1099 reporting.",
-    displayOrder: 5,
-    defaultRequired: false,
+    displayOrder: 2,
+    defaultRequired: true,
     fields: [
       { key: "name",             label: "Name (as shown on tax return)",   type: "text",   required: true,  placeholder: "Jane Smith" },
       { key: "business_name",    label: "Business Name / DBA (if any)",    type: "text",   required: false, placeholder: "Acme LLC" },
@@ -242,10 +242,13 @@ export const DOCUMENT_FORM_DEFS: Record<DocType, DocumentFormDef> = {
   },
 };
 
+// Default required set for 1099 independent contractor orgs.
+// W-4 and I-9 are for W2 employees — available but not required by default.
 export const DEFAULT_DOC_TYPES: DocType[] = [
-  "company_policy",
+  "company_policy",   // Independent Contractor Agreement
   "background_check",
-  "w4",
-  "i9",
+  "w9",               // Taxpayer ID — required for 1099 reporting
   "direct_deposit",
+  "w4",               // W2 only — seeded as not required
+  "i9",               // W2 only — seeded as not required
 ];
