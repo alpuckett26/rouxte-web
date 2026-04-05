@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isIncident } from "@/lib/utils/logs";
 import { LogEventType } from "@/lib/types";
+
+const GRADUATION_THRESHOLD = 10; // sales needed to leave trial / go commission-only
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -76,5 +79,29 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // When a sale is submitted, increment total_sales_count and check graduation
+  if (event_type === "sale_submitted") {
+    const admin = createAdminClient();
+    const { data: rep } = await admin
+      .from("user_profiles")
+      .select("total_sales_count, graduated_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (rep) {
+      const newCount = (rep.total_sales_count ?? 0) + 1;
+      const graduatedNow = !rep.graduated_at && newCount >= GRADUATION_THRESHOLD;
+      await admin
+        .from("user_profiles")
+        .update({
+          total_sales_count: newCount,
+          ...(graduatedNow ? { graduated_at: new Date().toISOString() } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+    }
+  }
+
   return NextResponse.json({ data }, { status: 201 });
 }

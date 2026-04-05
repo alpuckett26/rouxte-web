@@ -2,10 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// AT&T Dealer Compensation Schedule — effective 2024
+// payout_amount = Total Dealer Comp (base + VIR where applicable)
 const DEFAULT_PACKAGES = [
-  { name: "1 Gig Fiber",   speed_mbps: 1000, payout_amount: 500, display_order: 0 },
-  { name: "500 Mbps Fiber", speed_mbps: 500,  payout_amount: 450, display_order: 1 },
-  { name: "300 Mbps Fiber", speed_mbps: 300,  payout_amount: 350, display_order: 2 },
+  // ── Internet: New fiber installs ──────────────────────────────────────────
+  { name: "AT&T Internet 1 Gig+",           speed_mbps: 1000, payout_amount: 500, base_comp: 450, vir_incentive: 50, category: "new",       chargeback_days: 90,  display_order: 0 },
+  { name: "AT&T Internet 500 Mbps",         speed_mbps: 500,  payout_amount: 450, base_comp: 400, vir_incentive: 50, category: "new",       chargeback_days: 90,  display_order: 1 },
+  { name: "AT&T Internet 300 Mbps",         speed_mbps: 300,  payout_amount: 350, base_comp: 350, vir_incentive:  0, category: "new",       chargeback_days: 90,  display_order: 2 },
+  { name: "AT&T Internet ≤100 Mbps",        speed_mbps: 100,  payout_amount: 160, base_comp: 160, vir_incentive:  0, category: "new",       chargeback_days: 90,  display_order: 3 },
+  // ── Internet: Copper-to-fiber migrations ─────────────────────────────────
+  { name: "Migration — 1 Gig+",             speed_mbps: 1000, payout_amount: 150, base_comp: 150, vir_incentive:  0, category: "migration", chargeback_days: 90,  display_order: 4 },
+  { name: "Migration — 500 Mbps",           speed_mbps: 500,  payout_amount: 100, base_comp: 100, vir_incentive:  0, category: "migration", chargeback_days: 90,  display_order: 5 },
+  { name: "Migration — 300 Mbps",           speed_mbps: 300,  payout_amount: 75,  base_comp: 75,  vir_incentive:  0, category: "migration", chargeback_days: 90,  display_order: 6 },
+  // ── Mobility: New voice lines (Installment Plan) ──────────────────────────
+  // Base new voice add = $150. Common plan bonuses stack on top.
+  { name: "Mobile — New Line (Unlimited Starter)", speed_mbps: null, payout_amount: 150, base_comp: 150, vir_incentive: 0, category: "mobility", chargeback_days: 90,  display_order: 7 },
+  { name: "Mobile — New Line (Unlimited Extra)",   speed_mbps: null, payout_amount: 175, base_comp: 175, vir_incentive: 0, category: "mobility", chargeback_days: 90,  display_order: 8 },
+  { name: "Mobile — New Line (Unlimited Premium)", speed_mbps: null, payout_amount: 185, base_comp: 185, vir_incentive: 0, category: "mobility", chargeback_days: 90,  display_order: 9 },
+  { name: "Mobile — New Line BYOD",               speed_mbps: null, payout_amount: 150, base_comp: 150, vir_incentive: 0, category: "mobility", chargeback_days: 180, display_order: 10 },
+  // ── Mobile Insurance ──────────────────────────────────────────────────────
+  { name: "Mobile Insurance — Single (ProTech + Protect)",  speed_mbps: null, payout_amount: 15, base_comp: 15, vir_incentive: 0, category: "insurance", chargeback_days: 90, display_order: 11 },
+  { name: "Mobile Insurance — Family 4 (ProTech + Protect)",speed_mbps: null, payout_amount: 50, base_comp: 50, vir_incentive: 0, category: "insurance", chargeback_days: 90, display_order: 12 },
 ];
 
 async function getOrgAndRole(userId: string) {

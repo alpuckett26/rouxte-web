@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 
-interface Package { id: string; name: string; speed_mbps: number | null; payout_amount: number }
+interface Package { id: string; name: string; speed_mbps: number | null; payout_amount: number; category: string; chargeback_days: number }
 interface Tier { id: string; name: string; commission_pct: number }
 
 interface Props {
@@ -58,7 +58,9 @@ export default function LogSaleModal({ leadId, address, onClose, onLogged }: Pro
           metadata: {
             package_id: selectedPkgId,
             package_name: selectedPkg?.name,
+            package_category: selectedPkg?.category,
             payout_amount: selectedPkg?.payout_amount,
+            chargeback_days: selectedPkg?.chargeback_days ?? 90,
             commission_pct: myTier?.commission_pct ?? null,
             commission_amount: commission,
             tier_name: myTier?.name ?? null,
@@ -89,43 +91,58 @@ export default function LogSaleModal({ leadId, address, onClose, onLogged }: Pro
           <p className="text-sm text-green-900">{address}</p>
         </div>
 
-        {/* Package picker */}
+        {/* Package picker — grouped by category */}
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">Package sold <span className="text-red-500">*</span></label>
-          <div className="flex flex-col gap-2">
-            {packages.map((pkg) => {
-              const tierCommission = myTier ? (myTier.commission_pct / 100) * pkg.payout_amount : null;
-              const selected = selectedPkgId === pkg.id;
-              return (
-                <button
-                  key={pkg.id}
-                  onClick={() => setSelectedPkgId(pkg.id)}
-                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
-                    selected
-                      ? "border-blue-400 bg-blue-50"
-                      : "border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  <div>
-                    <p className={`text-sm font-medium ${selected ? "text-blue-900" : "text-gray-800"}`}>{pkg.name}</p>
-                    {pkg.speed_mbps && (
-                      <p className="text-xs text-gray-400">{pkg.speed_mbps >= 1000 ? `${pkg.speed_mbps / 1000}Gbps` : `${pkg.speed_mbps}Mbps`}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-bold ${selected ? "text-blue-700" : "text-gray-700"}`}>
-                      ${pkg.payout_amount}
-                    </p>
-                    {tierCommission !== null && (
-                      <p className="text-xs text-green-600 font-medium">
-                        Your cut: ${tierCommission.toFixed(0)}
-                      </p>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          {(["new", "migration", "mobility", "insurance"] as const).map((cat) => {
+            const group = packages.filter((p) => p.category === cat);
+            if (!group.length) return null;
+            const labels: Record<string, string> = {
+              new: "Internet — New Install",
+              migration: "Internet — Copper to Fiber",
+              mobility: "Mobile — New Line",
+              insurance: "Mobile Insurance",
+            };
+            return (
+              <div key={cat} className="mt-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">{labels[cat]}</p>
+                <div className="flex flex-col gap-1.5">
+                  {group.map((pkg) => {
+                    const tierCommission = myTier ? (myTier.commission_pct / 100) * pkg.payout_amount : null;
+                    const selected = selectedPkgId === pkg.id;
+                    return (
+                      <button
+                        key={pkg.id}
+                        onClick={() => setSelectedPkgId(pkg.id)}
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${
+                          selected ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div>
+                          <p className={`text-sm font-medium ${selected ? "text-blue-900" : "text-gray-800"}`}>{pkg.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {pkg.speed_mbps ? (pkg.speed_mbps >= 1000 ? `${pkg.speed_mbps / 1000}Gbps` : `${pkg.speed_mbps}Mbps`) : ""}
+                            {pkg.speed_mbps ? " · " : ""}
+                            {pkg.chargeback_days}d liability
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold ${selected ? "text-blue-700" : "text-gray-700"}`}>
+                            ${pkg.payout_amount}
+                          </p>
+                          {tierCommission !== null && (
+                            <p className="text-xs text-green-600 font-medium">
+                              Your cut: ${tierCommission.toFixed(0)}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Commission summary */}

@@ -6,7 +6,7 @@ export default function OfflinePage() {
   return (
     <ScreenShell>
       <div className="flex flex-col items-center justify-center min-h-[85vh] text-center">
-        <img src="/brand/rouxte-logo.png" alt="Rouxte" className="h-9 mx-auto mb-8 opacity-60" />
+        <img src="/logo.png" alt="Rouxte" className="h-9 mx-auto mb-8 opacity-60" />
 
         <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
           <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

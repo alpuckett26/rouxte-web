@@ -19,6 +19,7 @@ const TABS: NavTab[] = [
   { href: "/manager/compensation", label: "Compensation", roles: ["admin", "sales_manager"] },
   { href: "/manager/onboarding",  label: "Onboarding",   roles: ["admin", "sales_manager", "team_lead"] },
   { href: "/manager/compliance",  label: "Compliance",   roles: ["admin", "sales_manager", "team_lead"] },
+  { href: "/manager/payroll",     label: "Payroll",      roles: ["admin", "sales_manager"] },
 ];
 
 interface Props {

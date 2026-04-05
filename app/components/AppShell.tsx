@@ -35,6 +35,16 @@ const navItems = [
     ),
   },
   {
+    href: "/payroll",
+    label: "Pay",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
     href: "/manager/queue",
     label: "Manager",
     icon: (
@@ -51,22 +61,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 relative overflow-hidden">
-      {/* Subtle brand X background */}
-      <div
-        className="fixed inset-0 opacity-[0.03] pointer-events-none z-0"
-        style={{
-          backgroundImage: "url('/ui/rouxte-x-bg.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
-          backgroundSize: "cover",
-        }}
-      />
 
       {/* Top nav */}
       <header className="relative z-10 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 h-14">
           <Link href="/dashboard">
-            <img src="/brand/rouxte-logo.png" alt="Rouxte" className="h-7" />
+            <img src="/logo.png" alt="Rouxte" className="h-7" />
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
@@ -105,7 +105,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
