@@ -83,13 +83,7 @@ export default function MapboxMap({
     }), "top-right");
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
-    map.on("load", () => {
-      addLeadsLayer(map);
-      setStyleLoaded(true);
-    });
-
     map.on("style.load", () => {
-      // Re-add layers after style swap
       if (!map.getSource("leads")) {
         addLeadsLayer(map);
       }
