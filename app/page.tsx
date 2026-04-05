@@ -19,7 +19,6 @@ export default function Home() {
             src="/logo.png"
             alt="Rouxte"
             className="h-8"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
           <span className="text-xl font-bold tracking-tight text-white">Rouxte</span>
         </div>
