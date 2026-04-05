@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { randomBytes } from "crypto";
+import { sendEmail, FROM } from "@/lib/email/resend";
+import { inviteEmail } from "@/lib/email/templates";
 
 async function getProfile(userId: string) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("user_profiles")
-    .select("org_id, role, team_id")
+    .select("org_id, role, team_id, full_name")
     .eq("user_id", userId)
     .maybeSingle();
   return data;
@@ -75,5 +77,20 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data }, { status: 201 });
+
+  // Send invite email (best-effort — don't fail the request if email fails)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.vercel.app";
+  const inviteUrl = `${appUrl}/invite/${token}`;
+
+  const { data: org } = await admin.from("orgs").select("name").eq("id", profile.org_id).single();
+  const { subject, html } = inviteEmail({
+    orgName: org?.name ?? "your team",
+    role,
+    inviteUrl,
+    inviterName: (profile as { full_name?: string }).full_name ?? undefined,
+  });
+
+  await sendEmail({ from: FROM, to: email, subject, html });
+
+  return NextResponse.json({ data, invite_url: inviteUrl }, { status: 201 });
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail, FROM } from "@/lib/email/resend";
+import { paystubEmail } from "@/lib/email/templates";
 
 const TRIAL_WEEKS = 2;
 const TRIAL_SALES_THRESHOLD = 10;
@@ -215,6 +217,35 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   // Mark period as closed
   await admin.from("pay_periods").update({ status: "closed" }).eq("id", periodId);
+
+  // Send paystub notification emails (best-effort)
+  if (generatedStubIds.length && process.env.RESEND_API_KEY) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.vercel.app";
+    const periodLabel = `${period.period_start} – ${period.period_end}`;
+
+    for (const rep of reps) {
+      const stubId = generatedStubIds.find((_, i) => reps[i]?.user_id === rep.user_id);
+      if (!stubId) continue;
+
+      const { data: authUser } = await admin.auth.admin.getUserById(rep.user_id);
+      const email = authUser?.user?.email;
+      if (!email || !rep.full_name) continue;
+
+      const netPay = Math.max(0,
+        (logsByUser[rep.user_id] ?? []).reduce((s, l) => s + (Number(l.metadata?.payout_amount) || 0), 0)
+        - (chargebacksByUser[rep.user_id] ?? []).reduce((s, c) => s + Number(c.payout_amount), 0)
+      );
+
+      const { subject, html } = paystubEmail({
+        repName: rep.full_name.split(" ")[0],
+        periodLabel,
+        netPay,
+        viewUrl: `${appUrl}/payroll/stubs/${stubId}/print`,
+      });
+
+      await sendEmail({ from: FROM, to: email, subject, html });
+    }
+  }
 
   return NextResponse.json({ stubs_generated: generatedStubIds.length });
 }
