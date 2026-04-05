@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 const VIDEOS = [
   "/videos/field-sales.mp4",
   "/videos/celebration.mp4",
+  "/videos/clip3.mp4",
+  "/videos/clip4.mp4",
 ];
 
 const DISPLAY_DURATION = 8000; // ms each video shows
