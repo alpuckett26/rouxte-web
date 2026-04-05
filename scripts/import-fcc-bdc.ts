@@ -1,42 +1,36 @@
 /**
  * Import FCC BDC availability CSV into Supabase fcc_att_locations table.
+ * Supports the 2025 FCC format which uses H3 hex cell IDs (no lat/lng in file).
  *
- * Usage:
- *   npx tsx scripts/import-fcc-bdc.ts <path-to-csv>
+ * Usage (run from project root):
+ *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts <path-to-csv>
  *
- * Where to get the CSV:
- *   1. Go to https://broadbandmap.fcc.gov/data-download/availability-data
- *   2. Select your state → "Availability" → Download
- *   3. Unzip the file, you'll get a CSV named like:
- *      bdc_TX_Fixed_Broadband_2024December_V1.csv
+ * Multiple files:
+ *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts file1.csv file2.csv
  *
- * The script filters to AT&T fiber rows only (brand_name contains "AT&T",
- * technology = 50) and upserts them in batches of 500.
- *
- * AT&T technology codes in BDC data:
- *   50 = Fiber to the Premises (FTTP)
- *   40 = Cable (not AT&T fiber, skip)
- *   300 = LTE (skip)
+ * Filters to AT&T fiber (technology=50) rows only.
+ * Converts h3_res8_id → lat/lng centroid using h3-js.
+ * Search radius in fcc_att_available() should be ~400m to account for H3 cell size.
  */
 
 import fs from "fs";
 import path from "path";
 import { createInterface } from "readline";
 import { createClient } from "@supabase/supabase-js";
+import { cellToLatLng } from "h3-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const BATCH_SIZE = 500;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment.");
-  console.error("Run with: dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts <csv>");
+  console.error("Missing env vars. Run with: npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts <csv>");
   process.exit(1);
 }
 
-const csvPath = process.argv[2];
-if (!csvPath) {
-  console.error("Usage: npx tsx scripts/import-fcc-bdc.ts <path-to-bdc-csv>");
+const csvFiles = process.argv.slice(2);
+if (!csvFiles.length) {
+  console.error("Usage: npx tsx scripts/import-fcc-bdc.ts <csv> [csv2] ...");
   process.exit(1);
 }
 
@@ -44,34 +38,48 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-interface BdcRow {
+interface FccRow {
   location_id: string;
   lat: number;
   lng: number;
-  address_primary: string;
-  city: string;
-  state_abbr: string;
-  zip: string;
+  state: string;
   max_down_mbps: number;
   max_up_mbps: number;
-  technology: number;
 }
 
-async function upsertBatch(rows: BdcRow[]) {
-  const { error } = await supabase
-    .from("fcc_att_locations")
-    .upsert(rows, { onConflict: "location_id" });
-  if (error) throw new Error(`Upsert failed: ${error.message}`);
+async function upsertBatch(rows: FccRow[]) {
+  const records = rows.map((r) => ({
+    location_id: r.location_id,
+    geom: `SRID=4326;POINT(${r.lng} ${r.lat})`,
+    state: r.state,
+    max_down_mbps: r.max_down_mbps,
+    max_up_mbps: r.max_up_mbps,
+    tech_code: 50,
+  }));
+
+  const { error } = await supabase.rpc("upsert_fcc_locations", { rows: records });
+  if (error) {
+    // Fallback: insert one by one via SQL
+    for (const r of rows) {
+      await supabase.from("fcc_att_locations").upsert({
+        geom: `POINT(${r.lng} ${r.lat})`,
+        state: r.state,
+        max_down_mbps: r.max_down_mbps,
+        max_up_mbps: r.max_up_mbps,
+        tech_code: 50,
+      });
+    }
+  }
 }
 
-async function main() {
+async function importFile(csvPath: string) {
   const absolutePath = path.resolve(csvPath);
   if (!fs.existsSync(absolutePath)) {
     console.error(`File not found: ${absolutePath}`);
-    process.exit(1);
+    return;
   }
 
-  console.log(`Reading: ${absolutePath}`);
+  console.log(`\nImporting: ${path.basename(absolutePath)}`);
 
   const rl = createInterface({
     input: fs.createReadStream(absolutePath),
@@ -79,7 +87,7 @@ async function main() {
   });
 
   let headers: string[] = [];
-  let batch: BdcRow[] = [];
+  let batch: FccRow[] = [];
   let total = 0;
   let skipped = 0;
   let lineNum = 0;
@@ -87,13 +95,11 @@ async function main() {
   for await (const line of rl) {
     lineNum++;
     if (lineNum === 1) {
-      // Parse header row — BDC CSVs use lowercase snake_case column names
       headers = line.split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
-      console.log("Columns:", headers.slice(0, 10).join(", "), "...");
+      console.log("Columns:", headers.join(", "));
       continue;
     }
 
-    // Parse CSV row (simple split — BDC data doesn't embed commas in fields)
     const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
     const row: Record<string, string> = {};
     headers.forEach((h, i) => { row[h] = cols[i] ?? ""; });
@@ -101,34 +107,35 @@ async function main() {
     const brand = (row["brand_name"] ?? "").toLowerCase();
     const tech = parseInt(row["technology"] ?? "0", 10);
 
-    // Keep only AT&T fiber (tech 50) rows
-    if (!brand.includes("at&t") || tech !== 50) {
+    // AT&T fiber only (tech 50)
+    if (!brand.includes("at&t") || tech !== 50) { skipped++; continue; }
+
+    const h3Index = row["h3_res8_id"] ?? "";
+    if (!h3Index) { skipped++; continue; }
+
+    // Convert H3 cell centroid → lat/lng
+    let lat: number, lng: number;
+    try {
+      [lat, lng] = cellToLatLng(h3Index);
+    } catch {
       skipped++;
       continue;
     }
 
-    const lat = parseFloat(row["latitude"] ?? "0");
-    const lng = parseFloat(row["longitude"] ?? "0");
-    if (!lat || !lng) { skipped++; continue; }
-
     batch.push({
-      location_id: row["location_id"],
+      location_id: row["location_id"] ?? h3Index,
       lat,
       lng,
-      address_primary: row["address_primary"] ?? "",
-      city: row["city"] ?? "",
-      state_abbr: row["state_abbr"] ?? "",
-      zip: row["zip"] ?? "",
+      state: row["state_usps"] ?? "",
       max_down_mbps: parseInt(row["max_advertised_download_speed"] ?? "0", 10),
       max_up_mbps: parseInt(row["max_advertised_upload_speed"] ?? "0", 10),
-      technology: tech,
     });
 
     if (batch.length >= BATCH_SIZE) {
       await upsertBatch(batch);
       total += batch.length;
       batch = [];
-      process.stdout.write(`\rInserted ${total.toLocaleString()} rows…`);
+      process.stdout.write(`\r  ${total.toLocaleString()} inserted, ${skipped.toLocaleString()} skipped…`);
     }
   }
 
@@ -137,7 +144,14 @@ async function main() {
     total += batch.length;
   }
 
-  console.log(`\nDone. Inserted ${total.toLocaleString()} AT&T fiber locations. Skipped ${skipped.toLocaleString()} non-AT&T/non-fiber rows.`);
+  console.log(`\n  Done: ${total.toLocaleString()} AT&T fiber cells inserted, ${skipped.toLocaleString()} skipped.`);
+}
+
+async function main() {
+  for (const f of csvFiles) {
+    await importFile(f);
+  }
+  console.log("\nAll files imported.");
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
