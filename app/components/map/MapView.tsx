@@ -6,6 +6,8 @@ import LeadFilterBar from "./LeadFilterBar";
 import LeadListPanel from "./LeadListPanel";
 import { LeadFilters } from "@/lib/types";
 
+const ARView = dynamic(() => import("./ARView"), { ssr: false });
+
 // Dynamic import keeps mapbox-gl out of the SSR bundle
 const MapboxMap = dynamic(() => import("./MapboxMap"), {
   ssr: false,
@@ -20,14 +22,28 @@ export default function MapView() {
   const [filters, setFilters] = useState<LeadFilters>({});
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [arOpen, setArOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
+      {arOpen && <ARView onClose={() => setArOpen(false)} />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Field Map</h1>
           <p className="text-sm text-gray-500">FCC broadband overlay + lead discovery</p>
         </div>
+        <button
+          onClick={() => setArOpen(true)}
+          className="flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 transition-colors"
+        >
+          {/* Camera icon */}
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+          </svg>
+          AR View
+        </button>
       </div>
 
       <LeadFilterBar filters={filters} onChange={setFilters} />

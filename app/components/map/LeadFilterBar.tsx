@@ -50,21 +50,30 @@ export default function LeadFilterBar({ filters, onChange }: Props) {
         )}
       </select>
 
-      {/* DNK toggle */}
+      {/* DNK 3-state toggle: All → Hide DNK → DNK Only */}
       <button
-        onClick={() =>
-          onChange({
-            ...filters,
-            is_do_not_knock: filters.is_do_not_knock ? undefined : false,
-          })
-        }
+        onClick={() => {
+          if (filters.is_do_not_knock === undefined) {
+            onChange({ ...filters, is_do_not_knock: false }); // hide DNK
+          } else if (filters.is_do_not_knock === false) {
+            onChange({ ...filters, is_do_not_knock: true }); // DNK only
+          } else {
+            onChange({ ...filters, is_do_not_knock: undefined }); // all
+          }
+        }}
         className={`rounded-lg border px-2 py-1 text-xs font-medium transition-colors ${
           filters.is_do_not_knock === false
             ? "border-red-300 bg-red-50 text-red-700"
+            : filters.is_do_not_knock === true
+            ? "border-red-500 bg-red-500 text-white"
             : "border-gray-200 text-gray-600 hover:bg-gray-50"
         }`}
       >
-        Hide DNK
+        {filters.is_do_not_knock === false
+          ? "Hide DNK"
+          : filters.is_do_not_knock === true
+          ? "DNK Only"
+          : "All Homes"}
       </button>
 
       {/* Tag chips */}
