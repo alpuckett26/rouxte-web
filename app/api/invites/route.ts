@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     .from("invites")
     .insert({
       org_id: profile.org_id,
-      invited_by: user.id,
+      created_by: user.id,
       email,
       role,
       team_id: teamId,
