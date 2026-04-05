@@ -13,15 +13,7 @@ export default function Home() {
 
       {/* ── Top nav ────────────────────────────────────────────────────────── */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2.5">
-          {/* Logo — replace /logo.png with your file */}
-          <img
-            src="/logo.png"
-            alt="Rouxte"
-            className="h-8"
-          />
-          <span className="text-xl font-bold tracking-tight text-white">Rouxte</span>
-        </div>
+        <img src="/logo.png" alt="Rouxte" className="h-10" />
         <Link
           href="/auth"
           className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/10 transition-colors"
@@ -33,11 +25,8 @@ export default function Home() {
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <main className="relative z-10 mx-auto max-w-6xl px-6 pt-16 pb-24 flex flex-col items-center text-center lg:pt-24">
 
-        {/* Badge */}
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-xs font-medium text-blue-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
-          Built for AT&amp;T fiber door-to-door teams
-        </div>
+        {/* Logo hero */}
+        <img src="/logo.png" alt="Rouxte" className="h-24 mb-8 drop-shadow-2xl" />
 
         {/* Headline */}
         <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
@@ -49,7 +38,7 @@ export default function Home() {
         </h1>
 
         <p className="mt-6 max-w-xl text-lg text-white/60 leading-relaxed">
-          Rouxte puts live coverage maps, lead management, team performance, and payroll in one app — built specifically for fiber sales reps in the field.
+          Rouxte is field sales intelligence — live maps, lead tracking, team management, and payroll in one place.
         </p>
 
         {/* CTAs */}
@@ -88,8 +77,8 @@ export default function Home() {
         <div className="mt-16 grid grid-cols-3 gap-8 border-t border-white/8 pt-12 w-full max-w-lg">
           {[
             { label: "Coverage check", value: "Live" },
-            { label: "Chargeback tracking", value: "90-day" },
-            { label: "Commission tiers", value: "Built-in" },
+            { label: "Pay periods", value: "Weekly" },
+            { label: "Team visibility", value: "Real-time" },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-2xl font-bold text-white">{s.value}</p>
@@ -110,7 +99,7 @@ export default function Home() {
 const FEATURES = [
   {
     title: "Live Coverage Map",
-    desc: "Check AT&T fiber availability at any address before you knock.",
+    desc: "Instantly check service availability at any address before you knock.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -120,7 +109,7 @@ const FEATURES = [
   },
   {
     title: "Lead Management",
-    desc: "Pin leads, track statuses, log sales and notes from the street.",
+    desc: "Pin leads, track statuses, and log activity notes from the field.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -130,7 +119,7 @@ const FEATURES = [
   },
   {
     title: "Team & Goals",
-    desc: "Managers set targets, track standings, and keep reps accountable.",
+    desc: "Managers set targets, monitor performance, and keep teams on track.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -139,8 +128,8 @@ const FEATURES = [
     ),
   },
   {
-    title: "Automated Payroll",
-    desc: "Weekly stubs auto-generated with commissions, bonuses, and chargebacks.",
+    title: "Payroll",
+    desc: "Auto-generated weekly pay stubs with manager approval before release.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
