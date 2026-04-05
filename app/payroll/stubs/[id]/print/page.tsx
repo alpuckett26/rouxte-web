@@ -259,6 +259,31 @@ export default async function PrintStubPage({ params }: Params) {
               )}
             </div>
           </div>
+
+          {/* 1099 Tax Set-Aside Notice */}
+          <div style={{ maxWidth: 720, margin: "16px auto 0", padding: "16px 24px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12 }}>
+            <p style={{ margin: "0 0 8px", fontWeight: 700, fontSize: 14, color: "#92400e" }}>⚠ 1099 Tax Set-Aside Reminder</p>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: "#a16207", lineHeight: 1.5 }}>
+              Taxes are <strong>not withheld</strong> from your pay as an independent contractor. You are responsible for paying self-employment and income taxes directly to the IRS. The IRS requires <strong>quarterly estimated payments</strong> (due Jan, Apr, Jun, Sep).
+            </p>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <tbody>
+                <tr>
+                  <td style={{ padding: "4px 0", color: "#92400e" }}>Self-Employment Tax (15.3%)</td>
+                  <td style={{ textAlign: "right", fontWeight: 600, color: "#92400e" }}>{fmt(stub.net_pay * 0.153)}</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: "4px 0", color: "#92400e" }}>Est. Federal Income Tax (12%)</td>
+                  <td style={{ textAlign: "right", fontWeight: 600, color: "#92400e" }}>{fmt(stub.net_pay * 0.12)}</td>
+                </tr>
+                <tr style={{ borderTop: "1px solid #fde68a" }}>
+                  <td style={{ padding: "8px 0 4px", fontWeight: 700, color: "#78350f" }}>Suggested Set-Aside (~27%)</td>
+                  <td style={{ textAlign: "right", fontWeight: 700, fontSize: 15, color: "#78350f", padding: "8px 0 4px" }}>{fmt(stub.net_pay * 0.273)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p style={{ margin: "10px 0 0", fontSize: 11, color: "#b45309" }}>This is an estimate. Consult a tax professional for advice specific to your situation.</p>
+          </div>
         </div>
 
         <script dangerouslySetInnerHTML={{ __html: `

@@ -19,6 +19,58 @@ interface Paystub {
   released_at: string | null;
 }
 
+// 1099 contractor tax set-aside guidance
+const SE_TAX_RATE = 0.153;      // Self-employment tax (SS 12.4% + Medicare 2.9%)
+const FED_ESTIMATE_RATE = 0.12; // Conservative federal income tax estimate
+const TOTAL_RATE = SE_TAX_RATE + FED_ESTIMATE_RATE; // 27.3%
+
+function TaxBanner({ totalNetPay }: { totalNetPay: number }) {
+  const setAside = totalNetPay * TOTAL_RATE;
+  const seTax = totalNetPay * SE_TAX_RATE;
+  const fedTax = totalNetPay * FED_ESTIMATE_RATE;
+  const fmt = (n: number) => `$${n.toFixed(2)}`;
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex-shrink-0 text-amber-500">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-amber-800 text-sm">Tax Set-Aside Reminder</p>
+          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+            As a 1099 independent contractor, taxes are <strong>not</strong> withheld from your pay.
+            You are responsible for setting aside funds for self-employment and income taxes each period.
+          </p>
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-amber-100 px-3 py-2 text-center">
+              <p className="text-xs text-amber-600 font-medium">SE Tax (15.3%)</p>
+              <p className="text-sm font-bold text-amber-800 mt-0.5">{fmt(seTax)}</p>
+            </div>
+            <div className="rounded-lg bg-amber-100 px-3 py-2 text-center">
+              <p className="text-xs text-amber-600 font-medium">Fed Est. (12%)</p>
+              <p className="text-sm font-bold text-amber-800 mt-0.5">{fmt(fedTax)}</p>
+            </div>
+            <div className="rounded-lg bg-amber-200 px-3 py-2 text-center">
+              <p className="text-xs text-amber-700 font-semibold">Set Aside ~27%</p>
+              <p className="text-sm font-bold text-amber-900 mt-0.5">{fmt(setAside)}</p>
+            </div>
+          </div>
+
+          <p className="mt-2.5 text-xs text-amber-600">
+            This is an estimate only. Consult a tax professional for advice specific to your situation.
+            The IRS requires quarterly estimated tax payments — due Jan, Apr, Jun, and Sep.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PaystubsView() {
   const [stubs, setStubs] = useState<Paystub[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,8 +104,13 @@ export default function PaystubsView() {
     );
   }
 
+  const totalNetPay = stubs.reduce((sum, s) => sum + Number(s.net_pay), 0);
+
   return (
     <div className="space-y-3">
+      {/* Tax banner based on all released earnings */}
+      <TaxBanner totalNetPay={totalNetPay} />
+
       {stubs.map((stub) => (
         <div key={stub.id} className="rounded-xl border border-gray-200 bg-white p-4">
           <div className="flex items-start justify-between">
@@ -107,6 +164,12 @@ export default function PaystubsView() {
               <p className="text-xs text-blue-600">Net Pay</p>
               <p className="font-semibold text-lg text-blue-700">{fmt(stub.net_pay)}</p>
             </div>
+          </div>
+
+          {/* Per-stub tax suggestion */}
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
+            <p className="text-xs text-amber-700">Suggested tax set-aside (~27%)</p>
+            <p className="text-sm font-semibold text-amber-800">{fmt(Number(stub.net_pay) * TOTAL_RATE)}</p>
           </div>
 
           {stub.released_at && (
