@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "login" | "signup";
 
 export default function AuthPage() {
+  return (
+    <Suspense>
+      <AuthForm />
+    </Suspense>
+  );
+}
+
+function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/onboarding/check";
   const supabase = createClient();
 
   const [mode, setMode] = useState<Mode>("login");
@@ -25,17 +35,18 @@ export default function AuthPage() {
 
     try {
       if (mode === "signup") {
+        const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+          options: { emailRedirectTo: callbackUrl },
         });
         if (err) throw err;
         router.push("/auth/verify");
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
-        router.push("/onboarding/check");
+        router.push(next);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -47,9 +58,10 @@ export default function AuthPage() {
   async function handleOAuth(provider: "google" | "github") {
     setOauthLoading(provider);
     setError("");
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: callbackUrl },
     });
     if (err) {
       setError(err.message);
