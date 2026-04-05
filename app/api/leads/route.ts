@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { LeadStatus } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -37,13 +38,14 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient();
+  const { data: profile } = await admin
     .from("user_profiles")
     .select("org_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+  if (!profile?.org_id) return NextResponse.json({ error: "Profile not found — complete onboarding first." }, { status: 400 });
 
   const body = await request.json();
 
