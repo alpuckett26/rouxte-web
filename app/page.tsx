@@ -1,68 +1,73 @@
 import Link from "next/link";
+import VideoBackground from "@/app/components/VideoBackground";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-white overflow-hidden">
 
-      {/* ── Ambient glow blobs ─────────────────────────────────────────────── */}
+      {/* ── Ambient glow blobs (show through when no video) ────────────────── */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-blue-600 opacity-[0.12] blur-[120px]" />
         <div className="absolute top-1/2 -right-32 h-[500px] w-[500px] rounded-full bg-indigo-500 opacity-[0.10] blur-[100px]" />
-        <div className="absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-blue-400 opacity-[0.07] blur-[100px]" />
       </div>
 
       {/* ── Top nav ────────────────────────────────────────────────────────── */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
+      <header className="relative z-20 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
         <img src="/logo.svg" alt="Rouxte" className="h-10" />
         <Link
           href="/auth"
-          className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/10 transition-colors"
+          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/20 transition-colors"
         >
           Sign in
         </Link>
       </header>
 
-      {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <main className="relative z-10 mx-auto max-w-6xl px-6 pt-16 pb-24 flex flex-col items-center text-center lg:pt-24">
+      {/* ── Hero — video behind, content on top ────────────────────────────── */}
+      <section className="relative z-10 min-h-[90vh] flex flex-col items-center justify-center text-center px-6 pb-16">
 
-        {/* Logo hero */}
-        <img src="/logo.svg" alt="Rouxte" className="h-24 mb-8 drop-shadow-2xl" />
+        {/* Video background */}
+        <VideoBackground />
 
-        {/* Headline */}
-        <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-          Close more doors.
-          <br />
-          <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-300 bg-clip-text text-transparent">
-            Track every win.
-          </span>
-        </h1>
+        {/* Content layer */}
+        <div className="relative z-10 flex flex-col items-center">
+          <img src="/logo.svg" alt="Rouxte" className="h-20 mb-8 drop-shadow-2xl" />
 
-        <p className="mt-6 max-w-xl text-lg text-white/60 leading-relaxed">
-          Rouxte is field sales intelligence — live maps, lead tracking, team management, and payroll in one place.
-        </p>
+          <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-7xl drop-shadow-lg">
+            Close more doors.
+            <br />
+            <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-300 bg-clip-text text-transparent">
+              Track every win.
+            </span>
+          </h1>
 
-        {/* CTAs */}
-        <div className="mt-10 flex flex-col sm:flex-row gap-3">
-          <Link
-            href="/auth"
-            className="rounded-2xl bg-blue-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500 transition-colors"
-          >
-            Get Started
-          </Link>
-          <Link
-            href="/auth"
-            className="rounded-2xl border border-white/15 bg-white/5 px-8 py-4 text-base font-medium text-white/80 backdrop-blur-sm hover:bg-white/10 transition-colors"
-          >
-            Sign in to your team
-          </Link>
+          <p className="mt-6 max-w-xl text-lg text-white/75 leading-relaxed drop-shadow">
+            Rouxte is field sales intelligence — live maps, lead tracking, team management, and payroll in one place.
+          </p>
+
+          <div className="mt-10 flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/auth"
+              className="rounded-2xl bg-blue-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-blue-600/40 hover:bg-blue-500 transition-colors"
+            >
+              Get Started
+            </Link>
+            <Link
+              href="/auth"
+              className="rounded-2xl border border-white/20 bg-white/10 px-8 py-4 text-base font-medium text-white/90 backdrop-blur-sm hover:bg-white/20 transition-colors"
+            >
+              Sign in to your team
+            </Link>
+          </div>
         </div>
+      </section>
 
-        {/* Feature grid */}
-        <div className="mt-24 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full text-left">
+      {/* ── Feature grid ───────────────────────────────────────────────────── */}
+      <div className="relative z-10 mx-auto max-w-6xl px-6 pb-24">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full text-left">
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 backdrop-blur-sm"
+              className="rounded-2xl border border-white/8 bg-white/[0.04] p-5 backdrop-blur-sm"
             >
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
                 {f.icon}
@@ -74,7 +79,7 @@ export default function Home() {
         </div>
 
         {/* Stats row */}
-        <div className="mt-16 grid grid-cols-3 gap-8 border-t border-white/8 pt-12 w-full max-w-lg">
+        <div className="mt-12 grid grid-cols-3 gap-8 border-t border-white/8 pt-12 w-full max-w-lg mx-auto">
           {[
             { label: "Coverage check", value: "Live" },
             { label: "Pay periods", value: "Weekly" },
@@ -86,7 +91,7 @@ export default function Home() {
             </div>
           ))}
         </div>
-      </main>
+      </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-white/8 py-6 text-center text-xs text-white/30">
