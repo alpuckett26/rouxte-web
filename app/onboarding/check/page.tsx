@@ -10,7 +10,7 @@ export default async function OnboardingCheckPage() {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("onboarding_step, onboarding_complete")
+    .select("onboarding_step, onboarding_complete, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -23,6 +23,9 @@ export default async function OnboardingCheckPage() {
     redirect("/dashboard");
   }
 
+  // Owners and admins skip HR documents — go straight to dashboard
+  const isOwner = profile.role === "admin";
+
   switch (profile.onboarding_step) {
     case "verify":
       redirect("/onboarding/confirmed");
@@ -31,6 +34,7 @@ export default async function OnboardingCheckPage() {
     case "profile":
       redirect("/onboarding/profile");
     case "documents":
+      if (isOwner) redirect("/dashboard");
       redirect("/onboarding/documents");
     default:
       redirect("/dashboard");

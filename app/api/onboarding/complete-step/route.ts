@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Upsert user profile with the real org_id
+    // Admins skip HR documents — they go straight to complete
+    const isAdmin = profile.role === "admin";
     const { error: profileError } = await admin
       .from("user_profiles")
       .upsert(
@@ -65,8 +67,8 @@ export async function POST(request: NextRequest) {
           role: profile.role,
           territory: profile.territory || null,
           carrier_focus: profile.carrier_focus || null,
-          onboarding_step: "documents",
-          onboarding_complete: false,
+          onboarding_step: isAdmin ? "complete" : "documents",
+          onboarding_complete: isAdmin,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,org_id" }
