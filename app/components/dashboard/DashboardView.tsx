@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { RepStats } from "@/lib/types";
 import Card from "@/components/ui/Card";
+import GoalProgressWidget from "@/components/dashboard/GoalProgressWidget";
 
 interface DashData {
   rep_stats: RepStats;
@@ -51,6 +52,8 @@ export default function DashboardView() {
         <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
         <p className="text-sm text-gray-500">Your performance at a glance</p>
       </div>
+
+      <GoalProgressWidget />
 
       {data?.pending_incidents ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 flex items-center justify-between">

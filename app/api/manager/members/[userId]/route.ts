@@ -38,13 +38,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (body.role !== undefined) updates.role = body.role;
   if (body.team_id !== undefined) updates.team_id = body.team_id || null;
+  if (body.sales_tier_id !== undefined) updates.sales_tier_id = body.sales_tier_id || null;
+  if (body.standing !== undefined) updates.standing = body.standing;
 
   const { data, error } = await admin
     .from("user_profiles")
     .update(updates)
     .eq("user_id", userId)
     .eq("org_id", callerProfile.org_id)
-    .select("user_id, full_name, role, team_id")
+    .select("user_id, full_name, role, team_id, sales_tier_id, standing")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
