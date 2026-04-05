@@ -23,8 +23,7 @@ export default async function OnboardingCheckPage() {
     redirect("/dashboard");
   }
 
-  // Owners and admins skip HR documents — go straight to dashboard
-  const isOwner = profile.role === "admin";
+  const isAdmin = profile.role === "admin";
 
   switch (profile.onboarding_step) {
     case "verify":
@@ -34,7 +33,8 @@ export default async function OnboardingCheckPage() {
     case "profile":
       redirect("/onboarding/profile");
     case "documents":
-      if (isOwner) redirect("/dashboard");
+      // Admins skip HR documents
+      if (isAdmin) redirect("/dashboard");
       redirect("/onboarding/documents");
     default:
       redirect("/dashboard");
