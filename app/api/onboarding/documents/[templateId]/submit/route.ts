@@ -49,7 +49,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         template_id: templateId,
         doc_type: template.doc_type,
         form_data: body.form_data ?? {},
-        signed_name: signedName,
+        signature_name: signedName,
         signed_at: new Date().toISOString(),
       },
       { onConflict: "user_id,template_id" }
