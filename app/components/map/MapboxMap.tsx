@@ -126,6 +126,42 @@ export default function MapboxMap({
       handleMapClick(e.lngLat.lat, e.lngLat.lng, map);
     });
 
+    // Long-press support for touch devices
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    let touchMoved = false;
+
+    const canvas = map.getCanvas();
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      touchMoved = false;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const point = new mapboxgl.Point(
+        touch.clientX - rect.left,
+        touch.clientY - rect.top
+      );
+      const lngLat = map.unproject(point);
+      longPressTimer = setTimeout(() => {
+        if (!touchMoved) {
+          handleMapClick(lngLat.lat, lngLat.lng, map);
+        }
+      }, 500);
+    };
+
+    const onTouchMove = () => {
+      touchMoved = true;
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    };
+
+    const onTouchEnd = () => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    };
+
+    canvas.addEventListener("touchstart", onTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: true });
+    canvas.addEventListener("touchend", onTouchEnd, { passive: true });
+
     // Cursor changes
     for (const layer of ["leads-unclustered", "leads-cluster", "leads-dnk"]) {
       map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
@@ -136,6 +172,10 @@ export default function MapboxMap({
     setMapReady(true);
 
     return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+      if (longPressTimer) clearTimeout(longPressTimer);
       map.remove();
       mapRef.current = null;
       setMapReady(false);
@@ -467,7 +507,7 @@ export default function MapboxMap({
       {/* Right-click hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <div className="rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 shadow-sm px-4 py-1.5 text-xs text-gray-500">
-          {geocoding ? "Looking up address & checking FCC coverage…" : "Right-click any point to capture a lead"}
+          {geocoding ? "Looking up address & checking FCC coverage…" : <><span className="hidden sm:inline">Right-click</span><span className="sm:hidden">Long-press</span> any point to capture a lead</>}
         </div>
       </div>
 
