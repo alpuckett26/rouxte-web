@@ -70,7 +70,7 @@ export default function ProfileSetupPage() {
   return (
     <ScreenShell>
       <div className="flex flex-col items-center min-h-[85vh] py-12">
-        <img src="/logo.png" alt="Rouxte" className="h-9 mb-8" />
+        <img src="/logo.svg" alt="Rouxte" className="h-9 mb-8" />
 
         <div className="w-full max-w-md">
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">Set up your profile</h1>

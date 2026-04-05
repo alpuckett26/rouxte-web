@@ -59,7 +59,7 @@ export default function PromoPage() {
   return (
     <ScreenShell>
       <div className="flex flex-col items-center min-h-[85vh] py-12">
-        <img src="/logo.png" alt="Rouxte" className="h-9 mb-4" />
+        <img src="/logo.svg" alt="Rouxte" className="h-9 mb-4" />
 
         <h1 className="text-3xl font-semibold text-gray-900 text-center mb-2">
           Built for the field

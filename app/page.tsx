@@ -13,7 +13,7 @@ export default function Home() {
 
       {/* ── Top nav ────────────────────────────────────────────────────────── */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
-        <img src="/logo.png" alt="Rouxte" className="h-10" />
+        <img src="/logo.svg" alt="Rouxte" className="h-10" />
         <Link
           href="/auth"
           className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/10 transition-colors"
@@ -26,7 +26,7 @@ export default function Home() {
       <main className="relative z-10 mx-auto max-w-6xl px-6 pt-16 pb-24 flex flex-col items-center text-center lg:pt-24">
 
         {/* Logo hero */}
-        <img src="/logo.png" alt="Rouxte" className="h-24 mb-8 drop-shadow-2xl" />
+        <img src="/logo.svg" alt="Rouxte" className="h-24 mb-8 drop-shadow-2xl" />
 
         {/* Headline */}
         <h1 className="text-5xl font-extrabold leading-tight tracking-tight sm:text-6xl lg:text-7xl">

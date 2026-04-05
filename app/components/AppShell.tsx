@@ -66,7 +66,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <header className="relative z-10 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 h-14">
           <Link href="/dashboard">
-            <img src="/logo.png" alt="Rouxte" className="h-7" />
+            <img src="/logo.svg" alt="Rouxte" className="h-7" />
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {

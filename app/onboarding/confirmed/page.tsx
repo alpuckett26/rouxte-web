@@ -39,7 +39,7 @@ export default function OnboardingConfirmedPage() {
             </svg>
           </div>
 
-          <img src="/logo.png" alt="Rouxte" className="h-7 mx-auto mb-4" />
+          <img src="/logo.svg" alt="Rouxte" className="h-7 mx-auto mb-4" />
 
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Verified!</h2>
           <p className="text-sm text-gray-500 mb-8">

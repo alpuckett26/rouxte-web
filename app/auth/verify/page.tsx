@@ -4,7 +4,7 @@ export default function VerifyPage() {
   return (
     <ScreenShell>
       <div className="flex flex-col items-center justify-center min-h-[85vh] text-center">
-        <img src="/logo.png" alt="Rouxte" className="h-10 mx-auto mb-8" />
+        <img src="/logo.svg" alt="Rouxte" className="h-10 mx-auto mb-8" />
 
         <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-6">
           <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">

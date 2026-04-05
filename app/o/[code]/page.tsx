@@ -41,7 +41,7 @@ export default function OptOutPage({ params }: Props) {
   return (
     <ScreenShell>
       <div className="flex flex-col items-center justify-center min-h-[85vh] text-center px-4">
-        <img src="/logo.png" alt="Rouxte" className="h-9 mx-auto mb-8" />
+        <img src="/logo.svg" alt="Rouxte" className="h-9 mx-auto mb-8" />
 
         {submitted ? (
           <div className="w-full max-w-sm">

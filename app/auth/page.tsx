@@ -71,7 +71,7 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center">
           <Link href="/">
-            <img src="/logo.png" alt="Rouxte" className="h-14 mb-6" />
+            <img src="/logo.svg" alt="Rouxte" className="h-14 mb-6" />
           </Link>
           <h1 className="text-xl font-semibold text-white">
             {mode === "login" ? "Welcome back" : "Create your account"}
