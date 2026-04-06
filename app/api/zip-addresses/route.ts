@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
 
   const query = `
 [out:json][timeout:30];
-area["postal_code"="${zip}"]["boundary"="postal_code"]->.z;
+area["ISO3166-1"="US"]["admin_level"="2"]->.usa;
+area["postal_code"="${zip}"]["boundary"="postal_code"](area.usa)->.z;
 (
   node["addr:housenumber"]["addr:street"](area.z);
 );

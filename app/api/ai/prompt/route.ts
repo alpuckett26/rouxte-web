@@ -14,6 +14,64 @@ const PROMPT_DOC_KEYWORDS: Record<string, string[]> = {
   next_action: ["customer cues", "behavior", "closing", "rebuttal"],
 };
 
+async function getKnowledgeContext(promptType: string, orgId: string, adminClient: ReturnType<typeof createAdminClient>): Promise<string> {
+  const [trainingCtx, competitorCtx, qaCtx] = await Promise.all([
+    getTrainingContext(promptType, adminClient),
+    getCompetitorContext(adminClient, orgId),
+    getQAContext(promptType, adminClient, orgId),
+  ]);
+
+  const parts: string[] = [];
+  if (trainingCtx) parts.push(`# TRAINING MATERIAL\n${trainingCtx}`);
+  if (competitorCtx) parts.push(`# COMPETITOR PRICING INTEL\n${competitorCtx}`);
+  if (qaCtx) parts.push(`# MANAGER-APPROVED SCRIPTS & RESPONSES\n${qaCtx}`);
+  return parts.join("\n\n---\n\n");
+}
+
+async function getCompetitorContext(adminClient: ReturnType<typeof createAdminClient>, orgId: string): Promise<string> {
+  const { data } = await adminClient
+    .from("competitor_intel")
+    .select("competitor, plan_name, monthly_price, download_mbps, upload_mbps, contract_required, data_cap_gb, notes")
+    .or(`org_id.is.null,org_id.eq.${orgId}`)
+    .eq("active", true)
+    .order("competitor");
+
+  if (!data?.length) return "";
+
+  const lines = data.map((c) => {
+    const parts = [`${c.competitor} — ${c.plan_name}: $${c.monthly_price}/mo`];
+    if (c.download_mbps) parts.push(`${c.download_mbps}/${c.upload_mbps ?? "?"}Mbps`);
+    if (c.contract_required) parts.push("requires contract");
+    if (c.data_cap_gb) parts.push(`${c.data_cap_gb}GB cap`);
+    if (c.notes) parts.push(`(${c.notes})`);
+    return parts.join(", ");
+  });
+  return lines.join("\n");
+}
+
+async function getQAContext(promptType: string, adminClient: ReturnType<typeof createAdminClient>, orgId: string): Promise<string> {
+  const categoryMap: Record<string, string[]> = {
+    objection:   ["objection", "rebuttal"],
+    pitch:       ["pitch", "opening"],
+    followup:    ["closing", "followup"],
+    next_action: ["closing", "objection"],
+  };
+  const categories = categoryMap[promptType] ?? ["objection"];
+
+  const { data } = await adminClient
+    .from("coach_qa")
+    .select("trigger, response, category")
+    .eq("org_id", orgId)
+    .eq("active", true)
+    .in("category", categories)
+    .order("use_count", { ascending: false })
+    .limit(10);
+
+  if (!data?.length) return "";
+
+  return data.map((qa) => `[${qa.category}] When a prospect says: "${qa.trigger}"\nResponse: ${qa.response}`).join("\n\n");
+}
+
 async function getTrainingContext(promptType: string, adminClient: ReturnType<typeof createAdminClient>): Promise<string> {
   const keywords = PROMPT_DOC_KEYWORDS[promptType] ?? [];
 
@@ -117,10 +175,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid prompt_type" }, { status: 400 });
   }
 
-  // Build system prompt with training content
-  const trainingContext = await getTrainingContext(prompt_type, admin);
-  const systemPrompt = trainingContext
-    ? `${BASE_SYSTEM}\n\n# YOUR TRAINING MATERIAL\nUse the following training content to inform your responses:\n\n${trainingContext}`
+  // Build system prompt with training content, competitor intel, and Q&A bank
+  const knowledgeContext = await getKnowledgeContext(prompt_type, profile.org_id, admin);
+  const systemPrompt = knowledgeContext
+    ? `${BASE_SYSTEM}\n\nUse the following knowledge base to inform your responses:\n\n${knowledgeContext}`
     : BASE_SYSTEM;
 
   const userMessage = PROMPT_TEMPLATES[prompt_type](context);
