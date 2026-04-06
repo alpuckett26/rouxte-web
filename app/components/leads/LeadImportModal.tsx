@@ -71,6 +71,10 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
   const [zipRows, setZipRows] = useState<ParsedRow[]>([]);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipFetched, setZipFetched] = useState(false);
+  const [streetFilter, setStreetFilter] = useState("");
+  const [numFrom, setNumFrom] = useState("");
+  const [numTo, setNumTo] = useState("");
+  const [clientStreetFilter, setClientStreetFilter] = useState("");
 
   // Shared state
   const [importing, setImporting] = useState(false);
@@ -121,9 +125,15 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
     if (!zip || zip.length !== 5) { setError("Enter a valid 5-digit zip code."); return; }
     setZipLoading(true);
     setError(null);
+    setWarning(null);
     setZipFetched(false);
+    setClientStreetFilter("");
     try {
-      const res = await fetch(`/api/zip-addresses?zip=${zip}`);
+      const params = new URLSearchParams({ zip });
+      if (streetFilter.trim()) params.set("street", streetFilter.trim());
+      if (numFrom.trim()) params.set("num_from", numFrom.trim());
+      if (numTo.trim()) params.set("num_to", numTo.trim());
+      const res = await fetch(`/api/zip-addresses?${params}`);
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Lookup failed. Try the file import for this zip code."); return; }
       if (!json.data?.length) { setError(`No addresses found in zip code ${zip}. OSM may not have data for this area — use file import instead.`); return; }
@@ -138,7 +148,7 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
   }
 
   async function handleImport() {
-    const activeRows = tab === "file" ? rows : zipRows;
+    const activeRows = tab === "file" ? rows : filteredZipRows;
     if (!activeRows.length) return;
     setImporting(true);
     setError(null);
@@ -162,7 +172,10 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
     }
   }
 
-  const previewRows = tab === "file" ? rows : zipRows;
+  const filteredZipRows = clientStreetFilter.trim()
+    ? zipRows.filter((r) => r.address.toLowerCase().includes(clientStreetFilter.toLowerCase()))
+    : zipRows;
+  const previewRows = tab === "file" ? rows : filteredZipRows;
   const hasRows = previewRows.length > 0;
 
   if (!open) return null;
@@ -249,27 +262,64 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
           {/* Zip tab */}
           {tab === "zip" && !result && (
             <div className="flex flex-col gap-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-3">
-                  Pull all residential addresses from OpenStreetMap for a zip code. Addresses include coordinates for map display.
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-gray-600">
+                  Pull addresses from OpenStreetMap for a zip code. Use filters to narrow results before searching.
                 </p>
+
+                {/* Zip + street filter row */}
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={zip}
                     onChange={(e) => { setZip(e.target.value.replace(/\D/g, "").slice(0, 5)); setZipFetched(false); setZipRows([]); }}
-                    placeholder="e.g. 90210"
+                    placeholder="Zip code"
                     maxLength={5}
-                    className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="w-28 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <input
+                    type="text"
+                    value={streetFilter}
+                    onChange={(e) => setStreetFilter(e.target.value)}
+                    placeholder="Street name contains… (optional)"
+                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+
+                {/* House number range row */}
+                <div className="flex gap-2 items-center">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">House # range:</span>
+                  <input
+                    type="number"
+                    value={numFrom}
+                    onChange={(e) => setNumFrom(e.target.value)}
+                    placeholder="From"
+                    className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-xs text-gray-400">–</span>
+                  <input
+                    type="number"
+                    value={numTo}
+                    onChange={(e) => setNumTo(e.target.value)}
+                    placeholder="To"
+                    className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
                   <Button onClick={fetchZip} disabled={zipLoading || zip.length !== 5} variant="secondary">
                     {zipLoading ? "Searching…" : "Search"}
                   </Button>
                 </div>
               </div>
+
               {zipFetched && zipRows.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-500 mb-2">{zipRows.length} addresses found in {zip}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-gray-500">{zipRows.length} addresses found in {zip}</p>
+                  <input
+                    type="text"
+                    value={clientStreetFilter}
+                    onChange={(e) => setClientStreetFilter(e.target.value)}
+                    placeholder="Filter results…"
+                    className="ml-auto w-40 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
                 </div>
               )}
             </div>
