@@ -75,6 +75,9 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
   const [numFrom, setNumFrom] = useState("");
   const [numTo, setNumTo] = useState("");
   const [clientStreetFilter, setClientStreetFilter] = useState("");
+  const [serviceFilter, setServiceFilter] = useState<"all" | "available" | "unavailable">("all");
+  const [coverageMap, setCoverageMap] = useState<Record<string, boolean>>({}); // address -> covered
+  const [checkingCoverage, setCheckingCoverage] = useState(false);
 
   // Shared state
   const [importing, setImporting] = useState(false);
@@ -137,9 +140,46 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Lookup failed. Try the file import for this zip code."); return; }
       if (!json.data?.length) { setError(`No addresses found in zip code ${zip}. OSM may not have data for this area — use file import instead.`); return; }
-      setZipRows(json.data);
+      const fetched: ParsedRow[] = json.data;
+      setZipRows(fetched);
       setZipFetched(true);
       if (json.capped) setWarning(`Showing first 500 addresses — this zip has more. Use file import for complete coverage.`);
+
+      // Batch coverage check if service filter is set
+      if (serviceFilter !== "all") {
+        setCheckingCoverage(true);
+        try {
+          const points = fetched
+            .filter((r) => r.lat != null && r.lng != null)
+            .map((r) => ({ lat: r.lat as number, lng: r.lng as number }));
+
+          const covRes = await fetch("/api/fcc/batch-check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ points }),
+          });
+          const covJson = await covRes.json();
+          const results: boolean[] = covJson.results ?? [];
+
+          const map: Record<string, boolean> = {};
+          let pi = 0;
+          fetched.forEach((r) => {
+            if (r.lat != null && r.lng != null) {
+              map[r.address] = results[pi++] ?? false;
+            } else {
+              map[r.address] = false;
+            }
+          });
+          setCoverageMap(map);
+        } catch {
+          // Coverage check failed — show all
+          setCoverageMap({});
+        } finally {
+          setCheckingCoverage(false);
+        }
+      } else {
+        setCoverageMap({});
+      }
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -172,9 +212,15 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
     }
   }
 
-  const filteredZipRows = clientStreetFilter.trim()
-    ? zipRows.filter((r) => r.address.toLowerCase().includes(clientStreetFilter.toLowerCase()))
-    : zipRows;
+  const filteredZipRows = zipRows.filter((r) => {
+    if (clientStreetFilter.trim() && !r.address.toLowerCase().includes(clientStreetFilter.toLowerCase())) return false;
+    if (serviceFilter !== "all" && Object.keys(coverageMap).length > 0) {
+      const covered = coverageMap[r.address] ?? false;
+      if (serviceFilter === "available" && !covered) return false;
+      if (serviceFilter === "unavailable" && covered) return false;
+    }
+    return true;
+  });
   const previewRows = tab === "file" ? rows : filteredZipRows;
   const hasRows = previewRows.length > 0;
 
@@ -286,15 +332,15 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
                   />
                 </div>
 
-                {/* House number range row */}
-                <div className="flex gap-2 items-center">
-                  <span className="text-xs text-gray-500 whitespace-nowrap">House # range:</span>
+                {/* House number range + service filter row */}
+                <div className="flex gap-2 items-center flex-wrap">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">House #:</span>
                   <input
                     type="number"
                     value={numFrom}
                     onChange={(e) => setNumFrom(e.target.value)}
                     placeholder="From"
-                    className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
                   <span className="text-xs text-gray-400">–</span>
                   <input
@@ -302,8 +348,17 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
                     value={numTo}
                     onChange={(e) => setNumTo(e.target.value)}
                     placeholder="To"
-                    className="w-24 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    className="w-20 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
+                  <select
+                    value={serviceFilter}
+                    onChange={(e) => setServiceFilter(e.target.value as "all" | "available" | "unavailable")}
+                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="all">All addresses</option>
+                    <option value="available">Service available</option>
+                    <option value="unavailable">Not yet serviceable</option>
+                  </select>
                   <Button onClick={fetchZip} disabled={zipLoading || zip.length !== 5} variant="secondary">
                     {zipLoading ? "Searching…" : "Search"}
                   </Button>
@@ -311,8 +366,16 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
               </div>
 
               {zipFetched && zipRows.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-gray-500">{zipRows.length} addresses found in {zip}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-gray-500">
+                    {filteredZipRows.length} of {zipRows.length} addresses
+                    {checkingCoverage && <span className="ml-1 text-blue-500">· checking coverage…</span>}
+                    {!checkingCoverage && serviceFilter !== "all" && Object.keys(coverageMap).length > 0 && (
+                      <span className="ml-1 text-gray-400">
+                        · {Object.values(coverageMap).filter(Boolean).length} serviceable
+                      </span>
+                    )}
+                  </p>
                   <input
                     type="text"
                     value={clientStreetFilter}
@@ -340,7 +403,14 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
                 <tbody className="divide-y divide-gray-50">
                   {previewRows.slice(0, 8).map((row, i) => (
                     <tr key={i} className="bg-white">
-                      <td className="px-3 py-2 text-gray-900 max-w-[200px] truncate">{row.address}</td>
+                      <td className="px-3 py-2 text-gray-900 max-w-[200px]">
+                        <div className="flex items-center gap-1.5 truncate">
+                          {tab === "zip" && Object.keys(coverageMap).length > 0 && (
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${coverageMap[row.address] ? "bg-green-500" : "bg-gray-300"}`} title={coverageMap[row.address] ? "Service available" : "Not yet serviceable"} />
+                          )}
+                          <span className="truncate">{row.address}</span>
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-gray-600">{row.customer_name ?? "—"}</td>
                       <td className="px-3 py-2 text-gray-600">{row.phone ?? "—"}</td>
                       <td className="px-3 py-2 text-gray-400">

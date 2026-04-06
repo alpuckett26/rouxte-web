@@ -1,11 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/lib/hooks/useProfile";
 import Card from "@/components/ui/Card";
 import Link from "next/link";
+
+const SERVICE_TYPES = [
+  { value: "fiber",           label: "Fiber" },
+  { value: "cable",           label: "Cable" },
+  { value: "fixed_wireless",  label: "Fixed Wireless" },
+  { value: "5g",              label: "5G Home Internet" },
+  { value: "dsl",             label: "DSL" },
+];
+
+function OrgSettingsCard() {
+  const [orgName, setOrgName] = useState("");
+  const [providerName, setProviderName] = useState("");
+  const [serviceType, setServiceType] = useState("fiber");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/org/settings").then((r) => r.json()).then((d) => {
+      if (d.data) {
+        setOrgName(d.data.name ?? "");
+        setProviderName(d.data.provider_name ?? "");
+        setServiceType(d.data.service_type ?? "fiber");
+      }
+    });
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    await fetch("/api/org/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: orgName, provider_name: providerName, service_type: serviceType }),
+    });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <Card padding="md">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">Organization</p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">Company name</label>
+          <input value={orgName} onChange={(e) => setOrgName(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">Provider name <span className="text-gray-400">(shown to reps in the app)</span></label>
+          <input value={providerName} onChange={(e) => setProviderName(e.target.value)}
+            placeholder="e.g. AT&T Fiber, Brightspeed, Frontier…"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">Service type</label>
+          <select value={serviceType} onChange={(e) => setServiceType(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-100">
+            {SERVICE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </div>
+        <button onClick={save} disabled={saving}
+          className="mt-1 rounded-xl bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          {saving ? "Saving…" : saved ? "Saved ✓" : "Save Changes"}
+        </button>
+      </div>
+    </Card>
+  );
+}
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Owner / Admin",
@@ -60,6 +128,9 @@ export default function SettingsView() {
           </div>
         )}
       </Card>
+
+      {/* Org settings — admin only */}
+      {profile?.role === "admin" && <OrgSettingsCard />}
 
       {/* Manager tools — elevated roles only */}
       {(profile?.role === "admin" || profile?.role === "sales_manager") && (
