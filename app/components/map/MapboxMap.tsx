@@ -69,7 +69,9 @@ export default function MapboxMap({
   const [bulkLeads, setBulkLeads] = useState<Lead[]>([]);
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [reps, setReps] = useState<{ user_id: string; full_name: string; role: string }[]>([]);
+  const [teams, setTeams] = useState<{ id: string; name: string; member_count: number }[]>([]);
   const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [bulkTab, setBulkTab] = useState<"team" | "rep">("team");
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -207,12 +209,15 @@ export default function MapboxMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // ── Fetch reps for bulk assign ─────────────────────────────────────────────
+  // ── Fetch reps + teams for bulk assign ────────────────────────────────────
   useEffect(() => {
     if (!isManager) return;
     fetch("/api/team/members")
       .then((r) => r.json())
       .then((d) => setReps(d.data ?? []));
+    fetch("/api/manager/teams")
+      .then((r) => r.json())
+      .then((d) => setTeams(d.data ?? []));
   }, [isManager]);
 
   // ── Draw polygon → select leads ────────────────────────────────────────────
@@ -261,17 +266,18 @@ export default function MapboxMap({
     }
   }
 
-  async function handleBulkAssign(assignTo: string | null) {
+  async function handleBulkAssign(opts: { assign_to?: string | null; team_id?: string }) {
     if (!bulkLeads.length) return;
     setBulkAssigning(true);
     await fetch("/api/leads/bulk-assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lead_ids: bulkLeads.map((l) => l.id), assign_to: assignTo }),
+      body: JSON.stringify({ lead_ids: bulkLeads.map((l) => l.id), ...opts }),
     });
     setBulkAssigning(false);
     setBulkAssignOpen(false);
     setBulkLeads([]);
+    setBulkTab("team");
     fetchAndSyncLeads().then(syncLeadsToMap);
   }
 
@@ -641,32 +647,81 @@ export default function MapboxMap({
       {/* Bulk assign modal */}
       {bulkAssignOpen && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Assign Selected Leads</h3>
-            <p className="text-sm text-gray-500 mb-5">
-              {bulkLeads.length} lead{bulkLeads.length !== 1 ? "s" : ""} selected in this area.
-            </p>
-            <div className="flex flex-col gap-2 mb-5 max-h-48 overflow-y-auto">
-              {reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead").map((rep) => (
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 flex flex-col max-h-[80vh]">
+            <div className="px-6 pt-6 pb-4">
+              <h3 className="text-base font-semibold text-gray-900">Assign Selected Leads</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {bulkLeads.length} lead{bulkLeads.length !== 1 ? "s" : ""} selected
+              </p>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100 px-6">
+              {(["team", "rep"] as const).map((t) => (
                 <button
-                  key={rep.user_id}
-                  disabled={bulkAssigning}
-                  onClick={() => handleBulkAssign(rep.user_id)}
-                  className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
+                  key={t}
+                  onClick={() => setBulkTab(t)}
+                  className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors ${
+                    bulkTab === t ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500"
+                  }`}
                 >
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{rep.full_name}</span>
+                  {t === "team" ? "Distribute to Team" : "Assign to Rep"}
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => { setBulkAssignOpen(false); setBulkLeads([]); }}
-              className="w-full text-sm text-gray-500 hover:text-gray-700"
-            >
-              Cancel
-            </button>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {bulkTab === "team" ? (
+                <div className="flex flex-col gap-2">
+                  {teams.length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-4">No teams yet. Create a team first.</p>
+                  )}
+                  {teams.map((team) => (
+                    <button
+                      key={team.id}
+                      disabled={bulkAssigning || team.member_count === 0}
+                      onClick={() => handleBulkAssign({ team_id: team.id })}
+                      className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{team.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · leads split evenly
+                        </p>
+                      </div>
+                      <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead").map((rep) => (
+                    <button
+                      key={rep.user_id}
+                      disabled={bulkAssigning}
+                      onClick={() => handleBulkAssign({ assign_to: rep.user_id })}
+                      className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-900">{rep.full_name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100">
+              <button
+                onClick={() => { setBulkAssignOpen(false); setBulkLeads([]); setBulkTab("team"); }}
+                className="w-full text-sm text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
