@@ -30,13 +30,15 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 // Map Excel objection_category → coach_qa category
-function mapCategory(objectionCategory: string, softCloseType: string): string {
+// objection_category is the primary signal; soft_close_type describes technique within the rebuttal
+function mapCategory(objectionCategory: string): string {
   const cat = (objectionCategory ?? "").toLowerCase();
-  const close = (softCloseType ?? "").toLowerCase();
 
-  if (close.includes("close") && !cat.includes("price") && !cat.includes("afford")) return "closing";
-  if (cat.includes("price") || cat.includes("afford") || cat.includes("discount") || cat.includes("promo")) return "objection";
-  if (cat.includes("pitch") || cat.includes("bundle") || cat.includes("family")) return "pitch";
+  // Pitch / upsell scenarios
+  if (cat.includes("family plan") || cat.includes("bundle") || cat.includes("discount") || cat.includes("promo")) return "pitch";
+  // Closing / next-step scenarios
+  if (cat.includes("leave info") || cat.includes("follow up") || cat.includes("call back")) return "closing";
+  // Everything else is an objection rebuttal
   return "objection";
 }
 
@@ -89,7 +91,7 @@ async function main() {
       org_id: ORG_ID,
       trigger,
       response,
-      category: mapCategory(objCat, closeType),
+      category: mapCategory(objCat),
     });
   }
 
