@@ -10,40 +10,49 @@ import LeadFilterBar from "@/components/map/LeadFilterBar";
 import LeadImportModal from "@/components/leads/LeadImportModal";
 import { useProfile } from "@/lib/hooks/useProfile";
 
-interface Rep { user_id: string; full_name: string; role: string }
+interface Rep  { user_id: string; full_name: string; role: string; assigned_leads?: number }
 interface Team { id: string; name: string; member_count: number }
+
+const PAGE_SIZE = 100;
 
 export default function LeadsListPage() {
   const { profile } = useProfile();
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads]     = useState<Lead[]>([]);
+  const [total, setTotal]     = useState(0);
+  const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<LeadFilters>({});
   const [importOpen, setImportOpen] = useState(false);
-  const [reps, setReps] = useState<Rep[]>([]);
+  const [reps, setReps]   = useState<Rep[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkTab, setBulkTab] = useState<"team" | "rep">("team");
+  const [selected, setSelected]   = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen]   = useState(false);
+  const [bulkTab, setBulkTab]     = useState<"team" | "rep" | "unassign">("team");
   const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [selectMode, setSelectMode] = useState<"page" | "all">("page");
 
   const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const fetchLeads = useCallback(() => {
     const params = new URLSearchParams();
     if (filters.carrier) params.set("carrier", filters.carrier);
-    if (filters.status) params.set("status", filters.status);
+    if (filters.status)  params.set("status", filters.status);
     if (filters.tags?.length) params.set("tags", filters.tags.join(","));
+    params.set("page", String(page));
+    params.set("page_size", String(PAGE_SIZE));
 
     setLoading(true);
     fetch(`/api/leads?${params}`)
       .then((r) => r.json())
-      .then((d) => setLeads(d.data ?? []))
+      .then((d) => { setLeads(d.data ?? []); setTotal(d.total ?? 0); })
       .catch(() => setLeads([]))
       .finally(() => setLoading(false));
-  }, [filters]);
+  }, [filters, page]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [filters]);
 
   useEffect(() => {
     if (!isManager) return;
@@ -69,14 +78,21 @@ export default function LeadsListPage() {
   async function handleBulkAssign(opts: { assign_to?: string | null; team_id?: string }) {
     if (!selected.size) return;
     setBulkAssigning(true);
+
+    // If selectMode === "all", send a special flag to assign all matching leads
+    const body = selectMode === "all"
+      ? { ...opts, select_all: true, filters }
+      : { lead_ids: [...selected], ...opts };
+
     await fetch("/api/leads/bulk-assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lead_ids: [...selected], ...opts }),
+      body: JSON.stringify(body),
     });
     setBulkAssigning(false);
     setBulkOpen(false);
     setSelected(new Set());
+    setSelectMode("page");
     setBulkTab("team");
     fetchLeads();
   }
@@ -89,9 +105,11 @@ export default function LeadsListPage() {
     });
   }
 
-  function toggleAll() {
-    if (selected.size === leads.length) {
+  function togglePage() {
+    const allOnPage = leads.every((l) => selected.has(l.id));
+    if (allOnPage) {
       setSelected(new Set());
+      setSelectMode("page");
     } else {
       setSelected(new Set(leads.map((l) => l.id)));
     }
@@ -102,12 +120,21 @@ export default function LeadsListPage() {
     return reps.find((r) => r.user_id === userId)?.full_name ?? "Assigned";
   };
 
+  const repsList = reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead");
+
+  // Stats for bulk assignment preview
+  const selectedLeads = leads.filter((l) => selected.has(l.id));
+  const unassignedCount = selectedLeads.filter((l) => !l.assigned_to).length;
+  const assignedCount   = selectedLeads.filter((l) => l.assigned_to).length;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Leads</h1>
-          <p className="text-sm text-gray-500">Your pipeline at a glance</p>
+          <p className="text-sm text-gray-500">
+            {total > 0 ? `${total.toLocaleString()} total` : "Your pipeline"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {isManager && (
@@ -133,10 +160,7 @@ export default function LeadsListPage() {
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center">
           <p className="text-gray-500">No leads yet.</p>
           {isManager ? (
-            <button
-              onClick={() => setImportOpen(true)}
-              className="mt-4 inline-block text-sm text-blue-600 hover:underline"
-            >
+            <button onClick={() => setImportOpen(true)} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
               Import from spreadsheet
             </button>
           ) : (
@@ -149,14 +173,41 @@ export default function LeadsListPage() {
         <>
           {/* Bulk action bar */}
           {isManager && selected.size > 0 && (
-            <div className="flex items-center justify-between rounded-xl bg-blue-50 border border-blue-200 px-4 py-2.5">
-              <span className="text-sm text-blue-700 font-medium">
-                {selected.size} lead{selected.size !== 1 ? "s" : ""} selected
-              </span>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => setBulkOpen(true)}>Assign</Button>
-                <button onClick={() => setSelected(new Set())} className="text-xs text-blue-500 hover:text-blue-700">Clear</button>
+            <div className="flex flex-col gap-1 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-blue-700 font-medium">
+                    {selectMode === "all" ? `All ${total.toLocaleString()} leads selected` : `${selected.size} lead${selected.size !== 1 ? "s" : ""} selected`}
+                  </span>
+                  {selectMode === "page" && total > PAGE_SIZE && (
+                    <button
+                      onClick={() => setSelectMode("all")}
+                      className="text-xs text-blue-600 underline hover:text-blue-800"
+                    >
+                      Select all {total.toLocaleString()} leads
+                    </button>
+                  )}
+                  {selectMode === "all" && (
+                    <button
+                      onClick={() => { setSelectMode("page"); setSelected(new Set(leads.map((l) => l.id))); }}
+                      className="text-xs text-blue-600 underline hover:text-blue-800"
+                    >
+                      Select this page only
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => setBulkOpen(true)}>Assign</Button>
+                  <button onClick={() => { setSelected(new Set()); setSelectMode("page"); }} className="text-xs text-blue-500 hover:text-blue-700">Clear</button>
+                </div>
               </div>
+              {selectMode === "page" && (unassignedCount > 0 || assignedCount > 0) && (
+                <p className="text-xs text-blue-600">
+                  {unassignedCount > 0 && `${unassignedCount} unassigned`}
+                  {unassignedCount > 0 && assignedCount > 0 && " · "}
+                  {assignedCount > 0 && `${assignedCount} already assigned`}
+                </p>
+              )}
             </div>
           )}
 
@@ -168,15 +219,15 @@ export default function LeadsListPage() {
                     <th className="pl-4 py-3 w-8">
                       <input
                         type="checkbox"
-                        checked={selected.size === leads.length && leads.length > 0}
-                        onChange={toggleAll}
+                        checked={leads.length > 0 && leads.every((l) => selected.has(l.id))}
+                        onChange={togglePage}
                         className="rounded"
                       />
                     </th>
                   )}
                   <th className="px-4 py-3 text-left font-medium">Address / Customer</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">AT&T</th>
+                  <th className="px-4 py-3 text-left font-medium">Service</th>
                   <th className="px-4 py-3 text-left font-medium">Assigned To</th>
                   <th className="px-4 py-3 text-left font-medium">Updated</th>
                   <th className="px-4 py-3" />
@@ -202,17 +253,13 @@ export default function LeadsListPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge
-                        label={LEAD_STATUS_LABELS[lead.status]}
-                        color={LEAD_STATUS_COLORS[lead.status]}
-                        dot
-                      />
+                      <Badge label={LEAD_STATUS_LABELS[lead.status]} color={LEAD_STATUS_COLORS[lead.status]} dot />
                     </td>
                     <td className="px-4 py-3">
                       {lead.carrier_availability?.att ? (
-                        <span className="text-green-600 font-medium text-xs">Yes</span>
+                        <span className="text-green-600 font-medium text-xs">Available</span>
                       ) : (
-                        <span className="text-gray-400 text-xs">No</span>
+                        <span className="text-gray-400 text-xs">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -224,29 +271,69 @@ export default function LeadsListPage() {
                           className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50 max-w-[140px]"
                         >
                           <option value="">Unassigned</option>
-                          {reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead").map((r) => (
+                          {repsList.map((r) => (
                             <option key={r.user_id} value={r.user_id}>{r.full_name}</option>
                           ))}
                         </select>
                       ) : (
-                        <span className="text-xs text-gray-500">
-                          {repName(lead.assigned_to) ?? "Unassigned"}
-                        </span>
+                        <span className="text-xs text-gray-500">{repName(lead.assigned_to) ?? "Unassigned"}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-400 text-xs">
                       {new Date(lead.updated_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/leads/${lead.id}`} className="text-blue-600 hover:underline text-xs">
-                        View
-                      </Link>
+                      <Link href={`/leads/${lead.id}`} className="text-blue-600 hover:underline text-xs">View</Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs text-gray-400">
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
+              </p>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
+                  // Show pages around current
+                  let p: number;
+                  if (totalPages <= 7) p = i + 1;
+                  else if (page <= 4) p = i + 1;
+                  else if (page >= totalPages - 3) p = totalPages - 6 + i;
+                  else p = page - 3 + i;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors ${
+                        p === page ? "bg-blue-600 text-white border-blue-600" : "border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -259,62 +346,111 @@ export default function LeadsListPage() {
       {/* Bulk assign modal */}
       {bulkOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[80vh]">
-            <div className="px-6 pt-6 pb-4">
-              <h3 className="text-base font-semibold text-gray-900">Assign Selected Leads</h3>
-              <p className="text-sm text-gray-500 mt-0.5">{selected.size} lead{selected.size !== 1 ? "s" : ""} selected</p>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[85vh]">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Assign Leads</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {selectMode === "all"
+                  ? `All ${total.toLocaleString()} leads`
+                  : `${selected.size} lead${selected.size !== 1 ? "s" : ""} selected`}
+                {selectMode === "page" && unassignedCount > 0 && (
+                  <span className="text-amber-600"> · {unassignedCount} unassigned</span>
+                )}
+              </p>
             </div>
 
             <div className="flex border-b border-gray-100 px-6">
-              {(["team", "rep"] as const).map((t) => (
+              {([
+                { key: "team",     label: "Distribute to Team" },
+                { key: "rep",      label: "Assign to Rep" },
+                { key: "unassign", label: "Unassign" },
+              ] as const).map((t) => (
                 <button
-                  key={t}
-                  onClick={() => setBulkTab(t)}
+                  key={t.key}
+                  onClick={() => setBulkTab(t.key)}
                   className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors ${
-                    bulkTab === t ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500"
+                    bulkTab === t.key ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  {t === "team" ? "Distribute to Team" : "Assign to Rep"}
+                  {t.label}
                 </button>
               ))}
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-2">
-              {bulkTab === "team" ? (
-                teams.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-4">No teams yet.</p>
-                ) : teams.map((team) => (
+              {bulkTab === "team" && (
+                <>
+                  <p className="text-xs text-gray-400 mb-1">Leads will be distributed evenly across active reps on the selected team, balancing existing workloads.</p>
+                  {teams.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-4">No teams yet.</p>
+                  ) : teams.map((team) => (
+                    <button
+                      key={team.id}
+                      disabled={bulkAssigning || team.member_count === 0}
+                      onClick={() => handleBulkAssign({ team_id: team.id })}
+                      className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{team.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · split by workload
+                        </p>
+                      </div>
+                      {bulkAssigning ? (
+                        <span className="text-xs text-blue-500">Assigning…</span>
+                      ) : (
+                        <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {bulkTab === "rep" && (
+                <>
+                  <p className="text-xs text-gray-400 mb-1">All selected leads will be assigned to one rep.</p>
+                  {repsList.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-4">No reps found.</p>
+                  ) : repsList.map((rep) => (
+                    <button
+                      key={rep.user_id}
+                      disabled={bulkAssigning}
+                      onClick={() => handleBulkAssign({ assign_to: rep.user_id })}
+                      className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{rep.full_name}</p>
+                        {rep.assigned_leads != null && (
+                          <p className="text-xs text-gray-400">{rep.assigned_leads} leads currently assigned</p>
+                        )}
+                      </div>
+                      {bulkAssigning && <span className="text-xs text-blue-500">…</span>}
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {bulkTab === "unassign" && (
+                <div className="flex flex-col items-center gap-4 py-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Remove rep assignment from {selectMode === "all" ? `all ${total.toLocaleString()}` : selected.size} leads.
+                    {selectMode === "page" && assignedCount === 0 && (
+                      <span className="block text-gray-400 text-xs mt-1">All selected leads are already unassigned.</span>
+                    )}
+                  </p>
                   <button
-                    key={team.id}
-                    disabled={bulkAssigning || team.member_count === 0}
-                    onClick={() => handleBulkAssign({ team_id: team.id })}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled={bulkAssigning || (selectMode === "page" && assignedCount === 0)}
+                    onClick={() => handleBulkAssign({ assign_to: null })}
+                    className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-6 py-2.5 hover:bg-red-100 transition-colors disabled:opacity-40"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{team.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · split evenly
-                      </p>
-                    </div>
-                    <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    {bulkAssigning ? "Unassigning…" : "Unassign Selected"}
                   </button>
-                ))
-              ) : (
-                reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead").map((rep) => (
-                  <button
-                    key={rep.user_id}
-                    disabled={bulkAssigning}
-                    onClick={() => handleBulkAssign({ assign_to: rep.user_id })}
-                    className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">{rep.full_name}</span>
-                  </button>
-                ))
+                </div>
               )}
             </div>
 
