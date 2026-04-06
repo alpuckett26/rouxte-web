@@ -12,6 +12,10 @@ interface Member {
   user_id: string;
   full_name: string;
   role: UserRole;
+  team_id: string | null;
+  close_rate?: number | null;
+  assigned_leads?: number;
+  closed_leads?: number;
 }
 
 interface Team { id: string; name: string }
@@ -138,7 +142,7 @@ export default function PeoplePanel() {
 
               {/* Team picker */}
               <select
-                value={""}
+                value={member.team_id ?? ""}
                 disabled={saving === member.user_id}
                 onChange={(e) => updateMember(member.user_id, { team_id: e.target.value || null })}
                 className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white disabled:opacity-50"
@@ -148,6 +152,18 @@ export default function PeoplePanel() {
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
+
+              {member.role === "sales_rep" && member.assigned_leads != null && member.assigned_leads > 0 && (
+                <div className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  (member.close_rate ?? 0) >= 10
+                    ? "bg-green-50 text-green-700"
+                    : (member.close_rate ?? 0) >= 5
+                    ? "bg-yellow-50 text-yellow-700"
+                    : "bg-red-50 text-red-700"
+                }`}>
+                  {member.close_rate ?? 0}% close
+                </div>
+              )}
 
               <Badge
                 label={ROLE_LABELS[member.role]}

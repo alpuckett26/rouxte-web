@@ -50,31 +50,14 @@ export async function POST(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invite expired" }, { status: 410 });
   }
 
-  // Check if user already has a profile in this org
-  const { data: existingProfile } = await admin
-    .from("user_profiles")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("org_id", invite.org_id)
-    .maybeSingle();
-
-  if (existingProfile) {
-    // Already a member — just mark accepted
-    await admin
-      .from("invites")
-      .update({ accepted_at: new Date().toISOString() })
-      .eq("id", invite.id);
-    return NextResponse.json({ ok: true, already_member: true });
-  }
-
-  // Get the user's full_name from their existing profile (if they self-onboarded into another org)
+  // Get any existing profile for this user (any org)
   const { data: anyProfile } = await admin
     .from("user_profiles")
-    .select("full_name")
+    .select("id, full_name, org_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Create profile in the invited org (or move them in)
+  // Upsert profile into the invited org — overwrite role/team if they self-onboarded elsewhere
   const { error: profileError } = await admin
     .from("user_profiles")
     .upsert(
@@ -93,6 +76,13 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   if (profileError) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
+
+  // If user had a personal/self-onboarded org, clean it up
+  if (anyProfile?.org_id && anyProfile.org_id !== invite.org_id) {
+    await admin.from("user_profiles").delete()
+      .eq("user_id", user.id)
+      .eq("org_id", anyProfile.org_id);
   }
 
   // Add to team_members table if team is specified

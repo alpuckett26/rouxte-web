@@ -224,7 +224,9 @@ export default function LeadDetailView({ leadId }: Props) {
             </div>
             <div>
               <p className="text-xs text-gray-500">Coordinates</p>
-              <p className="font-medium text-gray-900">{lead.lat.toFixed(5)}, {lead.lng.toFixed(5)}</p>
+              <p className="font-medium text-gray-900">
+                {lead.lat != null && lead.lng != null ? `${lead.lat.toFixed(5)}, ${lead.lng.toFixed(5)}` : "No coordinates"}
+              </p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Max Download</p>

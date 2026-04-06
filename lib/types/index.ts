@@ -95,8 +95,8 @@ export interface Lead {
   id: string;
   org_id: string;
   address: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   carrier_availability: CarrierAvailability;
   status: LeadStatus;
   assigned_to: string | null;
@@ -105,6 +105,9 @@ export interface Lead {
   appointment_at: string | null;
   is_do_not_knock: boolean;
   is_opt_out: boolean;
+  customer_name: string | null;
+  phone: string | null;
+  source: string;
   created_at: string;
   updated_at: string;
 }

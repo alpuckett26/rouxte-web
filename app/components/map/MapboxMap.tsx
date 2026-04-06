@@ -320,9 +320,9 @@ export default function MapboxMap({
 
     const geojson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
-      features: fetched.map((lead) => ({
+      features: fetched.filter((lead) => lead.lat != null && lead.lng != null).map((lead) => ({
         type: "Feature",
-        geometry: { type: "Point", coordinates: [lead.lng, lead.lat] },
+        geometry: { type: "Point", coordinates: [lead.lng as number, lead.lat as number] },
         properties: {
           id: lead.id,
           status: lead.status,
