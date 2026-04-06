@@ -38,7 +38,7 @@ function StepBadge({ step, complete }: { step: string; complete: boolean }) {
   return <Badge label={STEP_LABELS[step] ?? step} color="gray" dot />;
 }
 
-export default function OnboardingMonitor() {
+export default function OnboardingMonitor({ embedded = false }: { embedded?: boolean }) {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending">("pending");
@@ -58,14 +58,23 @@ export default function OnboardingMonitor() {
   return (
     <div className="flex flex-col gap-5 max-w-4xl">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Onboarding Monitor</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+        {!embedded && (
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">Onboarding Monitor</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {pendingCount > 0
+                ? `${pendingCount} member${pendingCount !== 1 ? "s" : ""} still onboarding`
+                : "All members have completed onboarding"}
+            </p>
+          </div>
+        )}
+        {embedded && (
+          <p className="text-sm text-gray-500">
             {pendingCount > 0
               ? `${pendingCount} member${pendingCount !== 1 ? "s" : ""} still onboarding`
               : "All members have completed onboarding"}
           </p>
-        </div>
+        )}
         <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
           {(["pending", "all"] as const).map((f) => (
             <button

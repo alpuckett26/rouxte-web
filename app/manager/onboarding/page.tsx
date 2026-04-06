@@ -1,10 +1,10 @@
 import ManagerShell from "@/components/manager/ManagerShell";
-import OnboardingMonitor from "@/components/manager/OnboardingMonitor";
+import OnboardingTabs from "@/components/manager/OnboardingTabs";
 
 export default function OnboardingMonitorPage() {
   return (
     <ManagerShell>
-      <OnboardingMonitor />
+      <OnboardingTabs />
     </ManagerShell>
   );
 }
