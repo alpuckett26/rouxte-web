@@ -110,11 +110,6 @@ function QABank() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
-  const grouped = CATEGORIES.map((cat) => ({
-    ...cat,
-    items: items.filter((i) => i.category === cat.value),
-  })).filter((g) => g.items.length > 0 || tab === "qa");
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
