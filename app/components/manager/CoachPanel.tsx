@@ -80,6 +80,8 @@ function QABank() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
   const [form, setForm] = useState({ trigger: "", response: "", category: "objection" });
 
   const fetch_ = useCallback(async () => {
@@ -110,14 +112,62 @@ function QABank() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
+  async function seedFromDocs() {
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await fetch("/api/coach/seed-from-docs", { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) {
+        setSeedResult(d.error ?? "Failed to load scripts.");
+      } else {
+        setSeedResult(d.message);
+        if (d.inserted > 0) await fetch_();
+      }
+    } catch {
+      setSeedResult("Network error. Try again.");
+    } finally {
+      setSeeding(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <p className="text-sm text-gray-500">
           Add proven scripts and rebuttals. The AI coach references these when reps ask for help at the door.
         </p>
-        <Button size="sm" onClick={() => setAdding(true)}>+ Add Script</Button>
+        <div className="flex gap-2 shrink-0">
+          {items.length === 0 && (
+            <button
+              onClick={seedFromDocs}
+              disabled={seeding}
+              className="rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium px-3 py-1.5 hover:bg-blue-100 transition-colors disabled:opacity-50"
+            >
+              {seeding ? "Loading from docs…" : "Load from Training Docs"}
+            </button>
+          )}
+          <Button size="sm" onClick={() => setAdding(true)}>+ Add Script</Button>
+        </div>
       </div>
+
+      {seedResult && (
+        <div className={`rounded-xl px-4 py-3 text-sm ${seedResult.includes("error") || seedResult.includes("Failed") || seedResult.includes("No training") ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
+          {seedResult}
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={seedFromDocs}
+            disabled={seeding}
+            className="text-xs text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+          >
+            {seeding ? "Loading…" : "Re-sync from training docs"}
+          </button>
+        </div>
+      )}
 
       {adding && (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex flex-col gap-3">
