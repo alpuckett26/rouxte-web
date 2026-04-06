@@ -2,9 +2,6 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-import * as turf from "@turf/turf";
 import { Lead, LeadFilters } from "@/lib/types";
 import CaptureLeadModal from "./CaptureLeadModal";
 import { useProfile } from "@/lib/hooks/useProfile";
@@ -54,7 +51,9 @@ export default function MapboxMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
-  const drawRef = useRef<MapboxDraw | null>(null);
+  const selectionCanvasRef = useRef<HTMLCanvasElement>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const dragCurrent = useRef<{ x: number; y: number } | null>(null);
 
   const { profile } = useProfile();
   const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
@@ -71,7 +70,7 @@ export default function MapboxMap({
   const [reps, setReps] = useState<{ user_id: string; full_name: string; role: string }[]>([]);
   const [teams, setTeams] = useState<{ id: string; name: string; member_count: number }[]>([]);
   const [bulkAssigning, setBulkAssigning] = useState(false);
-  const [bulkTab, setBulkTab] = useState<"team" | "rep">("team");
+  const [bulkTab, setBulkTab] = useState<"lead" | "team" | "rep">("lead");
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -183,15 +182,6 @@ export default function MapboxMap({
       map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
     }
 
-    // Draw control (added but hidden until manager activates)
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {},
-      modes: { ...MapboxDraw.modes },
-    });
-    map.addControl(draw as unknown as mapboxgl.IControl);
-    drawRef.current = draw;
-
     mapRef.current = map;
     setMapReady(true);
 
@@ -202,7 +192,6 @@ export default function MapboxMap({
       if (longPressTimer) clearTimeout(longPressTimer);
       map.remove();
       mapRef.current = null;
-      drawRef.current = null;
       setMapReady(false);
       setStyleLoaded(false);
     };
@@ -220,50 +209,97 @@ export default function MapboxMap({
       .then((d) => setTeams(d.data ?? []));
   }, [isManager]);
 
-  // ── Draw polygon → select leads ────────────────────────────────────────────
+  // ── Canvas drag-select ─────────────────────────────────────────────────────
   useEffect(() => {
+    if (!drawMode) return;
+    const canvas = selectionCanvasRef.current;
     const map = mapRef.current;
-    if (!map || !drawRef.current) return;
+    if (!canvas || !map) return;
 
-    const onDrawCreate = (e: { features: GeoJSON.Feature[] }) => {
-      const polygon = e.features[0];
-      if (!polygon) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    function clearCanvas() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawRect(s: { x: number; y: number }, e: { x: number; y: number }) {
+      if (!ctx || !canvas) return;
+      clearCanvas();
+      const x = Math.min(s.x, e.x);
+      const y = Math.min(s.y, e.y);
+      const w = Math.abs(e.x - s.x);
+      const h = Math.abs(e.y - s.y);
+      ctx.fillStyle = "rgba(59,130,246,0.1)";
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = "rgba(59,130,246,0.8)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 3]);
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    function onMouseDown(e: MouseEvent) {
+      const rect = canvas!.getBoundingClientRect();
+      dragStart.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      dragCurrent.current = { ...dragStart.current };
+    }
+
+    function onMouseMove(e: MouseEvent) {
+      if (!dragStart.current) return;
+      const rect = canvas!.getBoundingClientRect();
+      dragCurrent.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      drawRect(dragStart.current, dragCurrent.current);
+    }
+
+    function onMouseUp() {
+      if (!dragStart.current || !dragCurrent.current || !map) return;
+      const s = dragStart.current;
+      const e = dragCurrent.current;
+      clearCanvas();
+      dragStart.current = null;
+      dragCurrent.current = null;
+
+      // Skip tiny accidental clicks
+      if (Math.abs(e.x - s.x) < 10 || Math.abs(e.y - s.y) < 10) return;
+
+      const rect = canvas!.getBoundingClientRect();
+      const sw = map.unproject([Math.min(s.x, e.x) - rect.left + rect.left, Math.max(s.y, e.y)]);
+      const ne = map.unproject([Math.max(s.x, e.x), Math.min(s.y, e.y)]);
 
       const inside = leads.filter((lead) => {
         if (lead.lat == null || lead.lng == null) return false;
-        const pt = turf.point([lead.lng, lead.lat]);
-        return turf.booleanPointInPolygon(pt, polygon as GeoJSON.Feature<GeoJSON.Polygon>);
+        return (
+          lead.lat >= sw.lat && lead.lat <= ne.lat &&
+          lead.lng >= sw.lng && lead.lng <= ne.lng
+        );
       });
 
-      drawRef.current?.deleteAll();
       setDrawMode(false);
-      map.getCanvas().style.cursor = "";
 
       if (inside.length > 0) {
         setBulkLeads(inside);
+        setBulkTab("lead");
         setBulkAssignOpen(true);
       }
-    };
+    }
 
-    map.on("draw.create", onDrawCreate);
-    return () => { map.off("draw.create", onDrawCreate); };
-  }, [leads]);
+    canvas.addEventListener("mousedown", onMouseDown);
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      canvas.removeEventListener("mousedown", onMouseDown);
+      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("mouseup", onMouseUp);
+      clearCanvas();
+    };
+  }, [drawMode, leads]);
 
   function toggleDrawMode() {
-    const map = mapRef.current;
-    const draw = drawRef.current;
-    if (!map || !draw) return;
-
-    if (drawMode) {
-      draw.changeMode("simple_select");
-      draw.deleteAll();
-      setDrawMode(false);
-      map.getCanvas().style.cursor = "";
-    } else {
-      draw.changeMode("draw_polygon");
-      setDrawMode(true);
-      map.getCanvas().style.cursor = "crosshair";
-    }
+    setDrawMode((prev) => !prev);
+    dragStart.current = null;
+    dragCurrent.current = null;
   }
 
   async function handleBulkAssign(opts: { assign_to?: string | null; team_id?: string }) {
@@ -277,7 +313,7 @@ export default function MapboxMap({
     setBulkAssigning(false);
     setBulkAssignOpen(false);
     setBulkLeads([]);
-    setBulkTab("team");
+    setBulkTab("lead");
     fetchAndSyncLeads().then(syncLeadsToMap);
   }
 
@@ -557,6 +593,16 @@ export default function MapboxMap({
       {/* Map canvas */}
       <div ref={containerRef} className="w-full h-full" />
 
+      {/* Drag-select overlay canvas */}
+      {drawMode && (
+        <canvas
+          ref={selectionCanvasRef}
+          className="absolute inset-0 z-20 cursor-crosshair"
+          width={containerRef.current?.clientWidth ?? 800}
+          height={containerRef.current?.clientHeight ?? 600}
+        />
+      )}
+
       {/* Map controls overlay */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
         {/* Draw / Select Area (managers only) */}
@@ -625,7 +671,7 @@ export default function MapboxMap({
           {geocoding
             ? "Looking up address & checking FCC coverage…"
             : drawMode
-            ? "Click to draw polygon — click first point to close"
+            ? "Click and drag to select an area — release to see results"
             : <><span className="hidden sm:inline">Right-click</span><span className="sm:hidden">Long-press</span> any point to capture a lead</>
           }
         </div>
@@ -646,35 +692,63 @@ export default function MapboxMap({
 
       {/* Bulk assign modal */}
       {bulkAssignOpen && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 flex flex-col max-h-[80vh]">
-            <div className="px-6 pt-6 pb-4">
-              <h3 className="text-base font-semibold text-gray-900">Assign Selected Leads</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {bulkLeads.length} lead{bulkLeads.length !== 1 ? "s" : ""} selected
-              </p>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[85vh]">
+            <div className="px-6 pt-5 pb-3">
+              <h3 className="text-base font-semibold text-gray-900">
+                {bulkLeads.length} Address{bulkLeads.length !== 1 ? "es" : ""} Selected
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">Review then assign to a team lead or team</p>
             </div>
 
             {/* Tabs */}
             <div className="flex border-b border-gray-100 px-6">
-              {(["team", "rep"] as const).map((t) => (
+              {([
+                { key: "lead", label: "Addresses" },
+                { key: "team", label: "Distribute to Team" },
+                { key: "rep", label: "Assign to Person" },
+              ] as const).map((t) => (
                 <button
-                  key={t}
-                  onClick={() => setBulkTab(t)}
-                  className={`py-2.5 px-3 text-xs font-medium border-b-2 transition-colors ${
-                    bulkTab === t ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500"
+                  key={t.key}
+                  onClick={() => setBulkTab(t.key)}
+                  className={`py-2.5 px-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    bulkTab === t.key ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
                   }`}
                 >
-                  {t === "team" ? "Distribute to Team" : "Assign to Rep"}
+                  {t.label}
                 </button>
               ))}
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              {bulkTab === "team" ? (
+              {/* Addresses tab */}
+              {bulkTab === "lead" && (
+                <div className="flex flex-col gap-1.5">
+                  {bulkLeads.map((lead) => (
+                    <div key={lead.id} className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{lead.address}</p>
+                        {lead.customer_name && (
+                          <p className="text-xs text-gray-400">{lead.customer_name}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setBulkTab("team")}
+                    className="mt-3 w-full rounded-xl bg-blue-500 text-white text-sm font-medium py-3 hover:bg-blue-600 transition-colors"
+                  >
+                    Assign These Leads →
+                  </button>
+                </div>
+              )}
+
+              {/* Team distribute tab */}
+              {bulkTab === "team" && (
                 <div className="flex flex-col gap-2">
                   {teams.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-4">No teams yet. Create a team first.</p>
+                    <p className="text-sm text-gray-400 text-center py-4">No teams yet — create one in the Manager panel.</p>
                   )}
                   {teams.map((team) => (
                     <button
@@ -686,7 +760,7 @@ export default function MapboxMap({
                       <div>
                         <p className="text-sm font-medium text-gray-900">{team.name}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · leads split evenly
+                          {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · {bulkLeads.length} leads split evenly
                         </p>
                       </div>
                       <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -695,28 +769,42 @@ export default function MapboxMap({
                     </button>
                   ))}
                 </div>
-              ) : (
+              )}
+
+              {/* Individual person tab */}
+              {bulkTab === "rep" && (
                 <div className="flex flex-col gap-2">
-                  {reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead").map((rep) => (
-                    <button
-                      key={rep.user_id}
-                      disabled={bulkAssigning}
-                      onClick={() => handleBulkAssign({ assign_to: rep.user_id })}
-                      className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">{rep.full_name}</span>
-                    </button>
-                  ))}
+                  {reps
+                    .filter((r) => r.role === "team_lead" || r.role === "sales_rep")
+                    .sort((a, b) => {
+                      // Team leads first
+                      if (a.role === "team_lead" && b.role !== "team_lead") return -1;
+                      if (b.role === "team_lead" && a.role !== "team_lead") return 1;
+                      return a.full_name.localeCompare(b.full_name);
+                    })
+                    .map((rep) => (
+                      <button
+                        key={rep.user_id}
+                        disabled={bulkAssigning}
+                        onClick={() => handleBulkAssign({ assign_to: rep.user_id })}
+                        className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{rep.full_name}</p>
+                          <p className="text-xs text-gray-400 capitalize">{rep.role.replace("_", " ")}</p>
+                        </div>
+                      </button>
+                    ))}
                 </div>
               )}
             </div>
 
             <div className="px-6 py-4 border-t border-gray-100">
               <button
-                onClick={() => { setBulkAssignOpen(false); setBulkLeads([]); setBulkTab("team"); }}
+                onClick={() => { setBulkAssignOpen(false); setBulkLeads([]); setBulkTab("lead"); }}
                 className="w-full text-sm text-gray-500 hover:text-gray-700"
               >
                 Cancel
