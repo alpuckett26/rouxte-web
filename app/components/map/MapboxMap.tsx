@@ -2,8 +2,12 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import * as turf from "@turf/turf";
 import { Lead, LeadFilters } from "@/lib/types";
 import CaptureLeadModal from "./CaptureLeadModal";
+import { useProfile } from "@/lib/hooks/useProfile";
 
 // Status → hex colour used in Mapbox paint expressions
 const STATUS_HEX: Record<string, string> = {
@@ -50,6 +54,10 @@ export default function MapboxMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const drawRef = useRef<MapboxDraw | null>(null);
+
+  const { profile } = useProfile();
+  const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mapReady, setMapReady] = useState(false);
@@ -57,6 +65,11 @@ export default function MapboxMap({
   const [captureInfo, setCaptureInfo] = useState<MapClickInfo | null>(null);
   const [geocoding, setGeocoding] = useState(false);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
+  const [drawMode, setDrawMode] = useState(false);
+  const [bulkLeads, setBulkLeads] = useState<Lead[]>([]);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
+  const [reps, setReps] = useState<{ user_id: string; full_name: string; role: string }[]>([]);
+  const [bulkAssigning, setBulkAssigning] = useState(false);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -168,6 +181,15 @@ export default function MapboxMap({
       map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
     }
 
+    // Draw control (added but hidden until manager activates)
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {},
+      modes: { ...MapboxDraw.modes },
+    });
+    map.addControl(draw as unknown as mapboxgl.IControl);
+    drawRef.current = draw;
+
     mapRef.current = map;
     setMapReady(true);
 
@@ -178,11 +200,80 @@ export default function MapboxMap({
       if (longPressTimer) clearTimeout(longPressTimer);
       map.remove();
       mapRef.current = null;
+      drawRef.current = null;
       setMapReady(false);
       setStyleLoaded(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // ── Fetch reps for bulk assign ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!isManager) return;
+    fetch("/api/team/members")
+      .then((r) => r.json())
+      .then((d) => setReps(d.data ?? []));
+  }, [isManager]);
+
+  // ── Draw polygon → select leads ────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !drawRef.current) return;
+
+    const onDrawCreate = (e: { features: GeoJSON.Feature[] }) => {
+      const polygon = e.features[0];
+      if (!polygon) return;
+
+      const inside = leads.filter((lead) => {
+        if (lead.lat == null || lead.lng == null) return false;
+        const pt = turf.point([lead.lng, lead.lat]);
+        return turf.booleanPointInPolygon(pt, polygon as GeoJSON.Feature<GeoJSON.Polygon>);
+      });
+
+      drawRef.current?.deleteAll();
+      setDrawMode(false);
+      map.getCanvas().style.cursor = "";
+
+      if (inside.length > 0) {
+        setBulkLeads(inside);
+        setBulkAssignOpen(true);
+      }
+    };
+
+    map.on("draw.create", onDrawCreate);
+    return () => { map.off("draw.create", onDrawCreate); };
+  }, [leads]);
+
+  function toggleDrawMode() {
+    const map = mapRef.current;
+    const draw = drawRef.current;
+    if (!map || !draw) return;
+
+    if (drawMode) {
+      draw.changeMode("simple_select");
+      draw.deleteAll();
+      setDrawMode(false);
+      map.getCanvas().style.cursor = "";
+    } else {
+      draw.changeMode("draw_polygon");
+      setDrawMode(true);
+      map.getCanvas().style.cursor = "crosshair";
+    }
+  }
+
+  async function handleBulkAssign(assignTo: string | null) {
+    if (!bulkLeads.length) return;
+    setBulkAssigning(true);
+    await fetch("/api/leads/bulk-assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lead_ids: bulkLeads.map((l) => l.id), assign_to: assignTo }),
+    });
+    setBulkAssigning(false);
+    setBulkAssignOpen(false);
+    setBulkLeads([]);
+    fetchAndSyncLeads().then(syncLeadsToMap);
+  }
 
   // ── Add GeoJSON layers ─────────────────────────────────────────────────────
   function addLeadsLayer(map: mapboxgl.Map) {
@@ -462,6 +553,24 @@ export default function MapboxMap({
 
       {/* Map controls overlay */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+        {/* Draw / Select Area (managers only) */}
+        {isManager && (
+          <button
+            onClick={toggleDrawMode}
+            className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
+              drawMode
+                ? "bg-blue-500 border-blue-600 text-white hover:bg-blue-600"
+                : "bg-white/90 border-gray-200 text-gray-700 hover:bg-white"
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            {drawMode ? "Cancel" : "Select Area"}
+          </button>
+        )}
+
         {/* Style toggle */}
         <button
           onClick={toggleStyle}
@@ -504,10 +613,15 @@ export default function MapboxMap({
         </div>
       </div>
 
-      {/* Right-click hint */}
+      {/* Bottom hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <div className="rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 shadow-sm px-4 py-1.5 text-xs text-gray-500">
-          {geocoding ? "Looking up address & checking FCC coverage…" : <><span className="hidden sm:inline">Right-click</span><span className="sm:hidden">Long-press</span> any point to capture a lead</>}
+          {geocoding
+            ? "Looking up address & checking FCC coverage…"
+            : drawMode
+            ? "Click to draw polygon — click first point to close"
+            : <><span className="hidden sm:inline">Right-click</span><span className="sm:hidden">Long-press</span> any point to capture a lead</>
+          }
         </div>
       </div>
 
@@ -522,6 +636,39 @@ export default function MapboxMap({
             onLeadCreated?.();
           }}
         />
+      )}
+
+      {/* Bulk assign modal */}
+      {bulkAssignOpen && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Assign Selected Leads</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              {bulkLeads.length} lead{bulkLeads.length !== 1 ? "s" : ""} selected in this area.
+            </p>
+            <div className="flex flex-col gap-2 mb-5 max-h-48 overflow-y-auto">
+              {reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead").map((rep) => (
+                <button
+                  key={rep.user_id}
+                  disabled={bulkAssigning}
+                  onClick={() => handleBulkAssign(rep.user_id)}
+                  className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">{rep.full_name}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setBulkAssignOpen(false); setBulkLeads([]); }}
+              className="w-full text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Status legend */}
