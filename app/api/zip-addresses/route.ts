@@ -18,12 +18,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Valid 5-digit zip code required" }, { status: 400 });
   }
 
+  // Step 1: Resolve zip to US bounding box via Nominatim
+  const nominatimRes = await fetch(
+    `https://nominatim.openstreetmap.org/search?postalcode=${zip}&countrycodes=us&format=json&limit=1`,
+    { headers: { "User-Agent": "Rouxte/1.0 (field-sales-app)" }, signal: AbortSignal.timeout(10000) }
+  );
+
+  if (!nominatimRes.ok) {
+    return NextResponse.json({ error: "Address lookup service unavailable" }, { status: 502 });
+  }
+
+  const nominatimData = await nominatimRes.json();
+  if (!nominatimData?.length) {
+    return NextResponse.json({ error: `Zip code ${zip} not found in the United States`, data: [], total: 0 });
+  }
+
+  const [south, north, west, east] = nominatimData[0].boundingbox.map(Number);
+
+  // Step 2: Query Overpass within the US bbox for this zip
   const query = `
 [out:json][timeout:30];
-area["ISO3166-1"="US"]["admin_level"="2"]->.usa;
-area["postal_code"="${zip}"]["boundary"="postal_code"](area.usa)->.z;
 (
-  node["addr:housenumber"]["addr:street"](area.z);
+  node["addr:housenumber"]["addr:street"](${south},${west},${north},${east});
 );
 out body;
   `.trim();
