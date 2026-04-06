@@ -54,15 +54,23 @@ const ManagerIcon = () => (
   </svg>
 );
 
+const TrainingIcon = () => (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+  </svg>
+);
+
 const ALL_NAV: NavItem[] = [
-  { href: "/map",           label: "Map",     icon: <MapIcon /> },
-  { href: "/leads",         label: "Leads",   icon: <LeadsIcon /> },
-  { href: "/dashboard",     label: "Home",    icon: <DashIcon /> },
-  { href: "/payroll",       label: "Pay",     icon: <PayIcon />,     roles: ["sales_rep", "team_lead"] },
+  { href: "/map",           label: "Map",      icon: <MapIcon /> },
+  { href: "/leads",         label: "Leads",    icon: <LeadsIcon /> },
+  { href: "/dashboard",     label: "Home",     icon: <DashIcon /> },
+  { href: "/training",      label: "Training", icon: <TrainingIcon /> },
+  { href: "/payroll",       label: "Pay",      icon: <PayIcon />,     roles: ["sales_rep", "team_lead"] },
   // Team leads see a lightweight team view
-  { href: "/manager/team",  label: "Team",    icon: <TeamIcon />,    roles: ["team_lead"] },
+  { href: "/manager/team",  label: "Team",     icon: <TeamIcon />,    roles: ["team_lead"] },
   // Managers + admins see full manager suite
-  { href: "/manager/queue", label: "Manager", icon: <ManagerIcon />, roles: ["sales_manager", "admin"] },
+  { href: "/manager/queue", label: "Manager",  icon: <ManagerIcon />, roles: ["sales_manager", "admin"] },
 ];
 
 function getNavForRole(role: UserRole | undefined): NavItem[] {
