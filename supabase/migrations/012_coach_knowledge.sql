@@ -19,7 +19,7 @@ create table competitor_intel (
 create table coach_qa (
   id          uuid primary key default uuid_generate_v4(),
   org_id      uuid not null references orgs(id) on delete cascade,
-  created_by  uuid not null references auth.users(id),
+  created_by  uuid references auth.users(id),
   trigger     text not null,   -- the objection or situation
   response    text not null,   -- the proven response
   category    text not null default 'objection', -- objection | pitch | closing | product
