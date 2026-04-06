@@ -76,6 +76,7 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   function reset() {
     setRows([]);
@@ -124,10 +125,11 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
     try {
       const res = await fetch(`/api/zip-addresses?zip=${zip}`);
       const json = await res.json();
-      if (!res.ok) { setError(json.error ?? "Lookup failed"); return; }
-      if (!json.data?.length) { setError(`No addresses found in zip code ${zip}.`); return; }
+      if (!res.ok) { setError(json.error ?? "Lookup failed. Try the file import for this zip code."); return; }
+      if (!json.data?.length) { setError(`No addresses found in zip code ${zip}. OSM may not have data for this area — use file import instead.`); return; }
       setZipRows(json.data);
       setZipFetched(true);
+      if (json.capped) setWarning(`Showing first 500 addresses — this zip has more. Use file import for complete coverage.`);
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -179,7 +181,7 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
           {(["file", "zip"] as Tab[]).map((t) => (
             <button
               key={t}
-              onClick={() => { setTab(t); setError(null); }}
+              onClick={() => { setTab(t); setError(null); setWarning(null); }}
               className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
                 tab === t ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
@@ -193,6 +195,11 @@ export default function LeadImportModal({ open, onClose, onImported }: Props) {
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+          {warning && !error && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+              {warning}
             </div>
           )}
           {result && (
