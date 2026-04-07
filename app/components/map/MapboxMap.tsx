@@ -580,7 +580,7 @@ export default function MapboxMap({
         const text = await r.text();
         console.log("[FCC] status:", r.status, "body:", text.slice(0, 300));
         let geojson;
-        try { geojson = JSON.parse(text); } catch { console.error("[FCC] invalid JSON"); return; }
+        try { geojson = JSON.parse(text); } catch (e) { console.error("[FCC] invalid JSON", e); return; }
         if (geojson.error) { console.error("[FCC] API error:", geojson.error); return; }
         if (!geojson.type || !Array.isArray(geojson.features)) { console.error("[FCC] bad shape:", geojson); return; }
         console.log("[FCC]", geojson.features.length, "hexes");
