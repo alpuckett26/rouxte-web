@@ -115,12 +115,15 @@ export default function MapboxMap({
     }), "top-right");
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
-    map.on("style.load", () => {
+    const onStyleLoad = () => {
       if (!map.getSource("leads")) {
         addLeadsLayer(map);
       }
       setStyleLoaded(true);
-    });
+    };
+    map.on("style.load", onStyleLoad);
+    // Fallback: if style already loaded by the time listener attaches
+    if (map.isStyleLoaded()) onStyleLoad();
 
     // Click on a lead cluster → zoom in
     map.on("click", "leads-cluster", (e) => {
