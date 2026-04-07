@@ -577,16 +577,20 @@ export default function MapboxMap({
     });
     fetch(`/api/fcc/coverage?${params}`)
       .then(async (r) => {
-        const geojson = await r.json();
-        if (geojson.error) { console.error("[FCC]", geojson.error); return; }
-        console.log("[FCC] loaded", geojson?.features?.length, "hexes");
+        const text = await r.text();
+        console.log("[FCC] status:", r.status, "body:", text.slice(0, 300));
+        let geojson;
+        try { geojson = JSON.parse(text); } catch { console.error("[FCC] invalid JSON"); return; }
+        if (geojson.error) { console.error("[FCC] API error:", geojson.error); return; }
+        if (!geojson.type || !Array.isArray(geojson.features)) { console.error("[FCC] bad shape:", geojson); return; }
+        console.log("[FCC]", geojson.features.length, "hexes");
         const m = mapRef.current;
         if (!m) return;
         const src = m.getSource("fcc-coverage") as mapboxgl.GeoJSONSource | undefined;
-        console.log("[FCC] source exists:", !!src);
-        if (src) src.setData(geojson);
+        if (!src) { console.error("[FCC] source not found"); return; }
+        src.setData(geojson);
       })
-      .catch((err) => console.error("[FCC] fetch failed:", err));
+      .catch((err) => console.error("[FCC] fetch error:", err));
   }, []);
 
   useEffect(() => {
