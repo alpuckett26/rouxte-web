@@ -566,14 +566,16 @@ export default function MapboxMap({
   // ── FCC coverage fetch ────────────────────────────────────────────────────
   const coverageFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchCoverage = useCallback((map: mapboxgl.Map, pad = 0.3) => {
+  const fetchCoverage = useCallback((map: mapboxgl.Map) => {
+    // Only fetch at zoom >= 11 — wider viewports hit too many of 6.4M rows
+    if (map.getZoom() < 11) return;
     const bounds = map.getBounds();
     if (!bounds) return;
     const params = new URLSearchParams({
-      north: String(bounds.getNorth() + pad),
-      south: String(bounds.getSouth() - pad),
-      east:  String(bounds.getEast()  + pad),
-      west:  String(bounds.getWest()  - pad),
+      north: String(bounds.getNorth()),
+      south: String(bounds.getSouth()),
+      east:  String(bounds.getEast()),
+      west:  String(bounds.getWest()),
     });
     fetch(`/api/fcc/coverage?${params}`)
       .then(async (r) => {
@@ -597,10 +599,10 @@ export default function MapboxMap({
     const map = mapRef.current;
     if (!styleLoaded || !map) return;
     // Large pad on first load so coverage is ready before user pans
-    fetchCoverage(map, 0.5);
+    fetchCoverage(map);
     const onMoveEnd = () => {
       if (coverageFetchTimer.current) clearTimeout(coverageFetchTimer.current);
-      coverageFetchTimer.current = setTimeout(() => fetchCoverage(map, 0.3), 800);
+      coverageFetchTimer.current = setTimeout(() => fetchCoverage(map), 800);
     };
     map.on("moveend", onMoveEnd);
     return () => { map.off("moveend", onMoveEnd); };
