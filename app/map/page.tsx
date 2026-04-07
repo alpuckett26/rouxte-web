@@ -3,7 +3,7 @@ import MapView from "@/components/map/MapView";
 
 export default function MapPage() {
   return (
-    <AppShell>
+    <AppShell mapMode>
       <MapView />
     </AppShell>
   );

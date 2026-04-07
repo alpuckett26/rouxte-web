@@ -86,7 +86,13 @@ function getNavForRole(role: UserRole | undefined): NavItem[] {
   return ALL_NAV.filter((n) => !n.roles || n.roles.includes(role));
 }
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({
+  children,
+  mapMode,
+}: {
+  children: React.ReactNode;
+  mapMode?: boolean;
+}) {
   const pathname = usePathname();
   const { profile } = useProfile();
   const navItems = getNavForRole(profile?.role);
@@ -98,66 +104,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     team_lead: "Team Lead",
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 relative overflow-hidden">
-      {/* Top nav */}
-      <header className="relative z-10 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 h-14">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <img src="/logo.svg" alt="Rouxte" className="h-7" />
-            {profile?.role && roleBadge[profile.role] && (
-              <span className="hidden sm:inline text-xs font-semibold rounded-full bg-blue-100 text-blue-700 px-2 py-0.5">
-                {roleBadge[profile.role]}
-              </span>
-            )}
-          </Link>
+  const header = (
+    <header className="shrink-0 relative z-10 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 h-14">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <img src="/logo.svg" alt="Rouxte" className="h-7" />
+          {profile?.role && roleBadge[profile.role] && (
+            <span className="hidden sm:inline text-xs font-semibold rounded-full bg-blue-100 text-blue-700 px-2 py-0.5">
+              {roleBadge[profile.role]}
+            </span>
+          )}
+        </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const active = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                  }`}
-                >
-                  {item.icon}
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <Link href="/settings" className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </Link>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main className="relative z-10 mx-auto max-w-6xl px-4 py-6">
-        {children}
-      </main>
-
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/90 backdrop-blur-sm">
-        <div className={`grid grid-cols-${navItems.length}`}>
+        <nav className="hidden md:flex items-center gap-1">
           {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-medium transition-colors ${
-                  active ? "text-blue-600" : "text-gray-500"
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
                 {item.icon}
@@ -165,7 +134,83 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-        </div>
+        </nav>
+
+        <Link href="/settings" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </Link>
+      </div>
+    </header>
+  );
+
+  const mobileNav = (
+    <nav
+      className="md:hidden shrink-0 border-t border-gray-200 bg-white/90 backdrop-blur-sm"
+      style={{ display: "grid", gridTemplateColumns: `repeat(${navItems.length}, 1fr)` }}
+    >
+      {navItems.map((item) => {
+        const active = pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-medium transition-colors ${
+              active ? "text-blue-600" : "text-gray-500"
+            }`}
+          >
+            {item.icon}
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  if (mapMode) {
+    // Full-height flex column: header + map fills remaining + in-flow mobile nav
+    // This gives the map a precise height without overflow or fixed nav overlap
+    return (
+      <div className="h-dvh flex flex-col bg-gray-50 overflow-hidden">
+        {header}
+        <main className="flex-1 min-h-0 relative z-10 md:mx-auto md:w-full md:max-w-6xl md:px-4 md:py-6">
+          {children}
+        </main>
+        {mobileNav}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {header}
+      {/* pb-16 md:pb-0 keeps content above the fixed mobile nav */}
+      <main className="relative z-10 mx-auto max-w-6xl px-4 py-6 pb-20 md:pb-6">
+        {children}
+      </main>
+      {/* Fixed bottom nav for normal pages */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/90 backdrop-blur-sm"
+        style={{ display: "grid", gridTemplateColumns: `repeat(${navItems.length}, 1fr)` }}
+      >
+        {navItems.map((item) => {
+          const active = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-medium transition-colors ${
+                active ? "text-blue-600" : "text-gray-500"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
