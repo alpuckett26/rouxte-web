@@ -465,18 +465,19 @@ export default function MapboxMap({
       data: { type: "FeatureCollection", features: [] },
     });
 
-    // H3 hex fill — solid green coverage zones
+    // H3 hex fill — stays visible at all zooms as a green tint
+    // At street level the hex is larger than screen = solid green tint in fiber zones
     map.addLayer({
       id: "fcc-coverage-fill",
       type: "fill",
       source: "fcc-coverage",
       paint: {
         "fill-color": "#22c55e",
-        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.3, 15, 0.2],
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 13, 0.15, 16, 0.12],
       },
     });
 
-    // H3 hex outline — visible at street zoom
+    // Hex outline visible at neighborhood zoom only
     map.addLayer({
       id: "fcc-coverage-outline",
       type: "line",
@@ -484,7 +485,7 @@ export default function MapboxMap({
       paint: {
         "line-color": "#16a34a",
         "line-width": 1,
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 13, 0.6],
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 12, 0.5, 15, 0],
       },
     });
 
