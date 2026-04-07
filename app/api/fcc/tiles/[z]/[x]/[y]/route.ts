@@ -39,7 +39,7 @@ export async function GET(
 
   if (buf.length === 0) return new Response(null, { status: 204 });
 
-  return new Response(buf, {
+  return new Response(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), {
     headers: {
       "Content-Type": "application/x-protobuf",
       "Cache-Control": "public, max-age=3600",
