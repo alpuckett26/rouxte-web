@@ -6,12 +6,13 @@ CREATE OR REPLACE FUNCTION fcc_att_coverage_bbox(
   p_east  DOUBLE PRECISION,
   p_north DOUBLE PRECISION
 )
-RETURNS TABLE(lat DOUBLE PRECISION, lng DOUBLE PRECISION)
+RETURNS TABLE(location_id TEXT, lat DOUBLE PRECISION, lng DOUBLE PRECISION)
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 AS $$
   SELECT
+    location_id,
     ST_Y(geom::geometry) AS lat,
     ST_X(geom::geometry) AS lng
   FROM fcc_att_locations

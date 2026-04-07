@@ -463,41 +463,45 @@ export default function MapboxMap({
     map.addSource("fcc-coverage", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
-      cluster: true,
-      clusterMaxZoom: 13,
-      clusterRadius: 25,
     });
 
-    // Green cluster bubbles at low zoom
+    // H3 hex fill — green coverage area
     map.addLayer({
-      id: "fcc-coverage-cluster",
-      type: "circle",
+      id: "fcc-coverage-fill",
+      type: "fill",
       source: "fcc-coverage",
-      filter: ["has", "point_count"],
+      filter: ["==", ["geometry-type"], "Polygon"],
       paint: {
-        "circle-color": "#22c55e",
-        "circle-opacity": 0.45,
-        "circle-stroke-width": 0,
-        "circle-radius": [
-          "step", ["get", "point_count"],
-          8, 10, 14, 50, 20, 200, 28,
-        ],
+        "fill-color": "#22c55e",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 14, 0.15],
       },
     });
 
-    // Individual green dot per fiber address at high zoom
+    // H3 hex outline
+    map.addLayer({
+      id: "fcc-coverage-outline",
+      type: "line",
+      source: "fcc-coverage",
+      filter: ["==", ["geometry-type"], "Polygon"],
+      paint: {
+        "line-color": "#16a34a",
+        "line-width": 0.5,
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 13, 0.4],
+      },
+    });
+
+    // Fallback: plain point for non-H3 (lat/lng format) data
     map.addLayer({
       id: "fcc-coverage-dots",
       type: "circle",
       source: "fcc-coverage",
-      filter: ["!", ["has", "point_count"]],
+      filter: ["==", ["geometry-type"], "Point"],
       paint: {
         "circle-color": "#22c55e",
         "circle-radius": 4,
-        "circle-opacity": 0.75,
+        "circle-opacity": 0.7,
         "circle-stroke-width": 1,
         "circle-stroke-color": "#15803d",
-        "circle-stroke-opacity": 0.9,
       },
     });
 
