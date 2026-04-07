@@ -463,31 +463,31 @@ export default function MapboxMap({
     });
 
     // Heatmap: glows green over AT&T fiber coverage areas
-    // H3 res8 cells are ~460m wide — radius scaled to match cell size at each zoom
     map.addLayer({
       id: "fcc-coverage-heat",
       type: "heatmap",
       source: "fcc-coverage",
       paint: {
         "heatmap-weight": 1,
-        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.6, 14, 1.2],
-        // Radius in pixels — sized so adjacent H3 cells touch/overlap naturally
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 2, 15, 4],
+        // Large radius so H3 centroids blend into solid coverage areas
         "heatmap-radius": ["interpolate", ["linear"], ["zoom"],
-          6,  4,
-          9,  8,
-          11, 14,
-          13, 22,
-          15, 35,
+          5,  20,
+          8,  35,
+          10, 55,
+          12, 80,
+          14, 120,
+          16, 180,
         ],
         "heatmap-color": [
           "interpolate", ["linear"], ["heatmap-density"],
-          0,   "rgba(34,197,94,0)",
-          0.15,"rgba(34,197,94,0.25)",
-          0.4, "rgba(34,197,94,0.55)",
-          0.7, "rgba(74,222,128,0.75)",
-          1,   "rgba(187,247,208,0.9)",
+          0,    "rgba(34,197,94,0)",
+          0.05, "rgba(34,197,94,0.4)",
+          0.3,  "rgba(34,197,94,0.65)",
+          0.6,  "rgba(74,222,128,0.8)",
+          1,    "rgba(187,247,208,0.9)",
         ],
-        "heatmap-opacity": 0.85,
+        "heatmap-opacity": 0.8,
       },
     });
 
