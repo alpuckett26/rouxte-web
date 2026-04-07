@@ -462,39 +462,32 @@ export default function MapboxMap({
       data: { type: "FeatureCollection", features: [] },
     });
 
-    // Heatmap: glows green where AT&T fiber exists; fades to dots at high zoom
+    // Heatmap: glows green over AT&T fiber coverage areas
+    // H3 res8 cells are ~460m wide — radius scaled to match cell size at each zoom
     map.addLayer({
       id: "fcc-coverage-heat",
       type: "heatmap",
       source: "fcc-coverage",
-      maxzoom: 15,
       paint: {
         "heatmap-weight": 1,
-        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 14, 3],
-        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 5, 15, 10, 30, 14, 50],
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.6, 14, 1.2],
+        // Radius in pixels — sized so adjacent H3 cells touch/overlap naturally
+        "heatmap-radius": ["interpolate", ["linear"], ["zoom"],
+          6,  4,
+          9,  8,
+          11, 14,
+          13, 22,
+          15, 35,
+        ],
         "heatmap-color": [
           "interpolate", ["linear"], ["heatmap-density"],
           0,   "rgba(34,197,94,0)",
-          0.1, "rgba(34,197,94,0.3)",
-          0.4, "rgba(34,197,94,0.6)",
-          0.7, "rgba(74,222,128,0.8)",
-          1,   "rgba(187,247,208,0.95)",
+          0.15,"rgba(34,197,94,0.25)",
+          0.4, "rgba(34,197,94,0.55)",
+          0.7, "rgba(74,222,128,0.75)",
+          1,   "rgba(187,247,208,0.9)",
         ],
-        "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.9, 15, 0],
-      },
-    });
-
-    // Individual dots at high zoom (>= 13), fade in as heatmap fades out
-    map.addLayer({
-      id: "fcc-coverage-dots",
-      type: "circle",
-      source: "fcc-coverage",
-      minzoom: 13,
-      paint: {
-        "circle-color": "#22c55e",
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 3, 17, 6],
-        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, 0.35],
-        "circle-stroke-width": 0,
+        "heatmap-opacity": 0.85,
       },
     });
 
