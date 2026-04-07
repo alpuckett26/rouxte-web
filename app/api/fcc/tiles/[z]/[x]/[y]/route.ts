@@ -28,7 +28,7 @@ export async function GET(
   let buf: Buffer;
   if (typeof data === "string") {
     // Could be base64 or \x-prefixed hex
-    if (data.startsWith("\\x") || data.startsWith("\x")) {
+    if (data.startsWith("\\x")) {
       buf = Buffer.from(data.replace(/^\\x/, ""), "hex");
     } else {
       buf = Buffer.from(data, "base64");
