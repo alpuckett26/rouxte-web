@@ -432,51 +432,30 @@ export default function MapboxMap({
 
   // ── Add GeoJSON layers ─────────────────────────────────────────────────────
   function addLeadsLayer(map: mapboxgl.Map) {
-    // ── FCC AT&T coverage — vector tiles served from PostGIS MVT ─────────────
-    // Tiles load instantly as you pan/zoom, browser caches them automatically
+    // ── FCC AT&T coverage — GeoJSON hex polygons ─────────────────────────────
     map.addSource("fcc-coverage", {
-      type: "vector",
-      tiles: [`${window.location.origin}/api/fcc/tiles/{z}/{x}/{y}`],
-      minzoom: 8,
-      maxzoom: 16,
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
     });
 
-    // Heatmap at low zoom — green glow shows fiber density
     map.addLayer({
-      id: "fcc-coverage-heat",
-      type: "heatmap",
+      id: "fcc-coverage-fill",
+      type: "fill",
       source: "fcc-coverage",
-      "source-layer": "fcc-coverage",
-      maxzoom: 13,
       paint: {
-        "heatmap-weight": 1,
-        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 20, 12, 40],
-        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 12, 1.5],
-        "heatmap-color": [
-          "interpolate", ["linear"], ["heatmap-density"],
-          0,   "rgba(34,197,94,0)",
-          0.2, "rgba(34,197,94,0.4)",
-          0.6, "rgba(74,222,128,0.7)",
-          1,   "rgba(187,247,208,0.9)",
-        ],
-        "heatmap-opacity": 0.85,
+        "fill-color": "#22c55e",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.3, 13, 0.2, 16, 0.12],
       },
     });
 
-    // Green dot per H3 cell centroid at street zoom (one dot ≈ one coverage zone)
     map.addLayer({
-      id: "fcc-coverage-dots",
-      type: "circle",
+      id: "fcc-coverage-outline",
+      type: "line",
       source: "fcc-coverage",
-      "source-layer": "fcc-coverage",
-      minzoom: 12,
       paint: {
-        "circle-color": "#22c55e",
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 3, 15, 6, 17, 10],
-        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0, 13, 0.6],
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "#15803d",
-        "circle-stroke-opacity": 0.8,
+        "line-color": "#16a34a",
+        "line-width": 1,
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 12, 0.5, 15, 0],
       },
     });
 
@@ -583,6 +562,42 @@ export default function MapboxMap({
       },
     });
   }
+
+  // ── FCC coverage fetch ────────────────────────────────────────────────────
+  const coverageFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchCoverage = useCallback((map: mapboxgl.Map, pad = 0.3) => {
+    const bounds = map.getBounds();
+    if (!bounds) return;
+    const params = new URLSearchParams({
+      north: String(bounds.getNorth() + pad),
+      south: String(bounds.getSouth() - pad),
+      east:  String(bounds.getEast()  + pad),
+      west:  String(bounds.getWest()  - pad),
+    });
+    fetch(`/api/fcc/coverage?${params}`)
+      .then((r) => r.json())
+      .then((geojson) => {
+        const m = mapRef.current;
+        if (!m) return;
+        const src = m.getSource("fcc-coverage") as mapboxgl.GeoJSONSource | undefined;
+        if (src) src.setData(geojson);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!styleLoaded || !map) return;
+    // Large pad on first load so coverage is ready before user pans
+    fetchCoverage(map, 0.5);
+    const onMoveEnd = () => {
+      if (coverageFetchTimer.current) clearTimeout(coverageFetchTimer.current);
+      coverageFetchTimer.current = setTimeout(() => fetchCoverage(map, 0.3), 800);
+    };
+    map.on("moveend", onMoveEnd);
+    return () => { map.off("moveend", onMoveEnd); };
+  }, [styleLoaded, fetchCoverage]);
 
   // ── Fetch leads and sync to map ────────────────────────────────────────────
   const fetchAndSyncLeads = useCallback(async () => {
