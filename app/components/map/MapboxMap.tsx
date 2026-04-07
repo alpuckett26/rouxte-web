@@ -465,43 +465,26 @@ export default function MapboxMap({
       data: { type: "FeatureCollection", features: [] },
     });
 
-    // H3 hex fill — green coverage area
+    // H3 hex fill — solid green coverage zones
     map.addLayer({
       id: "fcc-coverage-fill",
       type: "fill",
       source: "fcc-coverage",
-      filter: ["==", ["geometry-type"], "Polygon"],
       paint: {
         "fill-color": "#22c55e",
-        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 14, 0.15],
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.3, 15, 0.2],
       },
     });
 
-    // H3 hex outline
+    // H3 hex outline — visible at street zoom
     map.addLayer({
       id: "fcc-coverage-outline",
       type: "line",
       source: "fcc-coverage",
-      filter: ["==", ["geometry-type"], "Polygon"],
       paint: {
         "line-color": "#16a34a",
-        "line-width": 0.5,
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 13, 0.4],
-      },
-    });
-
-    // Fallback: plain point for non-H3 (lat/lng format) data
-    map.addLayer({
-      id: "fcc-coverage-dots",
-      type: "circle",
-      source: "fcc-coverage",
-      filter: ["==", ["geometry-type"], "Point"],
-      paint: {
-        "circle-color": "#22c55e",
-        "circle-radius": 4,
-        "circle-opacity": 0.7,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "#15803d",
+        "line-width": 1,
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 11, 0, 13, 0.6],
       },
     });
 
