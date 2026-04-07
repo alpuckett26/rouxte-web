@@ -426,8 +426,78 @@ export default function MapboxMap({
     fetchAndSyncLeads().then(syncLeadsToMap);
   }
 
+  // ── FCC coverage heatmap ───────────────────────────────────────────────────
+  const coverageFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchCoverage = useCallback((map: mapboxgl.Map) => {
+    console.log("[FCC] fetchCoverage called");
+    const bounds = map.getBounds();
+    console.log("[FCC] bounds:", bounds);
+    if (!bounds) return;
+    const params = new URLSearchParams({
+      north: String(bounds.getNorth()),
+      south: String(bounds.getSouth()),
+      east:  String(bounds.getEast()),
+      west:  String(bounds.getWest()),
+    });
+    console.log("[FCC] fetching coverage for bounds:", params.toString());
+    fetch(`/api/fcc/coverage?${params}`)
+      .then((r) => r.json())
+      .then((geojson) => {
+        console.log("[FCC] coverage response:", geojson?.features?.length, "features");
+        const map = mapRef.current;
+        if (!map) return;
+        const src = map.getSource("fcc-coverage") as mapboxgl.GeoJSONSource | undefined;
+        console.log("[FCC] source found:", !!src);
+        if (src) src.setData(geojson);
+      })
+      .catch((err) => console.error("[FCC] coverage fetch error:", err));
+  }, []);
+
   // ── Add GeoJSON layers ─────────────────────────────────────────────────────
   function addLeadsLayer(map: mapboxgl.Map) {
+    // ── FCC AT&T coverage source + layers ───────────────────────────────────
+    map.addSource("fcc-coverage", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+
+    // Heatmap: glows green where AT&T fiber exists; fades to dots at high zoom
+    map.addLayer({
+      id: "fcc-coverage-heat",
+      type: "heatmap",
+      source: "fcc-coverage",
+      maxzoom: 15,
+      paint: {
+        "heatmap-weight": 1,
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 14, 3],
+        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 5, 15, 10, 30, 14, 50],
+        "heatmap-color": [
+          "interpolate", ["linear"], ["heatmap-density"],
+          0,   "rgba(34,197,94,0)",
+          0.1, "rgba(34,197,94,0.3)",
+          0.4, "rgba(34,197,94,0.6)",
+          0.7, "rgba(74,222,128,0.8)",
+          1,   "rgba(187,247,208,0.95)",
+        ],
+        "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.9, 15, 0],
+      },
+    });
+
+    // Individual dots at high zoom (>= 13), fade in as heatmap fades out
+    map.addLayer({
+      id: "fcc-coverage-dots",
+      type: "circle",
+      source: "fcc-coverage",
+      minzoom: 13,
+      paint: {
+        "circle-color": "#22c55e",
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 3, 17, 6],
+        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, 0.35],
+        "circle-stroke-width": 0,
+      },
+    });
+
     map.addSource("leads", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
@@ -540,7 +610,7 @@ export default function MapboxMap({
     if (filters.tags?.length) params.set("tags", filters.tags.join(","));
     if (filters.is_do_not_knock !== undefined)
       params.set("is_do_not_knock", String(filters.is_do_not_knock));
-    params.set("page_size", "200");
+    params.set("page_size", "2000");
 
     try {
       const res = await fetch(`/api/leads?${params}`);
@@ -584,6 +654,25 @@ export default function MapboxMap({
     if (!styleLoaded) return;
     fetchAndSyncLeads().then(syncLeadsToMap);
   }, [filters, styleLoaded, fetchAndSyncLeads, syncLeadsToMap]);
+
+  // ── FCC coverage: initial load + re-fetch on map move ─────────────────────
+  useEffect(() => {
+    console.log("[FCC] coverage useEffect — styleLoaded:", styleLoaded, "map:", !!mapRef.current);
+    const map = mapRef.current;
+    if (!styleLoaded || !map) return;
+
+    // Initial fetch for current viewport
+    fetchCoverage(map);
+
+    // Re-fetch when user pans/zooms (debounced)
+    const onMoveEnd = () => {
+      if (coverageFetchTimer.current) clearTimeout(coverageFetchTimer.current);
+      coverageFetchTimer.current = setTimeout(() => fetchCoverage(map), 600);
+    };
+
+    map.on("moveend", onMoveEnd);
+    return () => { map.off("moveend", onMoveEnd); };
+  }, [styleLoaded, fetchCoverage]);
 
   // Re-sync when a new lead is created
   useEffect(() => {

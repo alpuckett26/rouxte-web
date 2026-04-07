@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const tags = searchParams.get("tags")?.split(",").filter(Boolean);
   const isDNK = searchParams.get("is_do_not_knock");
   const page = parseInt(searchParams.get("page") ?? "1");
-  const pageSize = Math.min(parseInt(searchParams.get("page_size") ?? "50"), 100);
+  const pageSize = Math.min(parseInt(searchParams.get("page_size") ?? "50"), 2000);
 
   let query = supabase
     .from("leads")
