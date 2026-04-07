@@ -576,14 +576,17 @@ export default function MapboxMap({
       west:  String(bounds.getWest()  - pad),
     });
     fetch(`/api/fcc/coverage?${params}`)
-      .then((r) => r.json())
-      .then((geojson) => {
+      .then(async (r) => {
+        const geojson = await r.json();
+        if (geojson.error) { console.error("[FCC]", geojson.error); return; }
+        console.log("[FCC] loaded", geojson?.features?.length, "hexes");
         const m = mapRef.current;
         if (!m) return;
         const src = m.getSource("fcc-coverage") as mapboxgl.GeoJSONSource | undefined;
+        console.log("[FCC] source exists:", !!src);
         if (src) src.setData(geojson);
       })
-      .catch(() => {});
+      .catch((err) => console.error("[FCC] fetch failed:", err));
   }, []);
 
   useEffect(() => {
