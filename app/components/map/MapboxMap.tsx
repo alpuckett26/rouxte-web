@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { Lead, LeadFilters } from "@/lib/types";
 import CaptureLeadModal from "./CaptureLeadModal";
+import QuickLogSheet from "./QuickLogSheet";
 import { useProfile } from "@/lib/hooks/useProfile";
 
 // Status → hex colour used in Mapbox paint expressions
@@ -71,8 +72,23 @@ export default function MapboxMap({
   const [teams, setTeams] = useState<{ id: string; name: string; member_count: number }[]>([]);
   const [bulkAssigning, setBulkAssigning] = useState(false);
   const [bulkTab, setBulkTab] = useState<"lead" | "team" | "rep">("lead");
-  const [dnkWarning, setDnkWarning] = useState<string | null>(null); // address of clicked DNK pin
+  const [dnkWarning, setDnkWarning] = useState<string | null>(null);
   const dnkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Quick-log sheet (Spotio)
+  const [quickLogLead, setQuickLogLead] = useState<Lead | null>(null);
+
+  // Knock counter
+  const [knockCount, setKnockCount] = useState(0);
+
+  // Field mode (Badger)
+  const [fieldMode, setFieldMode] = useState(false);
+
+  // Rep location dots (manager map)
+  interface RepLocation { user_id: string; lat: number; lng: number; full_name: string; initials: string; role: string; updated_at: string; }
+  const [repLocations, setRepLocations] = useState<RepLocation[]>([]);
+  const repMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -119,27 +135,35 @@ export default function MapboxMap({
       });
     });
 
-    // Click on an individual lead marker
+    // Click on an individual lead marker → show QuickLogSheet
     map.on("click", "leads-unclustered", (e) => {
       const feature = e.features?.[0];
       if (!feature) return;
       const id = feature.properties?.id as string;
-      onSelectLead(id);
-
       const coords = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
-      map.easeTo({ center: coords, offset: [150, 0] });
+      map.easeTo({ center: coords, offset: [0, -80] });
+      // Find lead in state and show quick-log sheet
+      setLeads((prev) => {
+        const lead = prev.find((l) => l.id === id);
+        if (lead) setQuickLogLead(lead);
+        return prev;
+      });
     });
 
-    // Click on DNK marker — show warning, still open the lead
+    // Click on DNK marker — warning + quick-log sheet
     map.on("click", "leads-dnk", (e) => {
       const feature = e.features?.[0];
       if (!feature) return;
       const address = feature.properties?.address as string | undefined;
-      // Show DNK warning toast
       setDnkWarning(address ?? "This address");
       if (dnkTimerRef.current) clearTimeout(dnkTimerRef.current);
       dnkTimerRef.current = setTimeout(() => setDnkWarning(null), 5000);
-      onSelectLead(feature.properties?.id as string);
+      const id = feature.properties?.id as string;
+      setLeads((prev) => {
+        const lead = prev.find((l) => l.id === id);
+        if (lead) setQuickLogLead(lead);
+        return prev;
+      });
     });
 
     // Right-click / long-press on empty map → FCC check + capture lead
@@ -215,6 +239,84 @@ export default function MapboxMap({
       .then((r) => r.json())
       .then((d) => setTeams(d.data ?? []));
   }, [isManager]);
+
+  // ── Rep GPS location reporting (reps only) ────────────────────────────────
+  useEffect(() => {
+    if (!mapReady || isManager || !navigator.geolocation) return;
+    function sendLocation() {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        fetch("/api/rep/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+        }).catch(() => {});
+      }, () => {});
+    }
+    sendLocation();
+    locationIntervalRef.current = setInterval(sendLocation, 30_000);
+    return () => {
+      if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    };
+  }, [mapReady, isManager]);
+
+  // ── Manager: poll rep locations + render dots ─────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !isManager) return;
+
+    function fetchRepLocations() {
+      fetch("/api/manager/rep-locations")
+        .then((r) => r.json())
+        .then((d) => setRepLocations(d.data ?? []))
+        .catch(() => {});
+    }
+
+    fetchRepLocations();
+    locationIntervalRef.current = setInterval(fetchRepLocations, 30_000);
+    return () => {
+      if (locationIntervalRef.current) clearInterval(locationIntervalRef.current);
+    };
+  }, [mapReady, isManager]);
+
+  // ── Render rep location markers on map ────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isManager) return;
+
+    const existing = repMarkersRef.current;
+
+    // Remove stale markers
+    existing.forEach((marker, userId) => {
+      if (!repLocations.find((r) => r.user_id === userId)) {
+        marker.remove();
+        existing.delete(userId);
+      }
+    });
+
+    // Add / update markers
+    const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#ef4444"];
+    repLocations.forEach((rep, i) => {
+      const color = COLORS[i % COLORS.length];
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width:32px;height:32px;border-radius:50%;background:${color};
+        display:flex;align-items:center;justify-content:center;
+        color:white;font-weight:700;font-size:11px;font-family:sans-serif;
+        border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.25);
+        cursor:default;
+      `;
+      el.title = rep.full_name;
+      el.textContent = rep.initials;
+
+      if (existing.has(rep.user_id)) {
+        existing.get(rep.user_id)!.setLngLat([rep.lng, rep.lat]);
+      } else {
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([rep.lng, rep.lat])
+          .addTo(map);
+        existing.set(rep.user_id, marker);
+      }
+    });
+  }, [repLocations, isManager]);
 
   // ── Canvas drag-select ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -621,8 +723,36 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Map controls overlay */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+      {/* Knock counter badge (reps, field mode hides other UI) */}
+      {!isManager && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full bg-gray-900/85 backdrop-blur-sm text-white px-4 py-1.5 shadow-lg text-sm font-semibold">
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            {knockCount} knock{knockCount !== 1 ? "s" : ""} today
+          </div>
+          <button
+            onClick={() => setFieldMode((f) => !f)}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold shadow-md transition-colors ${
+              fieldMode
+                ? "bg-blue-600 text-white"
+                : "bg-white/90 backdrop-blur-sm text-gray-700 border border-gray-200"
+            }`}
+          >
+            {fieldMode ? "Exit Field Mode" : "Field Mode"}
+          </button>
+        </div>
+      )}
+
+      {/* Rep location legend (managers only, when reps are active) */}
+      {isManager && repLocations.length > 0 && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 rounded-full bg-gray-900/80 backdrop-blur-sm text-white px-3 py-1.5 shadow-lg text-xs font-medium">
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          {repLocations.length} rep{repLocations.length !== 1 ? "s" : ""} active
+        </div>
+      )}
+
+      {/* Map controls overlay — hidden in field mode */}
+      <div className={`absolute top-3 left-3 z-10 flex flex-col gap-2 transition-opacity ${fieldMode ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
         {/* Draw / Select Area (managers only) */}
         {isManager && (
           <button
@@ -683,8 +813,8 @@ export default function MapboxMap({
         </div>
       </div>
 
-      {/* Bottom hint */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+      {/* Bottom hint — hidden in field mode */}
+      <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 transition-opacity ${fieldMode ? "opacity-0 pointer-events-none" : ""}`}>
         <div className="rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 shadow-sm px-4 py-1.5 text-xs text-gray-500">
           {geocoding
             ? "Looking up address & checking FCC coverage…"
@@ -832,20 +962,43 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Status legend */}
-      <div className="absolute bottom-12 right-3 z-10 hidden md:block">
-        <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
-          <p className="font-semibold mb-1.5 text-gray-900">Lead Status</p>
-          {Object.entries(STATUS_HEX)
-            .filter(([s]) => s !== "closed_lost")
-            .map(([status, hex]) => (
-              <div key={status} className="flex items-center gap-1.5 mb-0.5 capitalize">
-                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: hex }} />
-                {status.replace("_", " ")}
-              </div>
-            ))}
+      {/* Status legend — hidden in field mode */}
+      {!fieldMode && (
+        <div className="absolute bottom-12 right-3 z-10 hidden md:block">
+          <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
+            <p className="font-semibold mb-1.5 text-gray-900">Lead Status</p>
+            {Object.entries(STATUS_HEX)
+              .filter(([s]) => s !== "closed_lost")
+              .map(([status, hex]) => (
+                <div key={status} className="flex items-center gap-1.5 mb-0.5 capitalize">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: hex }} />
+                  {status.replace("_", " ")}
+                </div>
+              ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Quick-log sheet (Spotio-style) */}
+      {quickLogLead && (
+        <QuickLogSheet
+          lead={quickLogLead}
+          onClose={() => setQuickLogLead(null)}
+          onStatusLogged={(newStatus) => {
+            setQuickLogLead(null);
+            setKnockCount((c) => c + 1);
+            // Update lead in state + map
+            setLeads((prev) =>
+              prev.map((l) => l.id === quickLogLead.id ? { ...l, status: newStatus as Lead["status"] } : l)
+            );
+            fetchAndSyncLeads().then(syncLeadsToMap);
+          }}
+          onOpenFull={() => {
+            onSelectLead(quickLogLead.id);
+            setQuickLogLead(null);
+          }}
+        />
+      )}
     </div>
   );
 }
