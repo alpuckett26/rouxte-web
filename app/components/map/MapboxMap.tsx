@@ -460,34 +460,41 @@ export default function MapboxMap({
     map.addSource("fcc-coverage", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
+      cluster: true,
+      clusterMaxZoom: 13,
+      clusterRadius: 25,
     });
 
-    // Heatmap: glows green over AT&T fiber coverage areas
+    // Green cluster bubbles at low zoom
     map.addLayer({
-      id: "fcc-coverage-heat",
-      type: "heatmap",
+      id: "fcc-coverage-cluster",
+      type: "circle",
       source: "fcc-coverage",
+      filter: ["has", "point_count"],
       paint: {
-        "heatmap-weight": 1,
-        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 2, 15, 4],
-        // Large radius so H3 centroids blend into solid coverage areas
-        "heatmap-radius": ["interpolate", ["linear"], ["zoom"],
-          5,  20,
-          8,  35,
-          10, 55,
-          12, 80,
-          14, 120,
-          16, 180,
+        "circle-color": "#22c55e",
+        "circle-opacity": 0.45,
+        "circle-stroke-width": 0,
+        "circle-radius": [
+          "step", ["get", "point_count"],
+          8, 10, 14, 50, 20, 200, 28,
         ],
-        "heatmap-color": [
-          "interpolate", ["linear"], ["heatmap-density"],
-          0,    "rgba(34,197,94,0)",
-          0.05, "rgba(34,197,94,0.4)",
-          0.3,  "rgba(34,197,94,0.65)",
-          0.6,  "rgba(74,222,128,0.8)",
-          1,    "rgba(187,247,208,0.9)",
-        ],
-        "heatmap-opacity": 0.8,
+      },
+    });
+
+    // Individual green dot per fiber address at high zoom
+    map.addLayer({
+      id: "fcc-coverage-dots",
+      type: "circle",
+      source: "fcc-coverage",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": "#22c55e",
+        "circle-radius": 4,
+        "circle-opacity": 0.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "#15803d",
+        "circle-stroke-opacity": 0.9,
       },
     });
 
