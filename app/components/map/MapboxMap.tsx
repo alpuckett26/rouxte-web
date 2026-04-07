@@ -59,6 +59,7 @@ export default function MapboxMap({
   const { profile } = useProfile();
   const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
 
+  const [coverageGeoJSON, setCoverageGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [styleLoaded, setStyleLoaded] = useState(false);
@@ -453,6 +454,7 @@ export default function MapboxMap({
         const src = map.getSource("fcc-coverage") as mapboxgl.GeoJSONSource | undefined;
         console.log("[FCC] source found:", !!src);
         if (src) src.setData(geojson);
+        setCoverageGeoJSON(geojson);
       })
       .catch((err) => console.error("[FCC] coverage fetch error:", err));
   }, []);
@@ -486,6 +488,20 @@ export default function MapboxMap({
         "line-color": "#16a34a",
         "line-width": 1,
         "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 12, 0.5, 15, 0],
+      },
+    });
+
+    // Green fill on building footprints inside fiber zones (street zoom)
+    map.addLayer({
+      id: "fiber-buildings",
+      type: "fill",
+      source: "composite",
+      "source-layer": "building",
+      minzoom: 14,
+      filter: ["within", { type: "FeatureCollection", features: [] }],
+      paint: {
+        "fill-color": "#22c55e",
+        "fill-opacity": 0.5,
       },
     });
 
@@ -645,6 +661,13 @@ export default function MapboxMap({
     if (!styleLoaded) return;
     fetchAndSyncLeads().then(syncLeadsToMap);
   }, [filters, styleLoaded, fetchAndSyncLeads, syncLeadsToMap]);
+
+  // ── Apply fiber coverage to building footprints ───────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleLoaded || !coverageGeoJSON) return;
+    map.setFilter("fiber-buildings", ["within", coverageGeoJSON]);
+  }, [coverageGeoJSON, styleLoaded]);
 
   // ── FCC coverage: initial load + re-fetch on map move ─────────────────────
   useEffect(() => {
