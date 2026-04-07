@@ -1,16 +1,17 @@
 /**
  * Import FCC BDC availability CSV into Supabase fcc_att_locations table.
- * Supports the 2025 FCC format which uses H3 hex cell IDs (no lat/lng in file).
+ *
+ * Supports both FCC BDC formats:
+ *   - 2024/2025 format: includes latitude/longitude columns directly
+ *   - H3 format: uses h3_res8_id cell ID (converted to lat/lng centroid)
+ *
+ * Filters to AT&T fiber (technology code 50 = FTTP) rows only.
  *
  * Usage (run from project root):
  *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts <path-to-csv>
  *
  * Multiple files:
- *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts file1.csv file2.csv
- *
- * Filters to AT&T fiber (technology=50) rows only.
- * Converts h3_res8_id → lat/lng centroid using h3-js.
- * Search radius in fcc_att_available() should be ~400m to account for H3 cell size.
+ *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts LA.csv TX.csv OK.csv
  */
 
 import fs from "fs";
@@ -42,7 +43,10 @@ interface FccRow {
   location_id: string;
   lat: number;
   lng: number;
-  state: string;
+  address_primary: string | null;
+  city: string | null;
+  state_abbr: string;
+  zip: string | null;
   max_down_mbps: number;
   max_up_mbps: number;
 }
@@ -50,25 +54,23 @@ interface FccRow {
 async function upsertBatch(rows: FccRow[]) {
   const records = rows.map((r) => ({
     location_id: r.location_id,
-    geom: `SRID=4326;POINT(${r.lng} ${r.lat})`,
-    state: r.state,
+    lat: r.lat,
+    lng: r.lng,
+    address_primary: r.address_primary,
+    city: r.city,
+    state_abbr: r.state_abbr,
+    zip: r.zip,
     max_down_mbps: r.max_down_mbps,
     max_up_mbps: r.max_up_mbps,
-    tech_code: 50,
+    technology: 50,
   }));
 
-  const { error } = await supabase.rpc("upsert_fcc_locations", { rows: records });
+  const { error } = await supabase
+    .from("fcc_att_locations")
+    .upsert(records, { onConflict: "location_id" });
+
   if (error) {
-    // Fallback: insert one by one via SQL
-    for (const r of rows) {
-      await supabase.from("fcc_att_locations").upsert({
-        geom: `POINT(${r.lng} ${r.lat})`,
-        state: r.state,
-        max_down_mbps: r.max_down_mbps,
-        max_up_mbps: r.max_up_mbps,
-        tech_code: 50,
-      });
-    }
+    console.error("\nBatch error:", error.message);
   }
 }
 
@@ -91,42 +93,61 @@ async function importFile(csvPath: string) {
   let total = 0;
   let skipped = 0;
   let lineNum = 0;
+  let hasLatLng = false;
 
   for await (const line of rl) {
     lineNum++;
+
     if (lineNum === 1) {
       headers = line.split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
-      console.log("Columns:", headers.join(", "));
+      hasLatLng = headers.includes("latitude") && headers.includes("longitude");
+      console.log(`Columns: ${headers.join(", ")}`);
+      console.log(`Format: ${hasLatLng ? "lat/lng direct" : "H3 cell ID"}`);
       continue;
     }
 
-    const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    // Handle quoted CSV fields
+    const cols = parseCsvLine(line);
     const row: Record<string, string> = {};
     headers.forEach((h, i) => { row[h] = cols[i] ?? ""; });
 
     const brand = (row["brand_name"] ?? "").toLowerCase();
     const tech = parseInt(row["technology"] ?? "0", 10);
 
-    // AT&T fiber only (tech 50)
-    if (!brand.includes("at&t") || tech !== 50) { skipped++; continue; }
-
-    const h3Index = row["h3_res8_id"] ?? "";
-    if (!h3Index) { skipped++; continue; }
-
-    // Convert H3 cell centroid → lat/lng
-    let lat: number, lng: number;
-    try {
-      [lat, lng] = cellToLatLng(h3Index);
-    } catch {
+    // AT&T fiber only (tech 50 = FTTP)
+    if ((!brand.includes("at&t") && !brand.includes("att")) || tech !== 50) {
       skipped++;
       continue;
     }
 
+    let lat: number, lng: number;
+
+    if (hasLatLng) {
+      lat = parseFloat(row["latitude"] ?? "");
+      lng = parseFloat(row["longitude"] ?? "");
+      if (isNaN(lat) || isNaN(lng)) { skipped++; continue; }
+    } else {
+      const h3Index = row["h3_res8_id"] ?? "";
+      if (!h3Index) { skipped++; continue; }
+      try {
+        [lat, lng] = cellToLatLng(h3Index);
+      } catch {
+        skipped++;
+        continue;
+      }
+    }
+
+    const locationId = row["location_id"] ?? row["h3_res8_id"] ?? `${lat},${lng}`;
+    if (!locationId) { skipped++; continue; }
+
     batch.push({
-      location_id: row["location_id"] ?? h3Index,
+      location_id: locationId,
       lat,
       lng,
-      state: row["state_usps"] ?? "",
+      address_primary: row["address_primary"] || null,
+      city: row["city"] || null,
+      state_abbr: row["state_usps"] ?? "",
+      zip: row["zip_code"] ?? row["zip"] ?? null,
       max_down_mbps: parseInt(row["max_advertised_download_speed"] ?? "0", 10),
       max_up_mbps: parseInt(row["max_advertised_upload_speed"] ?? "0", 10),
     });
@@ -144,7 +165,28 @@ async function importFile(csvPath: string) {
     total += batch.length;
   }
 
-  console.log(`\n  Done: ${total.toLocaleString()} AT&T fiber cells inserted, ${skipped.toLocaleString()} skipped.`);
+  console.log(`\n  Done: ${total.toLocaleString()} AT&T fiber locations inserted, ${skipped.toLocaleString()} rows skipped.`);
+}
+
+// Parse a CSV line handling quoted fields with commas inside
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
 }
 
 async function main() {

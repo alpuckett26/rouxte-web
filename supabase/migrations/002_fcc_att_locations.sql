@@ -43,7 +43,7 @@ AS $$
     WHERE ST_DWithin(
       geom::geography,
       ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography,
-      100  -- metres
+      400  -- metres — covers H3 res8 cell radius (~460m) + address snapping
     )
   );
 $$;
