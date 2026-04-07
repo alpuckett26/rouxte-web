@@ -438,24 +438,18 @@ export default function MapboxMap({
       data: { type: "FeatureCollection", features: [] },
     });
 
+    // Address-level FCC dots — one circle per location_id from the FCC Fabric dataset.
+    // Radius scales with zoom so dots are visible but don't overlap at lower zooms.
     map.addLayer({
-      id: "fcc-coverage-fill",
-      type: "fill",
+      id: "fcc-coverage-dots",
+      type: "circle",
       source: "fcc-coverage",
       paint: {
-        "fill-color": "#22c55e",
-        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.3, 13, 0.2, 16, 0.12],
-      },
-    });
-
-    map.addLayer({
-      id: "fcc-coverage-outline",
-      type: "line",
-      source: "fcc-coverage",
-      paint: {
-        "line-color": "#16a34a",
-        "line-width": 1,
-        "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 12, 0.5, 15, 0],
+        "circle-color": "#22c55e",
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 14, 6, 17, 10],
+        "circle-opacity": 0.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "#15803d",
       },
     });
 

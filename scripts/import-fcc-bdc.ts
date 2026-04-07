@@ -2,8 +2,11 @@
  * Import FCC BDC availability CSV into Supabase fcc_att_locations table.
  *
  * Supports both FCC BDC formats:
- *   - 2024/2025 format: includes latitude/longitude columns directly
+ *   - 2024/2025 format: includes latitude/longitude columns directly (address-level)
  *   - H3 format: uses h3_res8_id cell ID (converted to lat/lng centroid)
+ *
+ * Prefer the 2024/2025 format — it gives true per-address GPS coordinates
+ * instead of H3 cell centroids that appear as an evenly-spaced grid.
  *
  * Filters to AT&T fiber (technology code 50 = FTTP) rows only.
  *
@@ -12,6 +15,10 @@
  *
  * Multiple files:
  *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts LA.csv TX.csv OK.csv
+ *
+ * To clear old data before re-importing:
+ *   Pass --truncate as the first argument:
+ *   npx dotenv -e .env.local -- npx tsx scripts/import-fcc-bdc.ts --truncate LA.csv
  */
 
 import fs from "fs";
@@ -29,9 +36,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const csvFiles = process.argv.slice(2);
+const args = process.argv.slice(2);
+const truncateFirst = args[0] === "--truncate";
+const csvFiles = truncateFirst ? args.slice(1) : args;
+
 if (!csvFiles.length) {
-  console.error("Usage: npx tsx scripts/import-fcc-bdc.ts <csv> [csv2] ...");
+  console.error("Usage: npx tsx scripts/import-fcc-bdc.ts [--truncate] <csv> [csv2] ...");
   process.exit(1);
 }
 
@@ -43,19 +53,21 @@ interface FccRow {
   location_id: string;
   lat: number;
   lng: number;
-  state: string;
+  state_abbr: string;
   max_down_mbps: number;
   max_up_mbps: number;
 }
 
 async function upsertBatch(rows: FccRow[]) {
+  // Insert lat + lng directly — geom is a GENERATED ALWAYS column (derived automatically)
   const records = rows.map((r) => ({
-    location_id: r.location_id,
-    geom: `SRID=4326;POINT(${r.lng} ${r.lat})`,
-    state: r.state,
-    tech_code: 50,
+    location_id:   r.location_id,
+    lat:           r.lat,
+    lng:           r.lng,
+    state_abbr:    r.state_abbr,
+    technology:    50,  // FTTP
     max_down_mbps: r.max_down_mbps,
-    max_up_mbps: r.max_up_mbps,
+    max_up_mbps:   r.max_up_mbps,
   }));
 
   const { error } = await supabase
@@ -68,7 +80,6 @@ async function upsertBatch(rows: FccRow[]) {
   }
   return true;
 }
-
 
 async function importFile(csvPath: string) {
   const absolutePath = path.resolve(csvPath);
@@ -98,11 +109,15 @@ async function importFile(csvPath: string) {
       headers = line.split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
       hasLatLng = headers.includes("latitude") && headers.includes("longitude");
       console.log(`Columns: ${headers.join(", ")}`);
-      console.log(`Format: ${hasLatLng ? "lat/lng direct" : "H3 cell ID"}`);
+      console.log(`Format: ${hasLatLng ? "lat/lng direct (address-level)" : "H3 cell ID (centroid — not per-address)"}`);
+      if (!hasLatLng) {
+        console.warn("  ⚠️  This CSV uses H3 centroids, not individual address coordinates.");
+        console.warn("     Dots will appear as an evenly-spaced grid. Use a 2023+ FCC BDC");
+        console.warn("     CSV with latitude/longitude columns for true per-address coverage.");
+      }
       continue;
     }
 
-    // Handle quoted CSV fields
     const cols = parseCsvLine(line);
     const row: Record<string, string> = {};
     headers.forEach((h, i) => { row[h] = cols[i] ?? ""; });
@@ -137,12 +152,12 @@ async function importFile(csvPath: string) {
     if (!locationId) { skipped++; continue; }
 
     batch.push({
-      location_id: locationId,
+      location_id:   locationId,
       lat,
       lng,
-      state: row["state_usps"] ?? "",
+      state_abbr:    row["state_usps"] ?? "",
       max_down_mbps: parseInt(row["max_advertised_download_speed"] ?? "0", 10),
-      max_up_mbps: parseInt(row["max_advertised_upload_speed"] ?? "0", 10),
+      max_up_mbps:   parseInt(row["max_advertised_upload_speed"] ?? "0", 10),
     });
 
     if (batch.length >= BATCH_SIZE) {
@@ -161,7 +176,6 @@ async function importFile(csvPath: string) {
   console.log(`\n  Done: ${total.toLocaleString()} AT&T fiber locations inserted, ${skipped.toLocaleString()} rows skipped.`);
 }
 
-// Parse a CSV line handling quoted fields with commas inside
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];
   let current = "";
@@ -183,6 +197,17 @@ function parseCsvLine(line: string): string[] {
 }
 
 async function main() {
+  if (truncateFirst) {
+    console.log("Truncating fcc_att_locations…");
+    const { error } = await supabase.rpc("truncate_fcc_locations");
+    if (error) {
+      // Fallback: delete all rows (slower but works without the helper RPC)
+      const { error: delErr } = await supabase.from("fcc_att_locations").delete().neq("location_id", "");
+      if (delErr) { console.error("Clear failed:", delErr.message); process.exit(1); }
+    }
+    console.log("Cleared.\n");
+  }
+
   for (const f of csvFiles) {
     await importFile(f);
   }
