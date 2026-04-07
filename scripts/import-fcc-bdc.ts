@@ -43,10 +43,7 @@ interface FccRow {
   location_id: string;
   lat: number;
   lng: number;
-  address_primary: string | null;
-  city: string | null;
-  state_abbr: string;
-  zip: string | null;
+  state: string;
   max_down_mbps: number;
   max_up_mbps: number;
 }
@@ -54,25 +51,24 @@ interface FccRow {
 async function upsertBatch(rows: FccRow[]) {
   const records = rows.map((r) => ({
     location_id: r.location_id,
-    lat: r.lat,
-    lng: r.lng,
-    address_primary: r.address_primary,
-    city: r.city,
-    state_abbr: r.state_abbr,
-    zip: r.zip,
+    geom: `SRID=4326;POINT(${r.lng} ${r.lat})`,
+    state: r.state,
+    tech_code: 50,
     max_down_mbps: r.max_down_mbps,
     max_up_mbps: r.max_up_mbps,
-    technology: 50,
   }));
 
   const { error } = await supabase
     .from("fcc_att_locations")
-    .upsert(records, { onConflict: "location_id" });
+    .upsert(records, { ignoreDuplicates: true, onConflict: "location_id" });
 
   if (error) {
     console.error("\nBatch error:", error.message);
+    return false;
   }
+  return true;
 }
+
 
 async function importFile(csvPath: string) {
   const absolutePath = path.resolve(csvPath);
@@ -144,25 +140,22 @@ async function importFile(csvPath: string) {
       location_id: locationId,
       lat,
       lng,
-      address_primary: row["address_primary"] || null,
-      city: row["city"] || null,
-      state_abbr: row["state_usps"] ?? "",
-      zip: row["zip_code"] ?? row["zip"] ?? null,
+      state: row["state_usps"] ?? "",
       max_down_mbps: parseInt(row["max_advertised_download_speed"] ?? "0", 10),
       max_up_mbps: parseInt(row["max_advertised_upload_speed"] ?? "0", 10),
     });
 
     if (batch.length >= BATCH_SIZE) {
-      await upsertBatch(batch);
-      total += batch.length;
+      const ok = await upsertBatch(batch);
+      if (ok) total += batch.length;
       batch = [];
       process.stdout.write(`\r  ${total.toLocaleString()} inserted, ${skipped.toLocaleString()} skipped…`);
     }
   }
 
   if (batch.length > 0) {
-    await upsertBatch(batch);
-    total += batch.length;
+    const ok = await upsertBatch(batch);
+    if (ok) total += batch.length;
   }
 
   console.log(`\n  Done: ${total.toLocaleString()} AT&T fiber locations inserted, ${skipped.toLocaleString()} rows skipped.`);
