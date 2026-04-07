@@ -71,6 +71,8 @@ export default function MapboxMap({
   const [teams, setTeams] = useState<{ id: string; name: string; member_count: number }[]>([]);
   const [bulkAssigning, setBulkAssigning] = useState(false);
   const [bulkTab, setBulkTab] = useState<"lead" | "team" | "rep">("lead");
+  const [dnkWarning, setDnkWarning] = useState<string | null>(null); // address of clicked DNK pin
+  const dnkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -128,10 +130,15 @@ export default function MapboxMap({
       map.easeTo({ center: coords, offset: [150, 0] });
     });
 
-    // Click on DNK marker
+    // Click on DNK marker — show warning, still open the lead
     map.on("click", "leads-dnk", (e) => {
       const feature = e.features?.[0];
       if (!feature) return;
+      const address = feature.properties?.address as string | undefined;
+      // Show DNK warning toast
+      setDnkWarning(address ?? "This address");
+      if (dnkTimerRef.current) clearTimeout(dnkTimerRef.current);
+      dnkTimerRef.current = setTimeout(() => setDnkWarning(null), 5000);
       onSelectLead(feature.properties?.id as string);
     });
 
@@ -601,6 +608,17 @@ export default function MapboxMap({
           width={containerRef.current?.clientWidth ?? 800}
           height={containerRef.current?.clientHeight ?? 600}
         />
+      )}
+
+      {/* DNK Warning Toast */}
+      {dnkWarning && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-2xl bg-red-600 text-white px-4 py-2.5 shadow-lg text-sm font-medium max-w-xs text-center">
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+          <span>Do Not Knock — {dnkWarning}</span>
+          <button onClick={() => setDnkWarning(null)} className="ml-1 opacity-70 hover:opacity-100">✕</button>
+        </div>
       )}
 
       {/* Map controls overlay */}

@@ -7,8 +7,10 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import SalesQueue from "@/components/manager/SalesQueue";
 
 export default function ManagerQueue() {
+  const [queueTab, setQueueTab] = useState<"incidents" | "sales">("incidents");
   const [incidents, setIncidents] = useState<SalesActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SalesActivityLog | null>(null);
@@ -49,6 +51,30 @@ export default function ManagerQueue() {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Top-level tab switcher */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setQueueTab("incidents")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            queueTab === "incidents" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Incidents
+        </button>
+        <button
+          onClick={() => setQueueTab("sales")}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            queueTab === "sales" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Sales
+        </button>
+      </div>
+
+      {queueTab === "sales" ? (
+        <SalesQueue />
+      ) : (
+      <>
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Manager Review Queue</h1>
         <p className="text-sm text-gray-500">Incidents and exceptions requiring acknowledgement</p>
@@ -193,6 +219,8 @@ export default function ManagerQueue() {
           </div>
         )}
       </Modal>
+      </>
+      )}
     </div>
   );
 }

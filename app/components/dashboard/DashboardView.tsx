@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { RepStats } from "@/lib/types";
 import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 import GoalProgressWidget from "@/components/dashboard/GoalProgressWidget";
 import { useProfile } from "@/lib/hooks/useProfile";
+import { LOG_EVENT_LABELS } from "@/lib/utils/logs";
 
 interface DashData {
   rep_stats: RepStats;
@@ -163,6 +165,9 @@ export default function DashboardView() {
         </div>
       )}
 
+      {/* Rep submitted sales status */}
+      {!isElevated && <RepSalesWidget />}
+
       {/* Quick actions — role-aware */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card padding="md">
@@ -233,6 +238,120 @@ export default function DashboardView() {
           </Card>
         )}
       </div>
+    </div>
+  );
+}
+
+interface SaleEntry {
+  id: string;
+  created_at: string;
+  lead_address: string | null;
+  customer_name: string | null;
+  metadata: Record<string, unknown>;
+  status: "pending" | "verified" | "rejected";
+  signoff_note: string | null;
+}
+
+interface ActivityEntry {
+  id: string;
+  event_type: string;
+  summary: string;
+  created_at: string;
+}
+
+function RepSalesWidget() {
+  const [sales, setSales] = useState<SaleEntry[]>([]);
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [tab, setTab] = useState<"sales" | "activity">("sales");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/rep/sales")
+      .then((r) => r.json())
+      .then((d) => { setSales(d.sales ?? []); setActivity(d.activity ?? []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const pending = sales.filter((s) => s.status === "pending");
+  const verified = sales.filter((s) => s.status === "verified");
+  const rejected = sales.filter((s) => s.status === "rejected");
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Summary pills */}
+      <div className="flex items-center gap-3">
+        <div className="flex gap-2">
+          <span className="rounded-full bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5">{pending.length} Pending</span>
+          <span className="rounded-full bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5">{verified.length} Verified</span>
+          {rejected.length > 0 && (
+            <span className="rounded-full bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5">{rejected.length} Rejected</span>
+          )}
+        </div>
+      </div>
+
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        <button onClick={() => setTab("sales")} className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${tab === "sales" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>My Sales</button>
+        <button onClick={() => setTab("activity")} className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${tab === "activity" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>Activity</button>
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {[1, 2].map((i) => <div key={i} className="h-16 rounded-xl bg-gray-100 animate-pulse" />)}
+        </div>
+      ) : tab === "sales" ? (
+        sales.length === 0 ? (
+          <Card padding="md">
+            <p className="text-sm text-gray-500 text-center py-4">No submitted sales yet</p>
+          </Card>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {sales.map((s) => (
+              <Card key={s.id} padding="sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {s.lead_address && <p className="text-sm font-medium text-gray-800 truncate">{s.lead_address}</p>}
+                    {s.customer_name && <p className="text-xs text-gray-500">{s.customer_name}</p>}
+                    {typeof s.metadata?.package === "string" && (
+                      <p className="text-xs text-gray-400 mt-0.5">{s.metadata.package}</p>
+                    )}
+                    {s.signoff_note && (
+                      <p className="text-xs text-gray-500 italic mt-1">"{s.signoff_note}"</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Badge
+                      label={s.status === "verified" ? "Verified" : s.status === "rejected" ? "Rejected" : "Pending"}
+                      color={s.status === "verified" ? "green" : s.status === "rejected" ? "red" : "yellow"}
+                    />
+                    <span className="text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      ) : (
+        activity.length === 0 ? (
+          <Card padding="md">
+            <p className="text-sm text-gray-500 text-center py-4">No recent activity</p>
+          </Card>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {activity.map((a) => (
+              <div key={a.id} className="flex items-start gap-3 rounded-xl px-3 py-2 hover:bg-gray-50">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-700">{a.summary}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {LOG_EVENT_LABELS[a.event_type as keyof typeof LOG_EVENT_LABELS] ?? a.event_type} · {new Date(a.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }
