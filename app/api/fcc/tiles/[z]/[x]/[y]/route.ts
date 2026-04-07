@@ -14,14 +14,30 @@ export async function GET(
     y: parseInt(y),
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[MVT] error:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-  // Empty tile
+  // Empty tile (no features in this tile)
   if (!data) return new Response(null, { status: 204 });
 
-  // data is a hex string from Supabase — decode to binary
-  const hex = typeof data === "string" ? data : Buffer.from(data).toString("hex");
-  const buf = Buffer.from(hex.replace(/^\\x/, ""), "hex");
+  console.log("[MVT] tile", z, x, y, "data type:", typeof data, "length:", String(data).length);
+
+  // Supabase returns bytea as a base64 string via PostgREST
+  let buf: Buffer;
+  if (typeof data === "string") {
+    // Could be base64 or \x-prefixed hex
+    if (data.startsWith("\\x") || data.startsWith("\x")) {
+      buf = Buffer.from(data.replace(/^\\x/, ""), "hex");
+    } else {
+      buf = Buffer.from(data, "base64");
+    }
+  } else {
+    buf = Buffer.from(data);
+  }
+
+  if (buf.length === 0) return new Response(null, { status: 204 });
 
   return new Response(buf, {
     headers: {
