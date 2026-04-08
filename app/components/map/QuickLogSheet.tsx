@@ -19,33 +19,12 @@ const DISPOSITIONS = [
   { status: "sold",            label: "SOLD",              color: "bg-green-100 text-green-700 border-green-200",     dot: "bg-green-500" },
 ];
 
-// Web Speech API types
-interface SpeechRecognitionEvent extends Event {
-  results: { [key: number]: { [key: number]: { transcript: string } } };
-}
-interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((e: SpeechRecognitionEvent) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => SpeechRecognitionInstance;
-    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-  }
-}
 
 export default function QuickLogSheet({ lead, onClose, onStatusLogged, onOpenFull }: Props) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState<string | null>(null); // status being saved
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const hasSpeech = typeof window !== "undefined" &&

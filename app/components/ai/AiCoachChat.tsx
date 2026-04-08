@@ -20,27 +20,6 @@ interface Props {
   compact?: boolean;
 }
 
-// Web Speech API types
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((e: SpeechRecognitionEvent) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-}
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => SpeechRecognitionInstance;
-    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-  }
-}
 
 const SCENARIOS = [
   { label: "Price objection",   prompt: "They said the price is too high. Give me the exact words to say." },
@@ -71,7 +50,7 @@ export default function AiCoachChat({ leadContext, compact = false }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Detect browser capabilities
