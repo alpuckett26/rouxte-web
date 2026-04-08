@@ -99,12 +99,41 @@ export default function MapboxMap({
 
     mapboxgl.accessToken = token;
 
+    // Restore last position, otherwise geolocate, otherwise fall back to center-US
+    const saved = (() => {
+      try {
+        const raw = localStorage.getItem("map_position");
+        if (raw) return JSON.parse(raw) as { lng: number; lat: number; zoom: number };
+      } catch { /* ignore */ }
+      return null;
+    })();
+
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
-      center: [-97.7431, 30.2672], // Austin TX default; will geolocate
-      zoom: 12,
+      center: saved ? [saved.lng, saved.lat] : [-97.0, 38.5],
+      zoom: saved ? saved.zoom : 4,
       attributionControl: false,
+    });
+
+    // If no saved position, geolocate on first load
+    if (!saved) {
+      map.once("load", () => {
+        navigator.geolocation?.getCurrentPosition(
+          ({ coords }) => {
+            map.flyTo({ center: [coords.longitude, coords.latitude], zoom: 13, duration: 1200 });
+          },
+          () => { /* permission denied — stay at default */ }
+        );
+      });
+    }
+
+    // Save position on every pan/zoom so we restore correctly next visit
+    map.on("moveend", () => {
+      const { lng, lat } = map.getCenter();
+      try {
+        localStorage.setItem("map_position", JSON.stringify({ lng, lat, zoom: map.getZoom() }));
+      } catch { /* ignore quota errors */ }
     });
 
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
