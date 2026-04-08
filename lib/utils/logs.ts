@@ -2,6 +2,7 @@ import { LogEventType } from "@/lib/types";
 
 export const LOG_EVENT_LABELS: Record<LogEventType, string> = {
   // Sales / CRM
+  door_knock: "Door Knocked",
   lead_assigned: "Lead Assigned",
   lead_unassigned: "Lead Unassigned",
   status_changed: "Status Changed",

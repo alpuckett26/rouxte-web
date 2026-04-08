@@ -14,8 +14,8 @@ export async function GET() {
 
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
 
-  // Rep stats: derive from lead statuses + log counts
-  const [leadsRes, incidentRes] = await Promise.all([
+  // Rep stats: derive from lead statuses + actual knock log
+  const [leadsRes, knockRes] = await Promise.all([
     supabase
       .from("leads")
       .select("status")
@@ -23,8 +23,8 @@ export async function GET() {
     supabase
       .from("sales_activity_log")
       .select("id", { count: "exact", head: true })
-      .eq("is_incident", true)
-      .is("signoffs", null), // rough "no signoff" check
+      .eq("actor_id", user.id)
+      .eq("event_type", "door_knock"),
   ]);
 
   const leads = leadsRes.data ?? [];
@@ -33,7 +33,7 @@ export async function GET() {
     ["appointment_set", "sold", "installed"].includes(l.status)
   ).length;
   const sales = leads.filter((l) => ["sold", "installed"].includes(l.status)).length;
-  const doors_knocked = leads.length;
+  const doors_knocked = knockRes.count ?? leads.length;
   const conversion_pct = doors_knocked > 0 ? (sales / doors_knocked) * 100 : 0;
 
   const rep_stats = {

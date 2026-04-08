@@ -23,6 +23,7 @@ export type PaymentMethod = "card" | "cashapp" | "paypal" | "invoice" | "company
 
 export type LogEventType =
   // Sales / CRM
+  | "door_knock"
   | "lead_assigned"
   | "lead_unassigned"
   | "status_changed"

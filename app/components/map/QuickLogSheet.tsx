@@ -94,6 +94,18 @@ export default function QuickLogSheet({ lead, onClose, onStatusLogged, onOpenFul
         body: JSON.stringify({ status }),
       });
 
+      // Log a door_knock event for every disposition tap
+      await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_type: "door_knock",
+          lead_id: lead.id,
+          summary: `Knocked — ${lead.address}`,
+          metadata: { disposition: status },
+        }),
+      });
+
       // Save note if any
       if (note.trim()) {
         await fetch(`/api/leads/${lead.id}/note`, {

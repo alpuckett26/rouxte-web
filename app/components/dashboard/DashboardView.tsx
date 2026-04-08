@@ -6,6 +6,7 @@ import { RepStats } from "@/lib/types";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import GoalProgressWidget from "@/components/dashboard/GoalProgressWidget";
+import KnockHistoryWidget from "@/components/dashboard/KnockHistoryWidget";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { LOG_EVENT_LABELS } from "@/lib/utils/logs";
 
@@ -164,6 +165,9 @@ export default function DashboardView() {
           </Card>
         </div>
       )}
+
+      {/* Knock history chart — reps and team leads */}
+      {(role === "sales_rep" || role === "team_lead") && <KnockHistoryWidget />}
 
       {/* Rep submitted sales status */}
       {!isElevated && <RepSalesWidget />}
