@@ -78,8 +78,11 @@ export default function MapboxMap({
   // Quick-log sheet (Spotio)
   const [quickLogLead, setQuickLogLead] = useState<Lead | null>(null);
 
-  // Knock counter
-  const [knockCount, setKnockCount] = useState(0);
+  // Knock counter — persisted in localStorage keyed by user + calendar date
+  const knockKey = `knock_${profile?.user_id ?? "anon"}_${new Date().toDateString()}`;
+  const [knockCount, setKnockCount] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem(knockKey) ?? "0", 10) || 0; } catch { return 0; }
+  });
 
   // Field mode (Badger)
   const [fieldMode, setFieldMode] = useState(false);
@@ -849,7 +852,9 @@ export default function MapboxMap({
       )}
 
       {/* Knock counter badge (reps, field mode hides other UI) */}
-      {!isManager && (
+      {/* Show knock counter for reps — only hide once profile confirms an elevated role,
+          preventing the flicker where !isManager is briefly true while profile loads */}
+      {profile?.role !== "admin" && profile?.role !== "sales_manager" && profile?.role !== "team_lead" && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-full bg-gray-900/85 backdrop-blur-sm text-white px-4 py-1.5 shadow-lg text-sm font-semibold">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -1135,7 +1140,11 @@ export default function MapboxMap({
           onClose={() => setQuickLogLead(null)}
           onStatusLogged={(newStatus) => {
             setQuickLogLead(null);
-            setKnockCount((c) => c + 1);
+            setKnockCount((c) => {
+              const next = c + 1;
+              try { localStorage.setItem(knockKey, String(next)); } catch { /* ignore */ }
+              return next;
+            });
             // Update lead in state + map
             setLeads((prev) =>
               prev.map((l) => l.id === quickLogLead.id ? { ...l, status: newStatus as Lead["status"] } : l)
