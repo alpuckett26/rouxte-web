@@ -78,10 +78,11 @@ export default function MapboxMap({
   // Quick-log sheet (Spotio)
   const [quickLogLead, setQuickLogLead] = useState<Lead | null>(null);
 
-  // Knock counter — persisted in localStorage keyed by user + calendar date
-  const knockKey = `knock_${profile?.user_id ?? "anon"}_${new Date().toDateString()}`;
+  // Knock counter — persisted in localStorage per calendar day
+  // Key is stable (no user-id dependency) so the initial read is always correct.
+  const knockKey = `knock_${new Date().toDateString()}`;
   const [knockCount, setKnockCount] = useState<number>(() => {
-    try { return parseInt(localStorage.getItem(knockKey) ?? "0", 10) || 0; } catch { return 0; }
+    try { return parseInt(localStorage.getItem(`knock_${new Date().toDateString()}`) ?? "0", 10) || 0; } catch { return 0; }
   });
 
   // Field mode (Badger)
@@ -133,8 +134,10 @@ export default function MapboxMap({
       });
     }
 
-    // Save position on every pan/zoom so we restore correctly next visit
-    map.on("moveend", () => {
+    // Save position only on user-initiated moves (not geolocation flyTo).
+    // Mapbox sets e.originalEvent when the move came from user input.
+    map.on("moveend", (e) => {
+      if (!(e as { originalEvent?: unknown }).originalEvent) return; // programmatic move — skip
       const { lng, lat } = map.getCenter();
       try {
         localStorage.setItem("map_position", JSON.stringify({ lng, lat, zoom: map.getZoom() }));
@@ -851,25 +854,11 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Knock counter badge (reps, field mode hides other UI) */}
-      {/* Show knock counter for reps — only hide once profile confirms an elevated role,
-          preventing the flicker where !isManager is briefly true while profile loads */}
-      {profile?.role !== "admin" && profile?.role !== "sales_manager" && profile?.role !== "team_lead" && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full bg-gray-900/85 backdrop-blur-sm text-white px-4 py-1.5 shadow-lg text-sm font-semibold">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            {knockCount} knock{knockCount !== 1 ? "s" : ""} today
-          </div>
-          <button
-            onClick={() => setFieldMode((f) => !f)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold shadow-md transition-colors ${
-              fieldMode
-                ? "bg-blue-600 text-white"
-                : "bg-white/90 backdrop-blur-sm text-gray-700 border border-gray-200"
-            }`}
-          >
-            {fieldMode ? "Exit Field Mode" : "Field Mode"}
-          </button>
+      {/* Knock counter — bottom-left, subtle pill, reps only */}
+      {profile?.role === "sales_rep" && (
+        <div className="absolute bottom-4 left-3 z-20 flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-sm text-white/90 px-3 py-1 text-xs font-medium shadow pointer-events-none select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+          {knockCount} knock{knockCount !== 1 ? "s" : ""}
         </div>
       )}
 
@@ -906,6 +895,25 @@ export default function MapboxMap({
             </svg>
           </button>
         </form>
+
+        {/* Field mode toggle (reps only) */}
+        {profile?.role === "sales_rep" && (
+          <button
+            onClick={() => setFieldMode((f) => !f)}
+            className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
+              fieldMode
+                ? "bg-blue-600 border-blue-700 text-white hover:bg-blue-700"
+                : "bg-white/90 border-gray-200 text-gray-700 hover:bg-white"
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {fieldMode ? "Exit Field" : "Field Mode"}
+          </button>
+        )}
 
         {/* Draw / Select Area (managers only) */}
         {isManager && (
