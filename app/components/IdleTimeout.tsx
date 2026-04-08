@@ -69,7 +69,7 @@ export default function IdleTimeout() {
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) {
         // Page was restored from bfcache after logout — force reload so middleware fires
-        supabase.auth.getUser().then(({ data }) => {
+        supabase.auth.getUser().then(({ data }: { data: { user: unknown } }) => {
           if (!data.user) window.location.replace("/auth");
         });
       }
