@@ -432,24 +432,30 @@ export default function MapboxMap({
 
   // ── Add GeoJSON layers ─────────────────────────────────────────────────────
   function addLeadsLayer(map: mapboxgl.Map) {
-    // ── FCC AT&T coverage — GeoJSON hex polygons ─────────────────────────────
+    // ── FCC AT&T coverage — census block polygons ─────────────────────────────
     map.addSource("fcc-coverage", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
     });
 
-    // Address-level FCC dots — one circle per location_id from the FCC Fabric dataset.
-    // Radius scales with zoom so dots are visible but don't overlap at lower zooms.
     map.addLayer({
-      id: "fcc-coverage-dots",
-      type: "circle",
+      id: "fcc-coverage-fill",
+      type: "fill",
       source: "fcc-coverage",
       paint: {
-        "circle-color": "#22c55e",
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 14, 6, 17, 10],
-        "circle-opacity": 0.75,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": "#15803d",
+        "fill-color": "#22c55e",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 13, 0.15, 16, 0.08],
+      },
+    });
+
+    map.addLayer({
+      id: "fcc-coverage-outline",
+      type: "line",
+      source: "fcc-coverage",
+      paint: {
+        "line-color": "#16a34a",
+        "line-width": 1,
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 11, 0.6, 15, 0.3],
       },
     });
 
@@ -561,8 +567,8 @@ export default function MapboxMap({
   const coverageFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchCoverage = useCallback((map: mapboxgl.Map) => {
-    // Only fetch at zoom >= 11 — wider viewports hit too many of 6.4M rows
-    if (map.getZoom() < 11) return;
+    // Census block polygons are large — only fetch at zoom >= 10
+    if (map.getZoom() < 10) return;
     const bounds = map.getBounds();
     if (!bounds) return;
     const params = new URLSearchParams({
@@ -571,19 +577,16 @@ export default function MapboxMap({
       east:  String(bounds.getEast()),
       west:  String(bounds.getWest()),
     });
-    fetch(`/api/fcc/coverage?${params}`)
+    fetch(`/api/fcc/blocks?${params}`)
       .then(async (r) => {
-        const text = await r.text();
-        console.log("[FCC] status:", r.status, "body:", text.slice(0, 300));
         let geojson;
-        try { geojson = JSON.parse(text); } catch (e) { console.error("[FCC] invalid JSON", e); return; }
-        if (geojson.error) { console.error("[FCC] API error:", geojson.error); return; }
-        if (!geojson.type || !Array.isArray(geojson.features)) { console.error("[FCC] bad shape:", geojson); return; }
-        console.log("[FCC]", geojson.features.length, "hexes");
+        try { geojson = await r.json(); } catch (e) { console.error("[FCC blocks] invalid JSON", e); return; }
+        if (geojson.error) { console.error("[FCC blocks] API error:", geojson.error); return; }
+        if (!geojson.type || !Array.isArray(geojson.features)) { console.error("[FCC blocks] bad shape:", geojson); return; }
         const m = mapRef.current;
         if (!m) return;
         const src = m.getSource("fcc-coverage") as mapboxgl.GeoJSONSource | undefined;
-        if (!src) { console.error("[FCC] source not found"); return; }
+        if (!src) { console.error("[FCC blocks] source not found"); return; }
         src.setData(geojson);
       })
       .catch((err) => console.error("[FCC] fetch error:", err));
