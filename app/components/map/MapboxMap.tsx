@@ -134,10 +134,8 @@ export default function MapboxMap({
       });
     }
 
-    // Save position only on user-initiated moves (not geolocation flyTo).
-    // Mapbox sets e.originalEvent when the move came from user input.
-    map.on("moveend", (e) => {
-      if (!(e as { originalEvent?: unknown }).originalEvent) return; // programmatic move — skip
+    // Save position on every move (geolocation, user pan/zoom, ZIP jump — all count).
+    map.on("moveend", () => {
       const { lng, lat } = map.getCenter();
       try {
         localStorage.setItem("map_position", JSON.stringify({ lng, lat, zoom: map.getZoom() }));
@@ -854,8 +852,8 @@ export default function MapboxMap({
         </div>
       )}
 
-      {/* Knock counter — bottom-left, subtle pill, reps only */}
-      {profile?.role === "sales_rep" && (
+      {/* Knock counter — bottom-left, subtle pill. Hidden only for pure managers (sales_manager). */}
+      {profile?.role !== "sales_manager" && (
         <div className="absolute bottom-4 left-3 z-20 flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-sm text-white/90 px-3 py-1 text-xs font-medium shadow pointer-events-none select-none">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
           {knockCount} knock{knockCount !== 1 ? "s" : ""}
@@ -868,6 +866,19 @@ export default function MapboxMap({
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           {repLocations.length} rep{repLocations.length !== 1 ? "s" : ""} active
         </div>
+      )}
+
+      {/* Field mode exit button — always visible when field mode is on */}
+      {fieldMode && (
+        <button
+          onClick={() => setFieldMode(false)}
+          className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-xl bg-blue-600 border border-blue-700 text-white shadow-sm px-3 py-1.5 text-xs font-medium"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Exit Field Mode
+        </button>
       )}
 
       {/* Map controls overlay — hidden in field mode */}
@@ -896,22 +907,18 @@ export default function MapboxMap({
           </button>
         </form>
 
-        {/* Field mode toggle (reps only) */}
-        {profile?.role === "sales_rep" && (
+        {/* Field mode toggle — shown when NOT in field mode */}
+        {profile?.role !== "sales_manager" && (
           <button
-            onClick={() => setFieldMode((f) => !f)}
-            className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
-              fieldMode
-                ? "bg-blue-600 border-blue-700 text-white hover:bg-blue-700"
-                : "bg-white/90 border-gray-200 text-gray-700 hover:bg-white"
-            }`}
+            onClick={() => setFieldMode(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-white transition-colors"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            {fieldMode ? "Exit Field" : "Field Mode"}
+            Field Mode
           </button>
         )}
 
