@@ -33,12 +33,19 @@ export async function updateSession(request: NextRequest) {
   const isPublicPath =
     pathname.startsWith("/auth") ||
     pathname.startsWith("/o/") ||
+    pathname.startsWith("/optout") ||
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/offline") ||
+    pathname.startsWith("/api/") ||
     pathname === "/";
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth";
-    return NextResponse.redirect(url);
+    const redirect = NextResponse.redirect(url);
+    // Prevent browser from caching the redirect so back-button can't restore protected pages
+    redirect.headers.set("Cache-Control", "no-store");
+    return redirect;
   }
 
   return supabaseResponse;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { UserRole } from "@/lib/types";
+import IdleTimeout from "./IdleTimeout";
 
 interface NavItem {
   href: string;
@@ -175,6 +176,7 @@ export default function AppShell({
     // This gives the map a precise height without overflow or fixed nav overlap
     return (
       <div className="h-dvh flex flex-col bg-gray-50 overflow-hidden">
+        <IdleTimeout />
         {header}
         <main className="flex-1 min-h-0 relative z-10 md:mx-auto md:w-full md:max-w-6xl md:px-4 md:py-6">
           {children}
@@ -186,6 +188,7 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <IdleTimeout />
       {header}
       {/* pb-16 md:pb-0 keeps content above the fixed mobile nav */}
       <main className="relative z-10 mx-auto max-w-6xl px-4 py-6 pb-20 md:pb-6">
