@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const leadIds: string[] = body.lead_ids ?? [];
+  const leadIds: string[] = [...new Set<string>(body.lead_ids ?? [])];
   const assignTo: string | null | undefined = body.assign_to;
   const teamId: string | undefined = body.team_id;
 
@@ -88,10 +88,11 @@ export async function POST(request: NextRequest) {
     }
 
     for (const [repId, ids] of Object.entries(byRep)) {
-      await admin
+      const { error: updateErr } = await admin
         .from("leads")
         .update({ assigned_to: repId, updated_at: new Date().toISOString() })
         .in("id", ids);
+      if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
     // Activity log

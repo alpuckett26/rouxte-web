@@ -22,8 +22,6 @@ export async function GET(
   // Empty tile (no features in this tile)
   if (!data) return new Response(null, { status: 204 });
 
-  console.log("[MVT] tile", z, x, y, "data type:", typeof data, "length:", String(data).length);
-
   // Supabase returns bytea as a base64 string via PostgREST
   let buf: Buffer;
   if (typeof data === "string") {

@@ -32,27 +32,37 @@ export default function LeadLogTab({ leadId, logs, onLogAdded }: Props) {
   const [eventType, setEventType] = useState<LogEventType>("note_added");
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   async function addEntry() {
     if (!summary.trim()) return;
     setSaving(true);
-    const res = await fetch("/api/logs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lead_id: leadId,
-        event_type: eventType,
-        summary,
-        is_incident: isIncident(eventType),
-      }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      onLogAdded(d.data);
-      setSummary("");
-      setModalOpen(false);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: leadId,
+          event_type: eventType,
+          summary,
+          is_incident: isIncident(eventType),
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        onLogAdded(d.data);
+        setSummary("");
+        setModalOpen(false);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setSaveError(d.error ?? "Failed to save entry. Try again.");
+      }
+    } catch {
+      setSaveError("Network error. Check your connection.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   return (
@@ -150,6 +160,11 @@ export default function LeadLogTab({ leadId, logs, onLogAdded }: Props) {
             <div className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
               This will be marked as an incident requiring manager review.
             </div>
+          )}
+          {saveError && (
+            <p className="text-sm text-red-600 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+              {saveError}
+            </p>
           )}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>

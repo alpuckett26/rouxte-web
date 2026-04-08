@@ -36,7 +36,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   const body = await request.json();
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (body.role !== undefined) updates.role = body.role;
+
+  if (body.role !== undefined) {
+    const allowedRoles = ["sales_rep", "team_lead", "sales_manager"];
+    // Only admins can promote to admin; sales_managers cannot self-escalate
+    if (body.role === "admin" && callerProfile.role !== "admin") {
+      return NextResponse.json({ error: "Only admins can assign the admin role" }, { status: 403 });
+    }
+    if (!["sales_rep", "team_lead", "sales_manager", "admin"].includes(body.role)) {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
+    // sales_manager cannot demote/promote other sales_managers or admins
+    if (callerProfile.role === "sales_manager" && !allowedRoles.includes(targetProfile.role)) {
+      return NextResponse.json({ error: "Insufficient permissions to modify this user's role" }, { status: 403 });
+    }
+    updates.role = body.role;
+  }
+
   if (body.team_id !== undefined) updates.team_id = body.team_id || null;
   if (body.sales_tier_id !== undefined) updates.sales_tier_id = body.sales_tier_id || null;
   if (body.standing !== undefined) updates.standing = body.standing;
