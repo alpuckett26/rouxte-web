@@ -83,6 +83,8 @@ export default function MapboxMap({
 
   // Field mode (Badger)
   const [fieldMode, setFieldMode] = useState(false);
+  const [zipInput, setZipInput]   = useState("");
+  const [zipError, setZipError]   = useState(false);
 
   // Rep location dots (manager map)
   interface RepLocation { user_id: string; lat: number; lng: number; full_name: string; initials: string; role: string; updated_at: string; }
@@ -716,6 +718,26 @@ export default function MapboxMap({
   }, [selectedLeadId, styleLoaded]);
 
   // ── Map style toggle ───────────────────────────────────────────────────────
+  async function goToZip(e: React.FormEvent) {
+    e.preventDefault();
+    const zip = zipInput.trim();
+    if (!zip || !mapRef.current) return;
+    setZipError(false);
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(zip)}.json` +
+        `?types=postcode&country=us&limit=1&access_token=${token}`
+      );
+      const data = await res.json();
+      const [lng, lat] = data.features?.[0]?.center ?? [];
+      if (lng == null || lat == null) { setZipError(true); return; }
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 13, duration: 1000 });
+      setZipInput("");
+    } catch {
+      setZipError(true);
+    }
+  }
+
   function toggleStyle() {
     const map = mapRef.current;
     if (!map) return;
@@ -856,6 +878,30 @@ export default function MapboxMap({
 
       {/* Map controls overlay — hidden in field mode */}
       <div className={`absolute top-3 left-3 z-10 flex flex-col gap-2 transition-opacity ${fieldMode ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+        {/* Zip code jump */}
+        <form onSubmit={goToZip} className="flex items-center gap-1">
+          <input
+            type="text"
+            value={zipInput}
+            onChange={(e) => { setZipInput(e.target.value); setZipError(false); }}
+            placeholder="ZIP code"
+            maxLength={10}
+            className={`w-24 rounded-xl bg-white/90 backdrop-blur-sm border shadow-sm px-2.5 py-1.5 text-xs font-medium text-gray-800 placeholder-gray-400 outline-none focus:ring-2 transition-colors ${
+              zipError ? "border-red-400 focus:ring-red-100" : "border-gray-200 focus:ring-blue-100"
+            }`}
+          />
+          <button
+            type="submit"
+            className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm p-1.5 text-gray-600 hover:bg-white transition-colors"
+            aria-label="Go to ZIP"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </form>
+
         {/* Draw / Select Area (managers only) */}
         {isManager && (
           <button
