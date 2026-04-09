@@ -60,6 +60,8 @@ export default function MapboxMap({
 
   const { profile } = useProfile();
   const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
+  // Select Area + bulk assign restricted to admin and sales_manager only
+  const canBulkAssign = profile?.role === "admin" || profile?.role === "sales_manager";
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mapReady, setMapReady] = useState(false);
@@ -970,8 +972,8 @@ export default function MapboxMap({
           </button>
         )}
 
-        {/* Draw / Select Area (managers only) */}
-        {isManager && (
+        {/* Draw / Select Area — admin and sales_manager only */}
+        {canBulkAssign && (
           <button
             onClick={toggleDrawMode}
             className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -1125,7 +1127,7 @@ interface BulkAssignModalProps {
 
 function BulkAssignModal({ leads, reps, teams, assigning, onAssign, onClose }: BulkAssignModalProps) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set(leads.map((l) => l.id)));
-  const [tab, setTab] = useState<"list" | "team" | "rep">("list");
+  const [tab, setTab] = useState<"list" | "pool" | "team" | "rep">("list");
 
   const selectedLeads = leads.filter((l) => selected.has(l.id));
   const allChecked = selected.size === leads.length;
@@ -1186,13 +1188,14 @@ function BulkAssignModal({ leads, reps, teams, assigning, onAssign, onClose }: B
             <div className="flex border-b border-gray-100 px-5 shrink-0">
               {([
                 { key: "list", label: "Leads" },
+                { key: "pool", label: "Save to Pool" },
                 { key: "team", label: "By Team" },
                 { key: "rep",  label: "By Person" },
               ] as const).map((t) => (
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-colors ${
+                  className={`py-2.5 px-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
                     tab === t.key ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
                   }`}
                 >
@@ -1241,6 +1244,29 @@ function BulkAssignModal({ leads, reps, teams, assigning, onAssign, onClose }: B
                       </button>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Save to pool — removes assignment, puts leads in unassigned queue */}
+              {tab === "pool" && (
+                <div className="flex flex-col gap-4 py-2">
+                  <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-800">
+                    <p className="font-semibold mb-1">Save {selected.size} lead{selected.size !== 1 ? "s" : ""} to Unassigned Pool</p>
+                    <p className="text-xs text-blue-600 leading-relaxed">
+                      These leads will appear in your leads list with no rep assigned.
+                      You can then go to <strong>Leads</strong> and distribute them to reps at any time.
+                    </p>
+                  </div>
+                  <button
+                    disabled={assigning || selected.size === 0}
+                    onClick={() => onAssign({ assign_to: null, lead_ids: [...selected] })}
+                    className="w-full rounded-xl bg-blue-600 text-white text-sm font-semibold py-3.5 hover:bg-blue-700 transition-colors disabled:opacity-40"
+                  >
+                    {assigning ? "Saving…" : `Save ${selected.size} Lead${selected.size !== 1 ? "s" : ""} to Pool`}
+                  </button>
+                  <p className="text-xs text-gray-400 text-center">
+                    After saving, go to Leads → filter by Unassigned to distribute to reps
+                  </p>
                 </div>
               )}
 
@@ -1307,14 +1333,22 @@ function BulkAssignModal({ leads, reps, teams, assigning, onAssign, onClose }: B
             {/* Footer */}
             <div className="px-5 py-4 border-t border-gray-100 shrink-0">
               {selected.size === 0 ? (
-                <p className="text-xs text-center text-gray-400">Select at least one lead to assign</p>
+                <p className="text-xs text-center text-gray-400">Select at least one lead above</p>
               ) : tab === "list" ? (
-                <button
-                  onClick={() => setTab("rep")}
-                  className="w-full rounded-xl bg-blue-600 text-white text-sm font-semibold py-3 hover:bg-blue-700 transition-colors"
-                >
-                  Assign {selected.size} Lead{selected.size !== 1 ? "s" : ""} →
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTab("pool")}
+                    className="flex-1 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    Save to Pool
+                  </button>
+                  <button
+                    onClick={() => setTab("rep")}
+                    className="flex-1 rounded-xl bg-blue-600 text-white text-sm font-semibold py-3 hover:bg-blue-700 transition-colors"
+                  >
+                    Assign Now →
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => setTab("list")}
