@@ -371,48 +371,34 @@ export default function MapboxMap({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    function drawRect(s: { x: number; y: number }, e: { x: number; y: number }) {
+    function drawRect(s: { x: number; y: number }, cur: { x: number; y: number }) {
       if (!ctx || !canvas) return;
       clearCanvas();
-      const x = Math.min(s.x, e.x);
-      const y = Math.min(s.y, e.y);
-      const w = Math.abs(e.x - s.x);
-      const h = Math.abs(e.y - s.y);
-      ctx.fillStyle = "rgba(59,130,246,0.1)";
+      const x = Math.min(s.x, cur.x);
+      const y = Math.min(s.y, cur.y);
+      const w = Math.abs(cur.x - s.x);
+      const h = Math.abs(cur.y - s.y);
+      ctx.fillStyle = "rgba(59,130,246,0.12)";
       ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = "rgba(59,130,246,0.8)";
+      ctx.strokeStyle = "rgba(59,130,246,0.9)";
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 3]);
       ctx.strokeRect(x, y, w, h);
     }
 
-    function onMouseDown(e: MouseEvent) {
+    function clientToCanvas(clientX: number, clientY: number) {
       const rect = canvas!.getBoundingClientRect();
-      dragStart.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      dragCurrent.current = { ...dragStart.current };
+      return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
-    function onMouseMove(e: MouseEvent) {
-      if (!dragStart.current) return;
-      const rect = canvas!.getBoundingClientRect();
-      dragCurrent.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      drawRect(dragStart.current, dragCurrent.current);
-    }
-
-    function onMouseUp() {
-      if (!dragStart.current || !dragCurrent.current || !map) return;
-      const s = dragStart.current;
-      const e = dragCurrent.current;
+    function finishSelection(s: { x: number; y: number }, e: { x: number; y: number }) {
       clearCanvas();
       dragStart.current = null;
       dragCurrent.current = null;
-
-      // Skip tiny accidental clicks
       if (Math.abs(e.x - s.x) < 10 || Math.abs(e.y - s.y) < 10) return;
 
-      const rect = canvas!.getBoundingClientRect();
-      const sw = map.unproject([Math.min(s.x, e.x) - rect.left + rect.left, Math.max(s.y, e.y)]);
-      const ne = map.unproject([Math.max(s.x, e.x), Math.min(s.y, e.y)]);
+      const sw = map!.unproject([Math.min(s.x, e.x), Math.max(s.y, e.y)]);
+      const ne = map!.unproject([Math.max(s.x, e.x), Math.min(s.y, e.y)]);
 
       const inside = leads.filter((lead) => {
         if (lead.lat == null || lead.lng == null) return false;
@@ -423,7 +409,6 @@ export default function MapboxMap({
       });
 
       setDrawMode(false);
-
       if (inside.length > 0) {
         setBulkLeads(inside);
         setBulkTab("lead");
@@ -431,14 +416,57 @@ export default function MapboxMap({
       }
     }
 
+    // Mouse
+    function onMouseDown(e: MouseEvent) {
+      const pt = clientToCanvas(e.clientX, e.clientY);
+      dragStart.current = pt;
+      dragCurrent.current = { ...pt };
+    }
+    function onMouseMove(e: MouseEvent) {
+      if (!dragStart.current) return;
+      dragCurrent.current = clientToCanvas(e.clientX, e.clientY);
+      drawRect(dragStart.current, dragCurrent.current);
+    }
+    function onMouseUp() {
+      if (!dragStart.current || !dragCurrent.current) return;
+      finishSelection(dragStart.current, dragCurrent.current);
+    }
+
+    // Touch
+    function onTouchStart(e: TouchEvent) {
+      e.preventDefault();
+      const t = e.touches[0];
+      const pt = clientToCanvas(t.clientX, t.clientY);
+      dragStart.current = pt;
+      dragCurrent.current = { ...pt };
+    }
+    function onTouchMove(e: TouchEvent) {
+      e.preventDefault();
+      if (!dragStart.current) return;
+      const t = e.touches[0];
+      dragCurrent.current = clientToCanvas(t.clientX, t.clientY);
+      drawRect(dragStart.current, dragCurrent.current);
+    }
+    function onTouchEnd(e: TouchEvent) {
+      e.preventDefault();
+      if (!dragStart.current || !dragCurrent.current) return;
+      finishSelection(dragStart.current, dragCurrent.current);
+    }
+
     canvas.addEventListener("mousedown", onMouseDown);
     canvas.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("mouseup", onMouseUp);
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd, { passive: false });
 
     return () => {
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseup", onMouseUp);
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
       clearCanvas();
     };
   }, [drawMode, leads]);
@@ -833,12 +861,29 @@ export default function MapboxMap({
 
       {/* Drag-select overlay canvas */}
       {drawMode && (
-        <canvas
-          ref={selectionCanvasRef}
-          className="absolute inset-0 z-20 cursor-crosshair"
-          width={containerRef.current?.clientWidth ?? 800}
-          height={containerRef.current?.clientHeight ?? 600}
-        />
+        <>
+          <canvas
+            ref={selectionCanvasRef}
+            className="absolute inset-0 z-20 cursor-crosshair touch-none"
+            width={containerRef.current?.clientWidth ?? 800}
+            height={containerRef.current?.clientHeight ?? 600}
+          />
+          {/* Cancel button rendered above the canvas so it's always tappable */}
+          <div className="absolute top-3 left-3 z-30 flex flex-col gap-2">
+            <button
+              onClick={() => { setDrawMode(false); dragStart.current = null; dragCurrent.current = null; }}
+              className="flex items-center gap-1.5 rounded-xl bg-white border border-gray-300 shadow-md px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition-all"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Cancel
+            </button>
+            <div className="rounded-xl bg-blue-600/90 backdrop-blur-sm text-white px-3 py-2 text-xs font-medium shadow-md max-w-[160px]">
+              Drag to select leads on the map
+            </div>
+          </div>
+        </>
       )}
 
       {/* DNK Warning Toast */}
