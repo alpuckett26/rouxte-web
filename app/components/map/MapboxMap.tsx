@@ -60,8 +60,8 @@ export default function MapboxMap({
 
   const { profile } = useProfile();
   const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
-  // Select Area + bulk assign restricted to admin and sales_manager only
-  const canBulkAssign = profile?.role === "admin" || profile?.role === "sales_manager";
+  // Select Area visible to all elevated roles; hidden from sales_rep only
+  const canBulkAssign = isManager;
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mapReady, setMapReady] = useState(false);
