@@ -55,6 +55,8 @@ export default function MapboxMap({
   const selectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragCurrent = useRef<{ x: number; y: number } | null>(null);
+  // Always-current leads ref so canvas closures never see stale data
+  const leadsRef = useRef<Lead[]>([]);
 
   const { profile } = useProfile();
   const isManager = profile?.role === "admin" || profile?.role === "sales_manager" || profile?.role === "team_lead";
@@ -391,29 +393,27 @@ export default function MapboxMap({
       return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
-    function finishSelection(s: { x: number; y: number }, e: { x: number; y: number }) {
+    function finishSelection(s: { x: number; y: number }, end: { x: number; y: number }) {
       clearCanvas();
       dragStart.current = null;
       dragCurrent.current = null;
-      if (Math.abs(e.x - s.x) < 10 || Math.abs(e.y - s.y) < 10) return;
+      if (Math.abs(end.x - s.x) < 10 || Math.abs(end.y - s.y) < 10) return;
 
-      const sw = map!.unproject([Math.min(s.x, e.x), Math.max(s.y, e.y)]);
-      const ne = map!.unproject([Math.max(s.x, e.x), Math.min(s.y, e.y)]);
+      // Use the map's own feature query — no coordinate math, no stale-closure risk.
+      const sw: [number, number] = [Math.min(s.x, end.x), Math.min(s.y, end.y)];
+      const ne: [number, number] = [Math.max(s.x, end.x), Math.max(s.y, end.y)];
 
-      const inside = leads.filter((lead) => {
-        if (lead.lat == null || lead.lng == null) return false;
-        return (
-          lead.lat >= sw.lat && lead.lat <= ne.lat &&
-          lead.lng >= sw.lng && lead.lng <= ne.lng
-        );
+      const features = map!.queryRenderedFeatures([sw, ne], {
+        layers: ["leads-unclustered", "leads-dnk"],
       });
 
+      const foundIds = new Set(features.map((f) => f.properties?.id as string).filter(Boolean));
+      const inside = leadsRef.current.filter((l) => foundIds.has(l.id));
+
       setDrawMode(false);
-      if (inside.length > 0) {
-        setBulkLeads(inside);
-        setBulkTab("lead");
-        setBulkAssignOpen(true);
-      }
+      setBulkLeads(inside);
+      setBulkTab("lead");
+      setBulkAssignOpen(true);
     }
 
     // Mouse
@@ -469,7 +469,7 @@ export default function MapboxMap({
       canvas.removeEventListener("touchend", onTouchEnd);
       clearCanvas();
     };
-  }, [drawMode, leads]);
+  }, [drawMode]);
 
   function toggleDrawMode() {
     setDrawMode((prev) => !prev);
@@ -477,13 +477,15 @@ export default function MapboxMap({
     dragCurrent.current = null;
   }
 
-  async function handleBulkAssign(opts: { assign_to?: string | null; team_id?: string }) {
-    if (!bulkLeads.length) return;
+  async function handleBulkAssign(opts: { assign_to?: string | null; team_id?: string; lead_ids?: string[] }) {
+    const ids = opts.lead_ids ?? bulkLeads.map((l) => l.id);
+    if (!ids.length) return;
     setBulkAssigning(true);
+    const { lead_ids: _, ...rest } = opts;
     await fetch("/api/leads/bulk-assign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lead_ids: bulkLeads.map((l) => l.id), ...opts }),
+      body: JSON.stringify({ lead_ids: ids, ...rest }),
     });
     setBulkAssigning(false);
     setBulkAssignOpen(false);
@@ -683,6 +685,7 @@ export default function MapboxMap({
       const data = await res.json();
       const fetched: Lead[] = data.data ?? [];
       setLeads(fetched);
+      leadsRef.current = fetched;
       return fetched;
     } catch {
       return [];
@@ -1054,126 +1057,14 @@ export default function MapboxMap({
 
       {/* Bulk assign modal */}
       {bulkAssignOpen && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col max-h-[85vh]">
-            <div className="px-6 pt-5 pb-3">
-              <h3 className="text-base font-semibold text-gray-900">
-                {bulkLeads.length} Address{bulkLeads.length !== 1 ? "es" : ""} Selected
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">Review then assign to a team lead or team</p>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b border-gray-100 px-6">
-              {([
-                { key: "lead", label: "Addresses" },
-                { key: "team", label: "Distribute to Team" },
-                { key: "rep", label: "Assign to Person" },
-              ] as const).map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => setBulkTab(t.key)}
-                  className={`py-2.5 px-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
-                    bulkTab === t.key ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {/* Addresses tab */}
-              {bulkTab === "lead" && (
-                <div className="flex flex-col gap-1.5">
-                  {bulkLeads.map((lead) => (
-                    <div key={lead.id} className="flex items-start gap-2 rounded-lg bg-gray-50 px-3 py-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate">{lead.address}</p>
-                        {lead.customer_name && (
-                          <p className="text-xs text-gray-400">{lead.customer_name}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => setBulkTab("team")}
-                    className="mt-3 w-full rounded-xl bg-blue-500 text-white text-sm font-medium py-3 hover:bg-blue-600 transition-colors"
-                  >
-                    Assign These Leads →
-                  </button>
-                </div>
-              )}
-
-              {/* Team distribute tab */}
-              {bulkTab === "team" && (
-                <div className="flex flex-col gap-2">
-                  {teams.length === 0 && (
-                    <p className="text-sm text-gray-400 text-center py-4">No teams yet — create one in the Manager panel.</p>
-                  )}
-                  {teams.map((team) => (
-                    <button
-                      key={team.id}
-                      disabled={bulkAssigning || team.member_count === 0}
-                      onClick={() => handleBulkAssign({ team_id: team.id })}
-                      className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{team.name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · {bulkLeads.length} leads split evenly
-                        </p>
-                      </div>
-                      <svg className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Individual person tab */}
-              {bulkTab === "rep" && (
-                <div className="flex flex-col gap-2">
-                  {reps
-                    .filter((r) => r.role === "team_lead" || r.role === "sales_rep")
-                    .sort((a, b) => {
-                      // Team leads first
-                      if (a.role === "team_lead" && b.role !== "team_lead") return -1;
-                      if (b.role === "team_lead" && a.role !== "team_lead") return 1;
-                      return a.full_name.localeCompare(b.full_name);
-                    })
-                    .map((rep) => (
-                      <button
-                        key={rep.user_id}
-                        disabled={bulkAssigning}
-                        onClick={() => handleBulkAssign({ assign_to: rep.user_id })}
-                        className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{rep.full_name}</p>
-                          <p className="text-xs text-gray-400 capitalize">{rep.role.replace("_", " ")}</p>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-100">
-              <button
-                onClick={() => { setBulkAssignOpen(false); setBulkLeads([]); setBulkTab("lead"); }}
-                className="w-full text-sm text-gray-500 hover:text-gray-700"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <BulkAssignModal
+          leads={bulkLeads}
+          reps={reps}
+          teams={teams}
+          assigning={bulkAssigning}
+          onAssign={handleBulkAssign}
+          onClose={() => { setBulkAssignOpen(false); setBulkLeads([]); setBulkTab("lead"); }}
+        />
       )}
 
       {/* Status legend — hidden in field mode */}
@@ -1217,6 +1108,225 @@ export default function MapboxMap({
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Bulk Assign Modal ────────────────────────────────────────────────────────
+
+interface BulkAssignModalProps {
+  leads: Lead[];
+  reps: { user_id: string; full_name: string; role: string }[];
+  teams: { id: string; name: string; member_count: number }[];
+  assigning: boolean;
+  onAssign: (opts: { assign_to?: string | null; team_id?: string; lead_ids?: string[] }) => void;
+  onClose: () => void;
+}
+
+function BulkAssignModal({ leads, reps, teams, assigning, onAssign, onClose }: BulkAssignModalProps) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(leads.map((l) => l.id)));
+  const [tab, setTab] = useState<"list" | "team" | "rep">("list");
+
+  const selectedLeads = leads.filter((l) => selected.has(l.id));
+  const allChecked = selected.size === leads.length;
+
+  function toggleAll() {
+    setSelected(allChecked ? new Set() : new Set(leads.map((l) => l.id)));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  return (
+    <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">
+              {leads.length === 0
+                ? "No leads in selection"
+                : `${leads.length} lead${leads.length !== 1 ? "s" : ""} in area`}
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {leads.length === 0
+                ? "Draw a larger box, or zoom in to see individual leads"
+                : `${selected.size} selected · tap to deselect before assigning`}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {leads.length === 0 ? (
+          <div className="px-5 pb-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              </svg>
+            </div>
+            <p className="text-sm text-gray-500">No lead pins were found inside the box.</p>
+            <button onClick={onClose} className="mt-4 w-full rounded-xl bg-gray-100 text-gray-700 text-sm font-medium py-2.5 hover:bg-gray-200 transition-colors">
+              Try Again
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100 px-5 shrink-0">
+              {([
+                { key: "list", label: "Leads" },
+                { key: "team", label: "By Team" },
+                { key: "rep",  label: "By Person" },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`py-2.5 px-3 text-xs font-semibold border-b-2 transition-colors ${
+                    tab === t.key ? "border-blue-500 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-3 min-h-0">
+
+              {/* Lead list with checkboxes */}
+              {tab === "list" && (
+                <div className="flex flex-col gap-1">
+                  {/* Select all */}
+                  <button
+                    onClick={toggleAll}
+                    className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${allChecked ? "bg-blue-500 border-blue-500" : "border-gray-300"}`}>
+                      {allChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    {allChecked ? "Deselect all" : "Select all"}
+                  </button>
+                  {leads.map((lead) => {
+                    const checked = selected.has(lead.id);
+                    return (
+                      <button
+                        key={lead.id}
+                        onClick={() => toggleOne(lead.id)}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${checked ? "bg-blue-50" : "bg-gray-50 opacity-60"}`}
+                      >
+                        <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? "bg-blue-500 border-blue-500" : "border-gray-300"}`}>
+                          {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-gray-800 truncate">{lead.address}</p>
+                          {lead.customer_name && <p className="text-xs text-gray-400">{lead.customer_name}</p>}
+                        </div>
+                        <span className={`ml-auto shrink-0 text-xs rounded-full px-2 py-0.5 capitalize font-medium ${
+                          lead.status === "sold" ? "bg-green-100 text-green-700" :
+                          lead.status === "new" ? "bg-gray-100 text-gray-500" :
+                          "bg-blue-100 text-blue-600"
+                        }`}>
+                          {lead.status.replace("_", " ")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Team distribute */}
+              {tab === "team" && (
+                <div className="flex flex-col gap-2">
+                  {teams.length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-6">No teams yet — create one in the Manager panel.</p>
+                  )}
+                  {teams.map((team) => (
+                    <button
+                      key={team.id}
+                      disabled={assigning || team.member_count === 0 || selected.size === 0}
+                      onClick={() => onAssign({ team_id: team.id, lead_ids: [...selected] })}
+                      className="flex items-center justify-between rounded-xl border border-gray-100 px-4 py-3.5 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{team.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {team.member_count} rep{team.member_count !== 1 ? "s" : ""} · {selected.size} lead{selected.size !== 1 ? "s" : ""} split evenly
+                        </p>
+                      </div>
+                      <svg className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Individual rep */}
+              {tab === "rep" && (
+                <div className="flex flex-col gap-2">
+                  {reps
+                    .filter((r) => r.role === "team_lead" || r.role === "sales_rep")
+                    .sort((a, b) => {
+                      if (a.role === "team_lead" && b.role !== "team_lead") return -1;
+                      if (b.role === "team_lead" && a.role !== "team_lead") return 1;
+                      return a.full_name.localeCompare(b.full_name);
+                    })
+                    .map((rep) => (
+                      <button
+                        key={rep.user_id}
+                        disabled={assigning || selected.size === 0}
+                        onClick={() => onAssign({ assign_to: rep.user_id, lead_ids: [...selected] })}
+                        className="flex items-center gap-3 rounded-xl border border-gray-100 px-4 py-3.5 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left disabled:opacity-50"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-semibold text-blue-700">{rep.full_name.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{rep.full_name}</p>
+                          <p className="text-xs text-gray-400 capitalize">{rep.role.replace("_", " ")}</p>
+                        </div>
+                        <span className="ml-auto text-xs text-blue-500 font-medium">
+                          Assign {selected.size}
+                        </span>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t border-gray-100 shrink-0">
+              {selected.size === 0 ? (
+                <p className="text-xs text-center text-gray-400">Select at least one lead to assign</p>
+              ) : tab === "list" ? (
+                <button
+                  onClick={() => setTab("rep")}
+                  className="w-full rounded-xl bg-blue-600 text-white text-sm font-semibold py-3 hover:bg-blue-700 transition-colors"
+                >
+                  Assign {selected.size} Lead{selected.size !== 1 ? "s" : ""} →
+                </button>
+              ) : (
+                <button
+                  onClick={() => setTab("list")}
+                  className="w-full text-sm text-gray-400 hover:text-gray-600 py-1"
+                >
+                  ← Back to lead list
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
