@@ -392,7 +392,9 @@ export default function MapboxMap({
     }
 
     function clientToCanvas(clientX: number, clientY: number) {
-      const rect = canvas!.getBoundingClientRect();
+      // Use the map container's bounding rect (not the canvas) so that pixel
+      // coordinates are always in the same space that map.unproject() expects.
+      const rect = map!.getContainer().getBoundingClientRect();
       return { x: clientX - rect.left, y: clientY - rect.top };
     }
 
@@ -432,10 +434,12 @@ export default function MapboxMap({
       function openModal(clusterIds: Set<string>) {
         const allIds = new Set([...inBoundsIds, ...clusterIds]);
         const inside = leadsRef.current.filter((l) => allIds.has(l.id));
+        const center = map!.getCenter();
         setAreaDebug(
           `px: (${pixelTL[0].toFixed(0)},${pixelTL[1].toFixed(0)})→(${pixelBR[0].toFixed(0)},${pixelBR[1].toFixed(0)}) canvas:${canvas?.width}x${canvas?.height}\n` +
+          `map center: ${center.lat.toFixed(4)},${center.lng.toFixed(4)} zoom:${map!.getZoom().toFixed(1)}\n` +
           `geo: ${minLat.toFixed(4)},${minLng.toFixed(4)} → ${maxLat.toFixed(4)},${maxLng.toFixed(4)}\n` +
-          `clusters in box: ${clustersInBox.length} | cluster leads: ${clusterIds.size} | geo hits: ${inBoundsIds.size} | total found: ${inside.length}`
+          `clusters: ${clustersInBox.length} | cluster leads: ${clusterIds.size} | geo hits: ${inBoundsIds.size} | found: ${inside.length}`
         );
         setDrawMode(false);
         setBulkLeads(inside);
