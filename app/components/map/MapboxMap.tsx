@@ -71,6 +71,7 @@ export default function MapboxMap({
   const [geocoding, setGeocoding] = useState(false);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
   const [drawMode, setDrawMode] = useState(false);
+  const [showAttDots, setShowAttDots] = useState(false);
   const [drawAreaOpen, setDrawAreaOpen] = useState(false);
   const [drawAreaBbox, setDrawAreaBbox] = useState<{ south: number; north: number; west: number; east: number } | null>(null);
   const [bulkLeads, setBulkLeads] = useState<Lead[]>([]);
@@ -529,6 +530,33 @@ export default function MapboxMap({
       },
     });
 
+    // ── AT&T fiber address dots ───────────────────────────────────────────────
+    // Individual address-level points from FCC BDC data — shown as blue dots.
+    // Rendered below leads so lead bubbles remain clickable on top.
+    map.addSource("att-dots", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+
+    map.addLayer({
+      id: "att-dots-layer",
+      type: "circle",
+      source: "att-dots",
+      paint: {
+        "circle-color": "#3b82f6",
+        "circle-radius": [
+          "interpolate", ["linear"], ["zoom"],
+          13, 3,
+          16, 5,
+          18, 7,
+        ],
+        "circle-opacity": 0.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "#1d4ed8",
+        "circle-stroke-opacity": 0.6,
+      },
+    });
+
     map.addSource("leads", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
@@ -674,6 +702,57 @@ export default function MapboxMap({
     map.on("moveend", onMoveEnd);
     return () => { map.off("moveend", onMoveEnd); };
   }, [styleLoaded, fetchCoverage]);
+
+  // ── AT&T fiber address dots fetch ─────────────────────────────────────────
+  const attDotsFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchAttDots = useCallback((map: mapboxgl.Map) => {
+    const src = map.getSource("att-dots") as mapboxgl.GeoJSONSource | undefined;
+    if (!src) return;
+    // Only show address-level dots when zoomed in enough to be useful
+    if (map.getZoom() < 13) {
+      src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    const bounds = map.getBounds();
+    if (!bounds) return;
+    const params = new URLSearchParams({
+      north: String(bounds.getNorth()),
+      south: String(bounds.getSouth()),
+      east:  String(bounds.getEast()),
+      west:  String(bounds.getWest()),
+    });
+    fetch(`/api/fcc/coverage?${params}`)
+      .then(async (r) => {
+        const geojson = await r.json();
+        if (!geojson.type) return;
+        const m = mapRef.current;
+        if (!m) return;
+        const s = m.getSource("att-dots") as mapboxgl.GeoJSONSource | undefined;
+        if (s) s.setData(geojson);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!styleLoaded || !map) return;
+    const src = map.getSource("att-dots") as mapboxgl.GeoJSONSource | undefined;
+    if (!showAttDots) {
+      if (src) src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    fetchAttDots(map);
+    const onMoveEnd = () => {
+      if (attDotsFetchTimer.current) clearTimeout(attDotsFetchTimer.current);
+      attDotsFetchTimer.current = setTimeout(() => fetchAttDots(map), 600);
+    };
+    map.on("moveend", onMoveEnd);
+    return () => {
+      map.off("moveend", onMoveEnd);
+      if (attDotsFetchTimer.current) clearTimeout(attDotsFetchTimer.current);
+    };
+  }, [styleLoaded, showAttDots, fetchAttDots]);
 
   // ── Fetch leads and sync to map ────────────────────────────────────────────
   const fetchAndSyncLeads = useCallback(async () => {
@@ -1044,16 +1123,35 @@ export default function MapboxMap({
           )}
         </button>
 
+        {/* AT&T fiber dots toggle */}
+        <button
+          onClick={() => setShowAttDots((v) => !v)}
+          className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
+            showAttDots
+              ? "bg-blue-500 border-blue-600 text-white hover:bg-blue-600"
+              : "bg-white/90 border-gray-200 text-gray-700 hover:bg-white"
+          }`}
+        >
+          <span className={`w-2.5 h-2.5 rounded-full border border-blue-700 shrink-0 ${showAttDots ? "bg-white" : "bg-blue-400"}`} />
+          AT&T Fiber
+        </button>
+
         {/* Map legend */}
         <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
           <p className="font-semibold mb-1.5 text-gray-900">Legend</p>
+          {showAttDots && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-700 inline-block" />
+              AT&T fiber address
+            </div>
+          )}
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-3 h-3 rounded-full border-2 border-green-500 bg-transparent inline-block" />
-            AT&T available
+            Lead — AT&T available
           </div>
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-3 h-3 rounded-full bg-gray-400 inline-block" />
-            No AT&T
+            Lead — No AT&T
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-red-500 font-bold text-xs leading-none">✕</span>
