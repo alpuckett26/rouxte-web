@@ -453,7 +453,7 @@ export default function MapboxMap({
         const clusterId = cluster.properties?.cluster_id as number | undefined;
         const count = (cluster.properties?.point_count as number) ?? 500;
         if (clusterId == null) { if (--pending === 0) openModal(clusterLeadIds); return; }
-        source.getClusterLeaves(clusterId, count, 0, (_err: Error | null | undefined, leaves: GeoJSON.Feature[] | null) => {
+        source.getClusterLeaves(clusterId, count, 0, (_err: Error | null | undefined, leaves: GeoJSON.Feature[] | null | undefined) => {
           (leaves ?? []).forEach((leaf) => {
             const id = leaf.properties?.id as string | undefined;
             if (id) clusterLeadIds.add(id);
