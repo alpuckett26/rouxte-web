@@ -70,6 +70,7 @@ export default function MapboxMap({
   const [geocoding, setGeocoding] = useState(false);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
   const [drawMode, setDrawMode] = useState(false);
+  const [areaDebug, setAreaDebug] = useState<string | null>(null);
   const [bulkLeads, setBulkLeads] = useState<Lead[]>([]);
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [reps, setReps] = useState<{ user_id: string; full_name: string; role: string }[]>([]);
@@ -411,13 +412,9 @@ export default function MapboxMap({
       const minLat = swLngLat.lat;
       const maxLat = neLngLat.lat;
 
-      console.log("[AreaSelect] bounds", { minLng, maxLng, minLat, maxLat });
-      console.log("[AreaSelect] total leads in ref", leadsRef.current.length);
-      console.log("[AreaSelect] leads with lat/lng", leadsRef.current.filter(l => l.lat != null && l.lng != null).length);
-      if (leadsRef.current.length > 0) {
-        const sample = leadsRef.current[0];
-        console.log("[AreaSelect] sample lead lat/lng", sample.lat, sample.lng);
-      }
+      const totalLeads = leadsRef.current.length;
+      const withCoords = leadsRef.current.filter(l => l.lat != null && l.lng != null).length;
+      const sample = leadsRef.current[0];
 
       const inside = leadsRef.current.filter(
         (l) =>
@@ -429,7 +426,11 @@ export default function MapboxMap({
           (l.lat as number) <= maxLat,
       );
 
-      console.log("[AreaSelect] leads inside selection", inside.length);
+      setAreaDebug(
+        `Leads loaded: ${totalLeads} | With coords: ${withCoords} | Found: ${inside.length}\n` +
+        `Bounds: ${minLat.toFixed(4)},${minLng.toFixed(4)} → ${maxLat.toFixed(4)},${maxLng.toFixed(4)}\n` +
+        (sample ? `Sample lead: lat=${sample.lat} lng=${sample.lng}` : "No leads in memory")
+      );
 
       setDrawMode(false);
       setBulkLeads(inside);
@@ -1074,6 +1075,15 @@ export default function MapboxMap({
             onLeadCreated?.();
           }}
         />
+      )}
+
+      {/* Area select debug overlay — temporary diagnostic, remove after fix confirmed */}
+      {areaDebug && (
+        <div className="fixed inset-x-4 top-4 z-[9999] rounded-xl bg-gray-900 text-white text-xs p-4 shadow-xl whitespace-pre-wrap font-mono">
+          <p className="font-bold mb-1 text-yellow-400">Area Select Debug</p>
+          {areaDebug}
+          <button onClick={() => setAreaDebug(null)} className="mt-2 block text-gray-400 underline text-xs">Dismiss</button>
+        </div>
       )}
 
       {/* Bulk assign modal */}
