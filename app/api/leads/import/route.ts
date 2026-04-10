@@ -83,12 +83,14 @@ export async function POST(request: NextRequest) {
         !fccErr && Array.isArray(fccResults)
           ? fccResults
           : await Promise.all(
-              coordPairs.map((r) =>
-                admin
-                  .rpc("fcc_att_available", { p_lat: r.lat, p_lng: r.lng })
-                  .then(({ data: d }) => !!d)
-                  .catch(() => false),
-              ),
+              coordPairs.map(async (r) => {
+                try {
+                  const { data: d } = await admin.rpc("fcc_att_available", { p_lat: r.lat, p_lng: r.lng });
+                  return !!d;
+                } catch {
+                  return false;
+                }
+              }),
             );
 
       // Only update the leads that have AT&T available (others stay as {} → false)
