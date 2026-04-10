@@ -65,5 +65,41 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Batch-check AT&T fiber availability for leads that have coordinates.
+  // This populates carrier_availability.att so green rings appear on the map.
+  const leadsData = data ?? [];
+  const coordPairs = leadsData
+    .map((row, i) => ({ id: row.id, lat: inserts[i]?.lat, lng: inserts[i]?.lng }))
+    .filter((r): r is { id: string; lat: number; lng: number } => r.lat != null && r.lng != null);
+
+  if (coordPairs.length) {
+    try {
+      // Use batch spatial query (one DB round-trip regardless of lead count)
+      const { data: fccResults, error: fccErr } = await admin.rpc("batch_fcc_check", {
+        points_json: JSON.stringify(coordPairs.map((r) => ({ lat: r.lat, lng: r.lng }))),
+      });
+
+      const results: boolean[] =
+        !fccErr && Array.isArray(fccResults)
+          ? fccResults
+          : await Promise.all(
+              coordPairs.map((r) =>
+                admin
+                  .rpc("fcc_att_available", { p_lat: r.lat, p_lng: r.lng })
+                  .then(({ data: d }) => !!d)
+                  .catch(() => false),
+              ),
+            );
+
+      // Only update the leads that have AT&T available (others stay as {} → false)
+      const attIds = coordPairs.filter((_, i) => results[i] === true).map((r) => r.id);
+      if (attIds.length) {
+        await admin.from("leads").update({ carrier_availability: { att: true } }).in("id", attIds);
+      }
+    } catch {
+      // Non-fatal: FCC check failure doesn't block import success
+    }
+  }
+
   return NextResponse.json({ imported: data?.length ?? 0, lead_ids: (data ?? []).map((r) => r.id) });
 }
