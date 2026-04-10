@@ -65,5 +65,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ imported: data?.length ?? 0 });
+  return NextResponse.json({ imported: data?.length ?? 0, lead_ids: (data ?? []).map((r) => r.id) });
 }

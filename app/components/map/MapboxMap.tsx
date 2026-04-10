@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { Lead, LeadFilters } from "@/lib/types";
 import CaptureLeadModal from "./CaptureLeadModal";
+import DrawAreaLeadModal from "./DrawAreaLeadModal";
 import QuickLogSheet from "./QuickLogSheet";
 import { useProfile } from "@/lib/hooks/useProfile";
 
@@ -70,7 +71,8 @@ export default function MapboxMap({
   const [geocoding, setGeocoding] = useState(false);
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
   const [drawMode, setDrawMode] = useState(false);
-  const [areaDebug, setAreaDebug] = useState<string | null>(null);
+  const [drawAreaOpen, setDrawAreaOpen] = useState(false);
+  const [drawAreaBbox, setDrawAreaBbox] = useState<{ south: number; north: number; west: number; east: number } | null>(null);
   const [bulkLeads, setBulkLeads] = useState<Lead[]>([]);
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [reps, setReps] = useState<{ user_id: string; full_name: string; role: string }[]>([]);
@@ -404,71 +406,19 @@ export default function MapboxMap({
       dragCurrent.current = null;
       if (Math.abs(end.x - s.x) < 10 || Math.abs(end.y - s.y) < 10) return;
 
-      // Pixel bounding box used for rendered-feature queries (always pixel-accurate)
-      const pixelTL: [number, number] = [Math.min(s.x, end.x), Math.min(s.y, end.y)];
-      const pixelBR: [number, number] = [Math.max(s.x, end.x), Math.max(s.y, end.y)];
+      // Convert the drawn pixel rectangle to a geographic bounding box,
+      // then open DrawAreaLeadModal which fetches OSM addresses within it.
+      const swLngLat = map!.unproject([Math.min(s.x, end.x), Math.max(s.y, end.y)]);
+      const neLngLat = map!.unproject([Math.max(s.x, end.x), Math.min(s.y, end.y)]);
 
-      // Geographic bounds — catches individual unclustered leads
-      const swLngLat = map!.unproject([pixelTL[0], pixelBR[1]]);
-      const neLngLat = map!.unproject([pixelBR[0], pixelTL[1]]);
-      const minLng = swLngLat.lng, maxLng = neLngLat.lng;
-      const minLat = swLngLat.lat, maxLat = neLngLat.lat;
-
-      const inBoundsIds = new Set(
-        leadsRef.current
-          .filter((l) =>
-            l.lat != null && l.lng != null &&
-            (l.lng as number) >= minLng && (l.lng as number) <= maxLng &&
-            (l.lat as number) >= minLat && (l.lat as number) <= maxLat,
-          )
-          .map((l) => l.id),
-      );
-
-      // Cluster circles sit at the centroid of their members — individual lead
-      // coordinates may lie outside the drawn box. Query the cluster layer by
-      // pixel rect (always accurate), then expand each cluster to its leaves.
-      const clustersInBox = map!.queryRenderedFeatures([pixelTL, pixelBR], {
-        layers: ["leads-cluster"],
+      setDrawMode(false);
+      setDrawAreaBbox({
+        south: swLngLat.lat,
+        north: neLngLat.lat,
+        west:  swLngLat.lng,
+        east:  neLngLat.lng,
       });
-
-      function openModal(clusterIds: Set<string>) {
-        const allIds = new Set([...inBoundsIds, ...clusterIds]);
-        const inside = leadsRef.current.filter((l) => allIds.has(l.id));
-        const center = map!.getCenter();
-        setAreaDebug(
-          `px: (${pixelTL[0].toFixed(0)},${pixelTL[1].toFixed(0)})→(${pixelBR[0].toFixed(0)},${pixelBR[1].toFixed(0)}) canvas:${canvas?.width}x${canvas?.height}\n` +
-          `map center: ${center.lat.toFixed(4)},${center.lng.toFixed(4)} zoom:${map!.getZoom().toFixed(1)}\n` +
-          `geo: ${minLat.toFixed(4)},${minLng.toFixed(4)} → ${maxLat.toFixed(4)},${maxLng.toFixed(4)}\n` +
-          `clusters: ${clustersInBox.length} | cluster leads: ${clusterIds.size} | geo hits: ${inBoundsIds.size} | found: ${inside.length}`
-        );
-        setDrawMode(false);
-        setBulkLeads(inside);
-        setBulkTab("lead");
-        setBulkAssignOpen(true);
-      }
-
-      if (!clustersInBox.length) {
-        openModal(new Set());
-        return;
-      }
-
-      // Expand each cluster asynchronously to get its constituent lead IDs
-      const source = map!.getSource("leads") as mapboxgl.GeoJSONSource;
-      const clusterLeadIds = new Set<string>();
-      let pending = clustersInBox.length;
-
-      clustersInBox.forEach((cluster) => {
-        const clusterId = cluster.properties?.cluster_id as number | undefined;
-        const count = (cluster.properties?.point_count as number) ?? 500;
-        if (clusterId == null) { if (--pending === 0) openModal(clusterLeadIds); return; }
-        source.getClusterLeaves(clusterId, count, 0, (_err: Error | null | undefined, leaves: GeoJSON.Feature[] | null | undefined) => {
-          (leaves ?? []).forEach((leaf) => {
-            const id = leaf.properties?.id as string | undefined;
-            if (id) clusterLeadIds.add(id);
-          });
-          if (--pending === 0) openModal(clusterLeadIds);
-        });
-      });
+      setDrawAreaOpen(true);
     }
 
     // Mouse
@@ -781,20 +731,22 @@ export default function MapboxMap({
     if (!hasFitToLeads.current && withCoords.length > 0) {
       hasFitToLeads.current = true;
       const bounds = map.getBounds();
-      const anyVisible = withCoords.some(
-        (l) =>
-          (l.lng as number) >= bounds.getWest() &&
-          (l.lng as number) <= bounds.getEast() &&
-          (l.lat as number) >= bounds.getSouth() &&
-          (l.lat as number) <= bounds.getNorth(),
-      );
-      if (!anyVisible) {
-        const lngs = withCoords.map((l) => l.lng as number);
-        const lats = withCoords.map((l) => l.lat as number);
-        map.fitBounds(
-          [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
-          { padding: 60, maxZoom: 14, duration: 1200 },
+      if (bounds) {
+        const anyVisible = withCoords.some(
+          (l) =>
+            (l.lng as number) >= bounds.getWest() &&
+            (l.lng as number) <= bounds.getEast() &&
+            (l.lat as number) >= bounds.getSouth() &&
+            (l.lat as number) <= bounds.getNorth(),
         );
+        if (!anyVisible) {
+          const lngs = withCoords.map((l) => l.lng as number);
+          const lats = withCoords.map((l) => l.lat as number);
+          map.fitBounds(
+            [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+            { padding: 60, maxZoom: 14, duration: 1200 },
+          );
+        }
       }
     }
   }, []);
@@ -1135,13 +1087,19 @@ export default function MapboxMap({
         />
       )}
 
-      {/* Area select debug overlay — temporary diagnostic, remove after fix confirmed */}
-      {areaDebug && (
-        <div className="fixed inset-x-4 top-4 z-[9999] rounded-xl bg-gray-900 text-white text-xs p-4 shadow-xl whitespace-pre-wrap font-mono">
-          <p className="font-bold mb-1 text-yellow-400">Area Select Debug</p>
-          {areaDebug}
-          <button onClick={() => setAreaDebug(null)} className="mt-2 block text-gray-400 underline text-xs">Dismiss</button>
-        </div>
+      {/* Draw area → create leads modal */}
+      {drawAreaOpen && drawAreaBbox && (
+        <DrawAreaLeadModal
+          bbox={drawAreaBbox}
+          reps={reps}
+          teams={teams}
+          onClose={() => { setDrawAreaOpen(false); setDrawAreaBbox(null); }}
+          onDone={(count) => {
+            setDrawAreaOpen(false);
+            setDrawAreaBbox(null);
+            if (count > 0) fetchAndSyncLeads().then(syncLeadsToMap);
+          }}
+        />
       )}
 
       {/* Bulk assign modal */}
