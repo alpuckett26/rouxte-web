@@ -5,8 +5,9 @@ export const maxDuration = 60;
 
 interface OverpassElement {
   type: string;
-  lat?: number;
-  lon?: number;
+  lat?: number;         // present on nodes
+  lon?: number;         // present on nodes
+  center?: { lat: number; lon: number }; // present on ways (with "out center")
   tags?: Record<string, string>;
 }
 
@@ -37,7 +38,9 @@ async function queryOverpass(query: string): Promise<{ elements: OverpassElement
  * GET /api/leads/bbox-addresses?south=X&north=X&west=X&east=X
  *
  * Returns OSM street addresses within a geographic bounding box.
- * Used by the map area-selector to find addresses for lead creation.
+ * Queries both address nodes AND building ways (with center coords)
+ * since most US suburban homes store addresses on building polygons,
+ * not as individual nodes.
  */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -56,15 +59,19 @@ export async function GET(request: NextRequest) {
   if (north <= south) {
     return NextResponse.json({ error: "north must be greater than south" }, { status: 400 });
   }
-  // Safety cap — prevent enormous queries
   if ((north - south) > 0.5 || (east - west) > 0.5) {
     return NextResponse.json({ error: "Selected area is too large. Draw a smaller box." }, { status: 400 });
   }
 
+  // Query both address nodes AND building ways (ways use "out center" for centroid coords).
+  // Many US suburbs only have addresses on building ways, not as individual nodes.
   const result = await queryOverpass(`
 [out:json][timeout:25][maxsize:10000000];
-(node["addr:housenumber"]["addr:street"](${south},${west},${north},${east}););
-out 1000;
+(
+  node["addr:housenumber"]["addr:street"](${south},${west},${north},${east});
+  way["addr:housenumber"]["addr:street"](${south},${west},${north},${east});
+);
+out center 1000;
   `.trim());
 
   if (result.error === "rate_limit") {
@@ -77,18 +84,32 @@ out 1000;
   const addresses = result.elements
     .filter((el) => el.tags?.["addr:housenumber"] && el.tags?.["addr:street"])
     .map((el) => {
+      // Nodes have lat/lon directly; ways have a center object
+      const lat = el.type === "node" ? (el.lat ?? null) : (el.center?.lat ?? null);
+      const lng = el.type === "node" ? (el.lon ?? null) : (el.center?.lon ?? null);
+
       const num    = el.tags!["addr:housenumber"];
       const street = el.tags!["addr:street"];
-      const city   = el.tags?.["addr:city"]  ?? "";
-      const state  = el.tags?.["addr:state"] ?? "";
+      const city   = el.tags?.["addr:city"]     ?? "";
+      const state  = el.tags?.["addr:state"]    ?? "";
       const zip    = el.tags?.["addr:postcode"] ?? "";
       const address = [
         `${num} ${street}`,
         city,
         [state, zip].filter(Boolean).join(" "),
       ].filter(Boolean).join(", ");
-      return { address, lat: el.lat ?? null, lng: el.lon ?? null };
-    });
+
+      return { address, lat, lng };
+    })
+    .filter((a) => a.lat != null && a.lng != null);
+
+  // If OSM has no address data at all, suggest the ZIP import fallback
+  if (!addresses.length) {
+    return NextResponse.json(
+      { error: "No address data found in this area. OSM coverage may be incomplete here — try the ZIP import instead.", data: [], total: 0 },
+      { status: 404 },
+    );
+  }
 
   return NextResponse.json({ data: addresses, total: addresses.length, capped: result.elements.length >= 1000 });
 }
