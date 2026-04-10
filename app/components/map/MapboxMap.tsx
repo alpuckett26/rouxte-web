@@ -401,16 +401,25 @@ export default function MapboxMap({
       dragCurrent.current = null;
       if (Math.abs(end.x - s.x) < 10 || Math.abs(end.y - s.y) < 10) return;
 
-      // Use the map's own feature query — no coordinate math, no stale-closure risk.
-      const sw: [number, number] = [Math.min(s.x, end.x), Math.min(s.y, end.y)];
-      const ne: [number, number] = [Math.max(s.x, end.x), Math.max(s.y, end.y)];
+      // Convert pixel bounding box to geographic bounds so selection works at
+      // any zoom level, including when leads are grouped into cluster circles.
+      const swLngLat = map!.unproject([Math.min(s.x, end.x), Math.max(s.y, end.y)]);
+      const neLngLat = map!.unproject([Math.max(s.x, end.x), Math.min(s.y, end.y)]);
 
-      const features = map!.queryRenderedFeatures([sw, ne], {
-        layers: ["leads-unclustered", "leads-dnk"],
-      });
+      const minLng = swLngLat.lng;
+      const maxLng = neLngLat.lng;
+      const minLat = swLngLat.lat;
+      const maxLat = neLngLat.lat;
 
-      const foundIds = new Set(features.map((f) => f.properties?.id as string).filter(Boolean));
-      const inside = leadsRef.current.filter((l) => foundIds.has(l.id));
+      const inside = leadsRef.current.filter(
+        (l) =>
+          l.lat != null &&
+          l.lng != null &&
+          (l.lng as number) >= minLng &&
+          (l.lng as number) <= maxLng &&
+          (l.lat as number) >= minLat &&
+          (l.lat as number) <= maxLat,
+      );
 
       setDrawMode(false);
       setBulkLeads(inside);
