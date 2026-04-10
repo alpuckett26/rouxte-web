@@ -24,6 +24,8 @@ export default function DrawAreaLeadModal({ bbox, reps, teams, onClose, onDone }
   const [addresses, setAddresses] = useState<BboxAddress[]>([]);
   const [capped, setCapped] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detectedZip, setDetectedZip] = useState<string | null>(null);
+  const [rawElements, setRawElements] = useState<number | null>(null);
 
   const [assignMode, setAssignMode] = useState<AssignMode>("pool");
   const [selectedTeam, setSelectedTeam] = useState(teams[0]?.id ?? "");
@@ -42,7 +44,13 @@ export default function DrawAreaLeadModal({ bbox, reps, teams, onClose, onDone }
     fetch(`/api/leads/bbox-addresses?${params}`)
       .then(async (res) => {
         const json = await res.json();
-        if (!res.ok) { setError(json.error ?? "Failed to load addresses."); setPhase("error"); return; }
+        if (!res.ok) {
+          setError(json.error ?? "Failed to load addresses.");
+          if (json.detectedZip) setDetectedZip(json.detectedZip);
+          if (json._debug?.rawElements != null) setRawElements(json._debug.rawElements);
+          setPhase("error");
+          return;
+        }
         if (!json.data?.length) { setError("No OSM address data found in this area. Try a smaller box or use the ZIP import."); setPhase("error"); return; }
         setAddresses(json.data);
         setCapped(json.capped ?? false);
@@ -109,9 +117,23 @@ export default function DrawAreaLeadModal({ bbox, reps, teams, onClose, onDone }
           )}
 
           {phase === "error" && (
-            <div className="py-6 text-center text-sm text-gray-500">
-              <p className="text-red-500 font-medium mb-1">No addresses found</p>
-              <p>{error}</p>
+            <div className="py-6 text-center text-sm text-gray-500 flex flex-col gap-3">
+              <div>
+                <p className="text-red-500 font-medium mb-1">No addresses found</p>
+                <p>{error}</p>
+              </div>
+              {rawElements != null && (
+                <p className="text-xs text-gray-400">OSM returned {rawElements} building{rawElements !== 1 ? "s" : ""} with no address tags in this area.</p>
+              )}
+              {detectedZip && (
+                <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-left">
+                  <p className="text-xs font-semibold text-amber-800 mb-0.5">Try ZIP Import instead</p>
+                  <p className="text-xs text-amber-700">
+                    This area appears to be in ZIP code <strong>{detectedZip}</strong>.
+                    Go to the Leads page and use &ldquo;Import&rdquo; &rarr; &ldquo;By ZIP&rdquo;, then enter <strong>{detectedZip}</strong>.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

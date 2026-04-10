@@ -34,6 +34,21 @@ async function queryOverpass(query: string): Promise<{ elements: OverpassElement
   return { elements: json.elements ?? [] };
 }
 
+async function reverseGeocodeZip(lat: number, lon: number): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+      { headers: { "User-Agent": "Rouxte/1.0 (field-sales-app)" }, signal: AbortSignal.timeout(5000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Extract 5-digit US zip from postcode (may be "77450-1234" format)
+    return data.address?.postcode?.match(/^\d{5}/)?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * GET /api/leads/bbox-addresses?south=X&north=X&west=X&east=X
  *
@@ -63,13 +78,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Selected area is too large. Draw a smaller box." }, { status: 400 });
   }
 
-  // Query both address nodes AND building ways (ways use "out center" for centroid coords).
-  // Many US suburbs only have addresses on building ways, not as individual nodes.
+  // Query nodes AND ways with ANY housenumber — post-process to require street/place/full.
+  // Dropping addr:street from the Overpass filter catches addr:place and addr:full patterns
+  // used in some US address imports (common in Texas suburban areas).
   const result = await queryOverpass(`
 [out:json][timeout:25][maxsize:10000000];
 (
-  node["addr:housenumber"]["addr:street"](${south},${west},${north},${east});
-  way["addr:housenumber"]["addr:street"](${south},${west},${north},${east});
+  node["addr:housenumber"](${south},${west},${north},${east});
+  way["addr:housenumber"](${south},${west},${north},${east});
 );
 out center 1000;
   `.trim());
@@ -81,18 +97,30 @@ out center 1000;
     return NextResponse.json({ error: "OSM lookup timed out. Try a smaller area." }, { status: 504 });
   }
 
+  const rawCount = result.elements.length;
+
   const addresses = result.elements
-    .filter((el) => el.tags?.["addr:housenumber"] && el.tags?.["addr:street"])
+    .filter((el) => {
+      if (!el.tags?.["addr:housenumber"]) return false;
+      // Accept addr:street, addr:place, or addr:full as the street identifier
+      return !!(el.tags["addr:street"] || el.tags["addr:place"] || el.tags["addr:full"]);
+    })
     .map((el) => {
       // Nodes have lat/lon directly; ways have a center object
       const lat = el.type === "node" ? (el.lat ?? null) : (el.center?.lat ?? null);
       const lng = el.type === "node" ? (el.lon ?? null) : (el.center?.lon ?? null);
 
       const num    = el.tags!["addr:housenumber"];
-      const street = el.tags!["addr:street"];
+      const street = el.tags!["addr:street"] ?? el.tags!["addr:place"] ?? "";
       const city   = el.tags?.["addr:city"]     ?? "";
       const state  = el.tags?.["addr:state"]    ?? "";
       const zip    = el.tags?.["addr:postcode"] ?? "";
+
+      // If we only have addr:full (complete address string), use it directly
+      if (!street && el.tags?.["addr:full"]) {
+        return { address: el.tags["addr:full"], lat, lng };
+      }
+
       const address = [
         `${num} ${street}`,
         city,
@@ -103,13 +131,23 @@ out center 1000;
     })
     .filter((a) => a.lat != null && a.lng != null);
 
-  // If OSM has no address data at all, suggest the ZIP import fallback
+  // OSM has no usable address data here — detect ZIP to guide user to ZIP import fallback
   if (!addresses.length) {
+    const centerLat = (south + north) / 2;
+    const centerLon = (west + east) / 2;
+    const detectedZip = await reverseGeocodeZip(centerLat, centerLon);
+
     return NextResponse.json(
-      { error: "No address data found in this area. OSM coverage may be incomplete here — try the ZIP import instead.", data: [], total: 0 },
+      {
+        error: "No address data found in this area. OSM coverage may be incomplete here — try the ZIP import instead.",
+        data: [],
+        total: 0,
+        detectedZip,
+        _debug: { rawElements: rawCount, bbox: { south, north, west, east } },
+      },
       { status: 404 },
     );
   }
 
-  return NextResponse.json({ data: addresses, total: addresses.length, capped: result.elements.length >= 1000 });
+  return NextResponse.json({ data: addresses, total: addresses.length, capped: rawCount >= 1000 });
 }
