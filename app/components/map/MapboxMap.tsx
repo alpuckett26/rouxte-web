@@ -411,6 +411,14 @@ export default function MapboxMap({
       const minLat = swLngLat.lat;
       const maxLat = neLngLat.lat;
 
+      console.log("[AreaSelect] bounds", { minLng, maxLng, minLat, maxLat });
+      console.log("[AreaSelect] total leads in ref", leadsRef.current.length);
+      console.log("[AreaSelect] leads with lat/lng", leadsRef.current.filter(l => l.lat != null && l.lng != null).length);
+      if (leadsRef.current.length > 0) {
+        const sample = leadsRef.current[0];
+        console.log("[AreaSelect] sample lead lat/lng", sample.lat, sample.lng);
+      }
+
       const inside = leadsRef.current.filter(
         (l) =>
           l.lat != null &&
@@ -420,6 +428,8 @@ export default function MapboxMap({
           (l.lat as number) >= minLat &&
           (l.lat as number) <= maxLat,
       );
+
+      console.log("[AreaSelect] leads inside selection", inside.length);
 
       setDrawMode(false);
       setBulkLeads(inside);
