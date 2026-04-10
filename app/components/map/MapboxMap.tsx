@@ -503,6 +503,10 @@ export default function MapboxMap({
 
   // ── Add GeoJSON layers ─────────────────────────────────────────────────────
   function addLeadsLayer(map: mapboxgl.Map) {
+    // Find the first symbol layer in the base style so coverage fill/dots
+    // are inserted below road labels — keeps streets always readable.
+    const firstSymbolId = map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
+
     // ── FCC AT&T coverage — census block polygons ─────────────────────────────
     map.addSource("fcc-coverage", {
       type: "geojson",
@@ -517,7 +521,7 @@ export default function MapboxMap({
         "fill-color": "#22c55e",
         "fill-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 13, 0.15, 16, 0.08],
       },
-    });
+    }, firstSymbolId);
 
     map.addLayer({
       id: "fcc-coverage-outline",
@@ -528,11 +532,11 @@ export default function MapboxMap({
         "line-width": 1,
         "line-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0, 11, 0.6, 15, 0.3],
       },
-    });
+    }, firstSymbolId);
 
     // ── AT&T fiber address dots ───────────────────────────────────────────────
     // Individual address-level points from FCC BDC data — shown as blue dots.
-    // Rendered below leads so lead bubbles remain clickable on top.
+    // Inserted below symbol layers so road labels remain visible.
     map.addSource("att-dots", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
@@ -555,7 +559,7 @@ export default function MapboxMap({
         "circle-stroke-color": "#1d4ed8",
         "circle-stroke-opacity": 0.6,
       },
-    });
+    }, firstSymbolId);
 
     map.addSource("leads", {
       type: "geojson",
