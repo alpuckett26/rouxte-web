@@ -432,7 +432,11 @@ export default function MapboxMap({
       function openModal(clusterIds: Set<string>) {
         const allIds = new Set([...inBoundsIds, ...clusterIds]);
         const inside = leadsRef.current.filter((l) => allIds.has(l.id));
-        setAreaDebug(null); // clear debug overlay on success
+        setAreaDebug(
+          `px: (${pixelTL[0].toFixed(0)},${pixelTL[1].toFixed(0)})→(${pixelBR[0].toFixed(0)},${pixelBR[1].toFixed(0)}) canvas:${canvas?.width}x${canvas?.height}\n` +
+          `geo: ${minLat.toFixed(4)},${minLng.toFixed(4)} → ${maxLat.toFixed(4)},${maxLng.toFixed(4)}\n` +
+          `clusters in box: ${clustersInBox.length} | cluster leads: ${clusterIds.size} | geo hits: ${inBoundsIds.size} | total found: ${inside.length}`
+        );
         setDrawMode(false);
         setBulkLeads(inside);
         setBulkTab("lead");
