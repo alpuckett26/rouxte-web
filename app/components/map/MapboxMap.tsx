@@ -748,15 +748,19 @@ export default function MapboxMap({
   }, [filters]);
 
   // Sync fetched leads → Mapbox GeoJSON source
+  const hasFitToLeads = useRef(false);
+
   const syncLeadsToMap = useCallback((fetched: Lead[]) => {
     const map = mapRef.current;
     if (!map) return;
     const source = map.getSource("leads") as mapboxgl.GeoJSONSource | undefined;
     if (!source) return;
 
+    const withCoords = fetched.filter((lead) => lead.lat != null && lead.lng != null);
+
     const geojson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
-      features: fetched.filter((lead) => lead.lat != null && lead.lng != null).map((lead) => ({
+      features: withCoords.map((lead) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [lead.lng as number, lead.lat as number] },
         properties: {
@@ -772,6 +776,27 @@ export default function MapboxMap({
     };
 
     source.setData(geojson);
+
+    // On first load, if none of the leads are in the current viewport, fly to fit them all.
+    if (!hasFitToLeads.current && withCoords.length > 0) {
+      hasFitToLeads.current = true;
+      const bounds = map.getBounds();
+      const anyVisible = withCoords.some(
+        (l) =>
+          (l.lng as number) >= bounds.getWest() &&
+          (l.lng as number) <= bounds.getEast() &&
+          (l.lat as number) >= bounds.getSouth() &&
+          (l.lat as number) <= bounds.getNorth(),
+      );
+      if (!anyVisible) {
+        const lngs = withCoords.map((l) => l.lng as number);
+        const lats = withCoords.map((l) => l.lat as number);
+        map.fitBounds(
+          [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+          { padding: 60, maxZoom: 14, duration: 1200 },
+        );
+      }
+    }
   }, []);
 
   useEffect(() => {
