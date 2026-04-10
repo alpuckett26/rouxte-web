@@ -402,40 +402,65 @@ export default function MapboxMap({
       dragCurrent.current = null;
       if (Math.abs(end.x - s.x) < 10 || Math.abs(end.y - s.y) < 10) return;
 
-      // Convert pixel bounding box to geographic bounds so selection works at
-      // any zoom level, including when leads are grouped into cluster circles.
-      const swLngLat = map!.unproject([Math.min(s.x, end.x), Math.max(s.y, end.y)]);
-      const neLngLat = map!.unproject([Math.max(s.x, end.x), Math.min(s.y, end.y)]);
+      // Pixel bounding box used for rendered-feature queries (always pixel-accurate)
+      const pixelTL: [number, number] = [Math.min(s.x, end.x), Math.min(s.y, end.y)];
+      const pixelBR: [number, number] = [Math.max(s.x, end.x), Math.max(s.y, end.y)];
 
-      const minLng = swLngLat.lng;
-      const maxLng = neLngLat.lng;
-      const minLat = swLngLat.lat;
-      const maxLat = neLngLat.lat;
+      // Geographic bounds — catches individual unclustered leads
+      const swLngLat = map!.unproject([pixelTL[0], pixelBR[1]]);
+      const neLngLat = map!.unproject([pixelBR[0], pixelTL[1]]);
+      const minLng = swLngLat.lng, maxLng = neLngLat.lng;
+      const minLat = swLngLat.lat, maxLat = neLngLat.lat;
 
-      const totalLeads = leadsRef.current.length;
-      const withCoords = leadsRef.current.filter(l => l.lat != null && l.lng != null).length;
-      const sample = leadsRef.current[0];
-
-      const inside = leadsRef.current.filter(
-        (l) =>
-          l.lat != null &&
-          l.lng != null &&
-          (l.lng as number) >= minLng &&
-          (l.lng as number) <= maxLng &&
-          (l.lat as number) >= minLat &&
-          (l.lat as number) <= maxLat,
+      const inBoundsIds = new Set(
+        leadsRef.current
+          .filter((l) =>
+            l.lat != null && l.lng != null &&
+            (l.lng as number) >= minLng && (l.lng as number) <= maxLng &&
+            (l.lat as number) >= minLat && (l.lat as number) <= maxLat,
+          )
+          .map((l) => l.id),
       );
 
-      setAreaDebug(
-        `Leads loaded: ${totalLeads} | With coords: ${withCoords} | Found: ${inside.length}\n` +
-        `Bounds: ${minLat.toFixed(4)},${minLng.toFixed(4)} → ${maxLat.toFixed(4)},${maxLng.toFixed(4)}\n` +
-        (sample ? `Sample lead: lat=${sample.lat} lng=${sample.lng}` : "No leads in memory")
-      );
+      // Cluster circles sit at the centroid of their members — individual lead
+      // coordinates may lie outside the drawn box. Query the cluster layer by
+      // pixel rect (always accurate), then expand each cluster to its leaves.
+      const clustersInBox = map!.queryRenderedFeatures([pixelTL, pixelBR], {
+        layers: ["leads-cluster"],
+      });
 
-      setDrawMode(false);
-      setBulkLeads(inside);
-      setBulkTab("lead");
-      setBulkAssignOpen(true);
+      function openModal(clusterIds: Set<string>) {
+        const allIds = new Set([...inBoundsIds, ...clusterIds]);
+        const inside = leadsRef.current.filter((l) => allIds.has(l.id));
+        setAreaDebug(null); // clear debug overlay on success
+        setDrawMode(false);
+        setBulkLeads(inside);
+        setBulkTab("lead");
+        setBulkAssignOpen(true);
+      }
+
+      if (!clustersInBox.length) {
+        openModal(new Set());
+        return;
+      }
+
+      // Expand each cluster asynchronously to get its constituent lead IDs
+      const source = map!.getSource("leads") as mapboxgl.GeoJSONSource;
+      const clusterLeadIds = new Set<string>();
+      let pending = clustersInBox.length;
+
+      clustersInBox.forEach((cluster) => {
+        const clusterId = cluster.properties?.cluster_id as number | undefined;
+        const count = (cluster.properties?.point_count as number) ?? 500;
+        if (clusterId == null) { if (--pending === 0) openModal(clusterLeadIds); return; }
+        source.getClusterLeaves(clusterId, count, 0, (_err: Error | null, leaves: GeoJSON.Feature[] | null) => {
+          (leaves ?? []).forEach((leaf) => {
+            const id = leaf.properties?.id as string | undefined;
+            if (id) clusterLeadIds.add(id);
+          });
+          if (--pending === 0) openModal(clusterLeadIds);
+        });
+      });
     }
 
     // Mouse
