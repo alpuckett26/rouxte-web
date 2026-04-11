@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail, FROM } from "@/lib/email/resend";
+import { paystubReleasedEmail } from "@/lib/email/templates";
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -89,5 +91,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     .from("paystubs").update(updates).eq("id", id).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Email rep when their stub is released
+  if (updates.status === "released") {
+    const { data: { user: repUser } } = await admin.auth.admin.getUserById(stub.user_id);
+    const { data: repProfile } = await admin
+      .from("user_profiles").select("full_name").eq("user_id", stub.user_id).maybeSingle();
+    if (repUser?.email) {
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://rouxte.com";
+      const tpl = paystubReleasedEmail({
+        repName:     repProfile?.full_name ?? repUser.email,
+        periodLabel: stub.period_label ?? `${stub.period_start} – ${stub.period_end}`,
+        netPay:      data?.net_pay ?? stub.net_pay,
+        viewUrl:     `${origin}/payroll/stubs/${id}/print`,
+      });
+      await sendEmail({ from: FROM, to: repUser.email, ...tpl });
+    }
+  }
+
   return NextResponse.json({ data });
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail, FROM } from "@/lib/email/resend";
+import { inviteAcceptedEmail } from "@/lib/email/templates";
 
 interface Params { params: Promise<{ token: string }> }
 
@@ -98,6 +100,29 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .from("invites")
     .update({ accepted_at: new Date().toISOString() })
     .eq("id", invite.id);
+
+  // Notify the manager/inviter that the rep joined
+  const { data: inviteRow } = await admin
+    .from("invites")
+    .select("invited_by, org:org_id(name), role")
+    .eq("id", invite.id)
+    .maybeSingle();
+
+  if (inviteRow?.invited_by) {
+    const { data: { user: managerUser } } = await admin.auth.admin.getUserById(inviteRow.invited_by);
+    if (managerUser?.email) {
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://rouxte.com";
+      const orgName = (inviteRow.org as { name?: string } | null)?.name ?? "your org";
+      const tpl = inviteAcceptedEmail({
+        repName:  anyProfile?.full_name ?? user.email?.split("@")[0] ?? "A new rep",
+        repEmail: user.email ?? "",
+        orgName,
+        role:     invite.role,
+        dashUrl:  `${origin}/manager`,
+      });
+      await sendEmail({ from: FROM, to: managerUser.email, ...tpl });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
