@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getStripe, STORE_PRICES, StoreProductKey } from "@/lib/stripe";
+import { getSquare, SQUARE_LOCATION_ID } from "@/lib/square";
+import { STORE_PRICES, StoreProductKey } from "@/lib/store-config";
+import { randomUUID } from "crypto";
 
-// POST /api/store/badge
-// Creates a Stripe Checkout Session for a badge order.
-// Body: { product_key, badge_config, shipping_address? }
+// POST /api/store/badge — creates a Square payment link for a badge order
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,23 +32,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid product_key" }, { status: 400 });
   }
 
-  const price   = STORE_PRICES[product_key];
+  const price      = STORE_PRICES[product_key];
   const isPhysical = product_key.includes("physical") || product_key.includes("org");
-  const totalCents  = price.cents;
 
   // Create a pending order record
   const { data: order, error: orderErr } = await admin
     .from("store_orders")
     .insert({
-      org_id:          profile.org_id,
-      user_id:         user.id,
-      product_type:    "badge",
+      org_id:           profile.org_id,
+      user_id:          user.id,
+      product_type:     "badge",
       quantity,
       unit_price_cents: price.cents,
-      total_cents:     totalCents,
-      status:          "pending",
+      total_cents:      price.cents,
+      status:           "pending",
+      fulfillment_provider: "printful",
       shipping_address: isPhysical ? (shipping_address ?? null) : null,
-      product_config:  badge_config,
+      product_config:   badge_config,
     })
     .select("id")
     .single();
@@ -57,44 +57,53 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
   }
 
-  const origin = request.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://rouxte.com";
+  const origin = request.headers.get("origin")
+    ?? process.env.NEXT_PUBLIC_SITE_URL
+    ?? "https://rouxte.com";
 
-  // Create Stripe Checkout Session
-  const session = await getStripe().checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          unit_amount: price.cents,
-          product_data: {
-            name:        `Rouxte — ${price.label}`,
-            description: `For: ${badge_config.full_name ?? ""}`,
-            images:      [],
+  // Create Square Payment Link
+  const square = getSquare();
+  const linkResult = await square.checkout.paymentLinks.create({
+    idempotencyKey: randomUUID(),
+    order: {
+      locationId:  SQUARE_LOCATION_ID(),
+      referenceId: order.id,
+      lineItems: [
+        {
+          name:     `Rouxte — ${price.label}`,
+          quantity: "1",
+          note:     `For: ${String(badge_config.full_name ?? "")}`,
+          basePriceMoney: {
+            amount:   BigInt(price.cents),
+            currency: "USD",
           },
         },
-        quantity: 1,
-      },
-    ],
-    metadata: {
-      order_id:    order.id,
-      user_id:     user.id,
-      org_id:      profile.org_id,
-      product_key,
+      ],
     },
-    success_url: `${origin}/store/badge/success?order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url:  `${origin}/store/badge?cancelled=1`,
-    customer_email: user.email,
+    checkoutOptions: {
+      redirectUrl: `${origin}/store/badge/success?order_id=${order.id}`,
+    },
+    prePopulatedData: {
+      buyerEmail: user.email,
+    },
   });
 
-  // Save stripe session ID
+  const paymentLink = linkResult.paymentLink;
+  if (!paymentLink?.url) {
+    console.error("Square payment link error:", linkResult);
+    return NextResponse.json({ error: "Failed to create payment link" }, { status: 500 });
+  }
+
+  // Save Square payment link ID on the order
   await admin
     .from("store_orders")
-    .update({ stripe_session_id: session.id })
+    .update({ stripe_session_id: paymentLink.id }) // reusing column for Square link ID
     .eq("id", order.id);
 
-  return NextResponse.json({ checkout_url: session.url, order_id: order.id });
+  return NextResponse.json({
+    checkout_url: paymentLink.url,
+    order_id:     order.id,
+  });
 }
 
 // GET /api/store/badge — list current user's badge orders
