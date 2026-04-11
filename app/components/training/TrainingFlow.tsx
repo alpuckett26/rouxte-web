@@ -221,18 +221,21 @@ export default function TrainingFlow() {
                 disabled={!unlocked}
                 onClick={() => openModule(mod)}
                 className={`group relative flex items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all ${
-                  passed
-                    ? "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15"
-                    : unlocked
-                    ? "border-white/15 bg-white/5 hover:bg-white/10 hover:border-blue-400/40"
-                    : "border-white/5 bg-white/[0.02] opacity-40 cursor-not-allowed"
+                  unlocked && !passed
+                    ? "border-blue-500/40 bg-blue-600/10 hover:bg-blue-600/15 hover:border-blue-400/60 shadow-lg shadow-blue-900/20"
+                    : "border-white/5 bg-white/[0.03] opacity-40 cursor-not-allowed"
                 }`}
               >
+                {/* Greyed overlay for non-active modules */}
+                {(passed || !unlocked) && (
+                  <div className="absolute inset-0 rounded-2xl bg-slate-950/30 pointer-events-none" />
+                )}
+
                 {/* Step circle */}
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm transition-all ${
-                  passed   ? "bg-emerald-500 text-white"
-                  : unlocked ? "bg-blue-600/30 text-blue-400 border border-blue-500/30"
-                  :           "bg-white/10 text-gray-600"
+                  passed    ? "bg-slate-700 text-slate-400"
+                  : unlocked ? "bg-blue-600 text-white shadow-md shadow-blue-700/40"
+                  :            "bg-white/10 text-gray-600"
                 }`}>
                   {passed ? (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -249,13 +252,13 @@ export default function TrainingFlow() {
 
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-semibold truncate ${
-                    passed ? "text-emerald-300" : unlocked ? "text-white" : "text-gray-500"
+                    passed ? "text-slate-500" : unlocked ? "text-white" : "text-gray-600"
                   }`}>
                     {mod.title}
                   </p>
-                  <p className={`text-xs mt-0.5 ${passed ? "text-emerald-500/80" : "text-gray-500"}`}>
+                  <p className={`text-xs mt-0.5 ${passed ? "text-slate-600" : unlocked ? "text-blue-400/80" : "text-gray-600"}`}>
                     {passed
-                      ? `Passed · ${attempts} attempt${attempts !== 1 ? "s" : ""}`
+                      ? `Completed · ${attempts} attempt${attempts !== 1 ? "s" : ""}`
                       : started    ? "In progress — quiz not yet passed"
                       : unlocked   ? "Ready to start"
                       :              "Complete the previous module first"}
@@ -263,7 +266,7 @@ export default function TrainingFlow() {
                 </div>
 
                 {unlocked && !passed && (
-                  <svg className="w-4 h-4 text-gray-600 group-hover:text-blue-400 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-blue-400/60 group-hover:text-blue-300 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                   </svg>
                 )}
