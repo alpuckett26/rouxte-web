@@ -59,6 +59,9 @@ export async function GET(request: NextRequest) {
 
     // Batch 10 at a time — avoids overwhelming FCC rate limits
     const attPoints: { lat: number; lng: number }[] = [];
+    let firstRawResponse: unknown = null;
+    let firstError: string | null = null;
+
     for (let i = 0; i < points.length; i += 10) {
       const batch = points.slice(i, i + 10);
       const results = await Promise.all(
@@ -68,21 +71,26 @@ export async function GET(request: NextRequest) {
             url.searchParams.set("latitude",  pt.lat.toFixed(6));
             url.searchParams.set("longitude", pt.lng.toFixed(6));
             url.searchParams.set("unit",      "location");
-            url.searchParams.set("category",  "residential");
+            url.searchParams.set("category",  "all");
             url.searchParams.set("limit",     "25");
             url.searchParams.set("offset",    "0");
 
             const res = await fetch(url.toString(), { headers: authHeaders });
-            if (!res.ok) return null;
             const json = await res.json();
+
+            // Capture first response for debugging
+            if (firstRawResponse === null) firstRawResponse = { status: res.status, body: json };
+
+            if (!res.ok) return null;
             const providers: { brand_name: string; technology: number }[] =
-              json?.availability ?? json?.results ?? [];
+              json?.availability ?? json?.results ?? json?.data ?? [];
 
             const hasATTFiber = providers.some(
               (p) => isATT(p.brand_name) && p.technology === 50
             );
             return hasATTFiber ? pt : null;
-          } catch {
+          } catch (e) {
+            if (!firstError) firstError = String(e);
             return null;
           }
         })
@@ -97,8 +105,8 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json(
-      { type: "FeatureCollection", features },
-      { headers: { "Cache-Control": "public, max-age=300" } }
+      { type: "FeatureCollection", features, _debug: { pointsChecked: points.length, attFound: attPoints.length, firstResponse: firstRawResponse, firstError } },
+      { headers: { "Cache-Control": "no-store" } }
     );
   }
 
