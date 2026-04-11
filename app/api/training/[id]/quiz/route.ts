@@ -12,8 +12,12 @@ interface QuizQuestion {
   explanation: string;
 }
 
+const QUESTION_COUNT = 5;
+const PASS_THRESHOLD = 4; // 4/5 = 80%
+
 // POST /api/training/[id]/quiz
-// body: { answers?: number[] } — if provided, grade the quiz; if not, generate it
+// body: {} → generate quiz
+// body: { answers, questions } → grade quiz
 export async function POST(request: NextRequest, { params }: Params) {
   const { id } = await params;
   const supabase = await createClient();
@@ -29,11 +33,11 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   // ── Generate quiz ──────────────────────────────────────────────────────────
   if (!body.answers) {
-    const prompt = `You are a training quiz generator. Based on this training document, generate exactly 3 multiple-choice quiz questions to test understanding.
+    const prompt = `You are a training quiz generator for a door-to-door fiber sales team. Based on this training document, generate exactly ${QUESTION_COUNT} multiple-choice quiz questions to test understanding.
 
 Document title: ${doc.title}
 Document content:
-${doc.content.slice(0, 3000)}
+${doc.content.slice(0, 4000)}
 
 Return ONLY valid JSON in this exact format, no other text:
 {
@@ -47,12 +51,17 @@ Return ONLY valid JSON in this exact format, no other text:
   ]
 }
 
-Make questions practical and field-relevant. Focus on techniques and specific talking points from the content.`;
+Requirements:
+- Exactly ${QUESTION_COUNT} questions
+- Each question has exactly 4 options (A, B, C, D)
+- Make questions practical and field-relevant — focus on techniques, scripts, and key talking points from the content
+- Vary difficulty: 2 recall, 2 application, 1 scenario-based
+- Explanations should reinforce the learning, not just restate the answer`;
 
     try {
       const message = await anthropic.messages.create({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 800,
+        max_tokens: 1200,
         messages: [{ role: "user", content: prompt }],
       });
 
@@ -67,7 +76,7 @@ Make questions practical and field-relevant. Focus on techniques and specific ta
   // ── Grade quiz ─────────────────────────────────────────────────────────────
   const { answers, questions } = body as { answers: number[]; questions: QuizQuestion[] };
   const correct = answers.filter((ans, i) => ans === questions[i]?.correct).length;
-  const passed = correct >= 2; // 2/3 to pass
+  const passed = correct >= PASS_THRESHOLD;
 
   // Update progress
   const { data: existing } = await admin
@@ -78,12 +87,13 @@ Make questions practical and field-relevant. Focus on techniques and specific ta
     .maybeSingle();
 
   const attempts = (existing?.quiz_attempts ?? 0) + 1;
+  const alreadyPassed = existing?.quiz_passed ?? false;
 
   if (existing) {
     await admin.from("training_progress").update({
-      quiz_passed: existing.quiz_passed || passed,
+      quiz_passed: alreadyPassed || passed,
       quiz_attempts: attempts,
-      completed_at: passed && !existing.quiz_passed ? new Date().toISOString() : undefined,
+      completed_at: passed && !alreadyPassed ? new Date().toISOString() : undefined,
     }).eq("id", existing.id);
   } else {
     const { data: profile } = await admin.from("user_profiles").select("org_id").eq("user_id", user.id).maybeSingle();
@@ -98,5 +108,16 @@ Make questions practical and field-relevant. Focus on techniques and specific ta
     });
   }
 
-  return NextResponse.json({ correct, total: questions.length, passed, attempts });
+  // ── Check promotion eligibility after a new pass ───────────────────────────
+  if (passed && !alreadyPassed) {
+    await admin.rpc("check_and_set_promotion_eligible", { p_user_id: user.id });
+  }
+
+  return NextResponse.json({
+    correct,
+    total: questions.length,
+    passed,
+    attempts,
+    pass_threshold: PASS_THRESHOLD,
+  });
 }

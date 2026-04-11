@@ -27,7 +27,7 @@ export async function GET() {
   // All reps in org (team leads only see their team)
   let repQuery = admin
     .from("user_profiles")
-    .select("user_id, full_name, role, team_id, field_cleared")
+    .select("user_id, full_name, role, team_id, field_cleared, promotion_eligible, promotion_eligible_at")
     .eq("org_id", profile.org_id)
     .in("role", ["sales_rep", "team_lead"])
     .order("full_name");
