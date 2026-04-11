@@ -50,11 +50,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const authHeaders: Record<string, string> = {
+    const baseHeaders: Record<string, string> = {
       "Accept": "application/json",
+      "Content-Type": "application/json",
       "User-Agent": "Rouxte/1.0",
-      "username": fccUser,
-      "hash_value": fccHash,
     };
 
     // Batch 10 at a time — avoids overwhelming FCC rate limits
@@ -67,18 +66,21 @@ export async function GET(request: NextRequest) {
       const results = await Promise.all(
         batch.map(async (pt) => {
           try {
-            const url = new URL(`${FCC_BASE}/listAvailability`);
-            url.searchParams.set("latitude",  pt.lat.toFixed(6));
-            url.searchParams.set("longitude", pt.lng.toFixed(6));
-            url.searchParams.set("unit",      "location");
-            url.searchParams.set("category",  "all");
-            url.searchParams.set("limit",     "25");
-            url.searchParams.set("offset",    "0");
-
-            const res = await fetch(url.toString(), { headers: authHeaders });
+            // FCC broadband map API requires POST with JSON body
+            const res = await fetch(`${FCC_BASE}/listAvailability`, {
+              method: "POST",
+              headers: baseHeaders,
+              body: JSON.stringify({
+                latitude:  parseFloat(pt.lat.toFixed(6)),
+                longitude: parseFloat(pt.lng.toFixed(6)),
+                unit:      "location",
+                category:  "all",
+                limit:     25,
+                offset:    0,
+              }),
+            });
             const json = await res.json();
 
-            // Capture first response for debugging
             if (firstRawResponse === null) firstRawResponse = { status: res.status, body: json };
 
             if (!res.ok) return null;
