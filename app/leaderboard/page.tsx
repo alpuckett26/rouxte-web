@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { LeaderboardEntry, Metric, Period } from "@/app/api/leaderboard/route";
-import type { BonusPeriod, BonusWinner } from "@/app/api/bonus-board/route";
+import type { LeaderboardEntry, Metric, Period, BonusPeriod, BonusWinner } from "@/lib/types/leaderboard";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type PageTab = "leaderboard" | "bonusboard";

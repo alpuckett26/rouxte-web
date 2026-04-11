@@ -1,25 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { LeaderboardEntry, Metric, Period } from "@/lib/types/leaderboard";
 
-export interface LeaderboardEntry {
-  rank: number;
-  user_id: string;
-  full_name: string;
-  avatar_url: string | null;
-  team_name: string | null;
-  sales: number;
-  appointments: number;
-  doors: number;
-  training_pct: number;       // % of modules passed
-  training_modules: number;   // count of modules passed
-  goal: number | null;
-  goal_pct: number | null;
-  is_me: boolean;
-}
-
-export type Metric = "sales" | "appointments" | "doors" | "training";
-export type Period = "today" | "week" | "month" | "alltime";
+// Re-export for any server-side consumers that still import from here
+export type { LeaderboardEntry, Metric, Period };
 
 function periodStart(period: Period): string | null {
   const now = new Date();

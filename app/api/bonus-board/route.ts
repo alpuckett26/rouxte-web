@@ -1,27 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { BonusWinner, BonusPeriod } from "@/lib/types/leaderboard";
 
-export interface BonusWinner {
-  user_id: string;
-  full_name: string;
-  avatar_url: string | null;
-  team_name: string | null;
-  bonus: number;
-  net_pay: number;
-  sales_count: number;
-  period_label: string;        // e.g. "Apr 7 – Apr 13"
-  period_start: string;
-  period_end: string;
-  is_me: boolean;
-}
-
-export interface BonusPeriod {
-  period_label: string;
-  period_start: string;
-  period_end: string;
-  winners: BonusWinner[];
-}
+// Re-export for any server-side consumers that still import from here
+export type { BonusWinner, BonusPeriod };
 
 // GET /api/bonus-board
 // Returns recent pay periods with reps who earned bonuses (bonus > 0, status = released).
