@@ -220,7 +220,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   // Send paystub notification emails (best-effort)
   if (generatedStubIds.length && process.env.RESEND_API_KEY) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.vercel.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.com";
     const periodLabel = `${period.period_start} – ${period.period_end}`;
 
     for (const rep of reps) {

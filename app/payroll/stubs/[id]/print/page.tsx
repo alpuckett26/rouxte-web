@@ -286,9 +286,6 @@ export default async function PrintStubPage({ params }: Params) {
           </div>
         </div>
 
-        <script dangerouslySetInnerHTML={{ __html: `
-          document.querySelector('.print-btn')?.addEventListener('click', () => window.print());
-        `}} />
       </body>
     </html>
   );

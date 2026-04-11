@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Send invite email (best-effort — don't fail the request if email fails)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.com";
   const inviteUrl = `${appUrl}/invite/${token}`;
 
   const { data: org } = await admin.from("orgs").select("name").eq("id", profile.org_id).single();
