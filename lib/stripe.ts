@@ -1,17 +1,11 @@
 import Stripe from "stripe";
 
-// Server-side Stripe client
+// Server-side only — do NOT import this in client components.
+// For shared price config use lib/store-config.ts instead.
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-03-25.dahlia",
   typescript: true,
 });
 
-// Prices in cents
-export const STORE_PRICES = {
-  badge_digital:    { cents: 799,   label: "Digital Download (print-ready PDF)" },
-  badge_physical_1: { cents: 1499,  label: "1 Physical Badge (mailed)" },
-  badge_physical_5: { cents: 3499,  label: "5-Pack Physical Badges (mailed)" },
-  badge_org_25:     { cents: 11900, label: "Org Pack — 25 Badges (mailed)" },
-} as const;
-
-export type StoreProductKey = keyof typeof STORE_PRICES;
+export type { StoreProductKey } from "./store-config";
+export { STORE_PRICES } from "./store-config";

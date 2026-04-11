@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { BadgeCanvas, BadgeConfig } from "@/app/components/store/BadgeCanvas";
-import { STORE_PRICES } from "@/lib/stripe";
+import { STORE_PRICES } from "@/lib/store-config";
 
 interface MeData {
   full_name: string;
