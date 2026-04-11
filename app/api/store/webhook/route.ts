@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
+import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPrintfulOrder } from "@/lib/printful";
 import type { PrintfulAddress } from "@/lib/printful";
@@ -10,9 +11,9 @@ export async function POST(request: NextRequest) {
   const sig  = request.headers.get("stripe-signature") ?? "";
   const body = await request.text();
 
-  let event: ReturnType<typeof stripe.webhooks.constructEvent>;
+  let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err) {
     return NextResponse.json({ error: `Webhook signature invalid: ${err}` }, { status: 400 });
   }
