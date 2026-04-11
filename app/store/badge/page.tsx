@@ -52,8 +52,8 @@ export default function BadgePage() {
   const isPhysical = PRODUCTS.find(p => p.key === product)?.physical ?? false;
 
   useEffect(() => {
-    fetch("/api/me").then(r => r.json()).then(({ data }) => {
-      if (!data) return;
+    fetch("/api/me").then(r => r.json()).then((data) => {
+      if (!data || data.error) return;
       setMe(data);
       setConfig(c => ({
         ...c,

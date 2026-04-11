@@ -331,7 +331,7 @@ export default function TrainingFlow() {
           id="module-content-scroll"
           className="rounded-2xl border border-white/10 bg-white/5 px-6 py-6 max-h-[55vh] overflow-y-auto"
         >
-          <div className="prose prose-invert prose-sm max-w-none text-gray-200 whitespace-pre-wrap leading-relaxed">
+          <div className="text-slate-100 text-sm whitespace-pre-wrap leading-relaxed">
             {activeModule.content || "Content not available."}
           </div>
         </div>

@@ -71,7 +71,11 @@ export default function RepOnboardingStatus() {
   useEffect(() => {
     fetch("/api/onboarding/status")
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+      .then((d) => {
+        if (d && !d.error) setData(d);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
@@ -80,7 +84,7 @@ export default function RepOnboardingStatus() {
     </div>
   );
 
-  if (!data) return null;
+  if (!data?.profile) return null;
 
   const { profile, readiness, training, shadows } = data;
   const approvedShadows = shadows.filter((s) => s.manager_approved).length;
