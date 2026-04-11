@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { LeaderboardEntry, Metric, Period } from "@/lib/types/leaderboard";
 
-export interface LeaderboardEntry {
-  rank: number;
-  user_id: string;
-  full_name: string;
-  team_name: string | null;
-  sales: number;
-  appointments: number;
-  doors: number;
-  training_pct: number;       // % of modules passed
-  training_modules: number;   // count of modules passed
-  goal: number | null;
-  goal_pct: number | null;
-  is_me: boolean;
-}
-
-export type Metric = "sales" | "appointments" | "doors" | "training";
-export type Period = "today" | "week" | "month" | "alltime";
+// Re-export for any server-side consumers that still import from here
+export type { LeaderboardEntry, Metric, Period };
 
 function periodStart(period: Period): string | null {
   const now = new Date();
@@ -58,14 +44,15 @@ export async function GET(request: NextRequest) {
   const since = periodStart(period);
 
   // All reps in scope
+  // Everyone sees the full org board — it's motivational.
+  // Optional ?team_id= filter still available for drill-down.
   let repQuery = admin
     .from("user_profiles")
-    .select("user_id, full_name, team_id")
+    .select("user_id, full_name, team_id, avatar_url")
     .eq("org_id", profile.org_id)
     .in("role", ["sales_rep", "team_lead"]);
 
-  if (teamId)                          repQuery = repQuery.eq("team_id", teamId);
-  else if (profile.role === "team_lead") repQuery = repQuery.eq("team_id", profile.team_id);
+  if (teamId) repQuery = repQuery.eq("team_id", teamId);
 
   const { data: reps } = await repQuery.order("full_name");
   if (!reps?.length) return NextResponse.json({ data: [], period, metric });
@@ -151,6 +138,7 @@ export async function GET(request: NextRequest) {
       rank: 0,
       user_id:          rep.user_id,
       full_name:        rep.full_name,
+      avatar_url:       (rep as { avatar_url?: string | null }).avatar_url ?? null,
       team_name:        rep.team_id ? (teamMap[rep.team_id] ?? null) : null,
       sales,
       appointments,
