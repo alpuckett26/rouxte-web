@@ -23,7 +23,7 @@ export default function TrainingPage() {
   }
 
   return (
-    <main className="p-4 md:p-6">
+    <main className="min-h-screen bg-slate-950 p-4 md:p-6">
       {/* Tabs */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
         {([

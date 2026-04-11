@@ -296,7 +296,7 @@ export default function TrainingFlow() {
     const canTakeQuiz = readProgress >= 50;
 
     return (
-      <div className="flex flex-col gap-5 max-w-2xl">
+      <div className="flex flex-col gap-5 max-w-2xl text-white">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
@@ -332,7 +332,7 @@ export default function TrainingFlow() {
         {/* Content */}
         <div
           id="module-content-scroll"
-          className="rounded-2xl border border-white/10 bg-white/5 px-6 py-6 max-h-[55vh] overflow-y-auto"
+          className="rounded-2xl border border-slate-700 bg-slate-900 px-6 py-6 max-h-[55vh] overflow-y-auto"
         >
           <div className="text-slate-100 text-sm whitespace-pre-wrap leading-relaxed">
             {activeModule.content || "Content not available."}
@@ -379,7 +379,7 @@ export default function TrainingFlow() {
     const answeredCount = answers.filter((a) => a !== null).length;
 
     return (
-      <div className="flex flex-col gap-5 max-w-2xl">
+      <div className="flex flex-col gap-5 max-w-2xl text-white">
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm">
@@ -458,7 +458,7 @@ export default function TrainingFlow() {
     const scorePct  = Math.round((result.correct / result.total) * 100);
 
     return (
-      <div className="flex flex-col gap-5 max-w-2xl">
+      <div className="flex flex-col gap-5 max-w-2xl text-white">
 
         {/* Step bubble */}
         <StepProgress current="result" />

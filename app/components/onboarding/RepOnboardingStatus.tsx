@@ -84,7 +84,11 @@ export default function RepOnboardingStatus() {
     </div>
   );
 
-  if (!data?.profile) return null;
+  if (!data?.profile) return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-10 text-center text-sm text-gray-400 max-w-2xl">
+      Onboarding status unavailable — contact your manager if this persists.
+    </div>
+  );
 
   const { profile, readiness, training, shadows } = data;
   const approvedShadows = shadows.filter((s) => s.manager_approved).length;
