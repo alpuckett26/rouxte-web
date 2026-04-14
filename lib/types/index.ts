@@ -26,6 +26,8 @@ export type LogEventType =
   | "door_knock"
   | "lead_assigned"
   | "lead_unassigned"
+  | "lead_pulled"
+  | "lead_auto_pulled"
   | "status_changed"
   | "note_added"
   | "appointment_set"
@@ -101,6 +103,7 @@ export interface Lead {
   carrier_availability: CarrierAvailability;
   status: LeadStatus;
   assigned_to: string | null;
+  assigned_at: string | null;
   created_by: string;
   follow_up_at: string | null;
   appointment_at: string | null;
@@ -109,6 +112,11 @@ export interface Lead {
   customer_name: string | null;
   phone: string | null;
   source: string;
+  // Pull tracking
+  pulled_at: string | null;
+  pulled_by: string | null;
+  cooldown_until: string | null;
+  pull_reason: string | null;
   created_at: string;
   updated_at: string;
 }

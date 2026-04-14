@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import InviteModal from "@/components/manager/InviteModal";
 import InviteLinkCard from "@/components/manager/InviteLinkCard";
+import RepLeadPullModal from "@/components/manager/RepLeadPullModal";
 import { UserRole } from "@/lib/types";
 
 interface Member {
@@ -57,6 +58,7 @@ export default function PeoplePanel() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [newInvite, setNewInvite] = useState<{ token: string; email: string } | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const [pullTarget, setPullTarget] = useState<{ userId: string; name: string } | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [membersRes, teamsRes, invitesRes] = await Promise.all([
@@ -165,6 +167,16 @@ export default function PeoplePanel() {
                 </div>
               )}
 
+              {member.role === "sales_rep" && (
+                <button
+                  onClick={() => setPullTarget({ userId: member.user_id, name: member.full_name })}
+                  className="text-xs text-orange-600 hover:text-orange-800 font-medium px-2 py-0.5 rounded-lg hover:bg-orange-50 transition-colors"
+                  title="Pull leads from this rep"
+                >
+                  Pull Leads
+                </button>
+              )}
+
               <Badge
                 label={ROLE_LABELS[member.role]}
                 color={ROLE_COLORS[member.role]}
@@ -209,6 +221,15 @@ export default function PeoplePanel() {
         }}
         callerRole="sales_manager"
       />
+
+      {pullTarget && (
+        <RepLeadPullModal
+          repId={pullTarget.userId}
+          repName={pullTarget.name}
+          onClose={() => setPullTarget(null)}
+          onPulled={() => { setPullTarget(null); fetchAll(); }}
+        />
+      )}
     </div>
   );
 }
