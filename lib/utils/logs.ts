@@ -5,6 +5,8 @@ export const LOG_EVENT_LABELS: Record<LogEventType, string> = {
   door_knock: "Door Knocked",
   lead_assigned: "Lead Assigned",
   lead_unassigned: "Lead Unassigned",
+  lead_pulled: "Lead Pulled",
+  lead_auto_pulled: "Lead Auto-Pulled",
   status_changed: "Status Changed",
   note_added: "Note Added",
   appointment_set: "Appointment Set",
