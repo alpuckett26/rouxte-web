@@ -338,8 +338,8 @@ function PullsTab({ logs }: { logs: PullLogEntry[] }) {
             <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${isAuto ? "bg-yellow-400" : "bg-blue-500"}`} />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-gray-700 leading-snug">{log.summary}</p>
-              {meta.rep_id && (
-                <p className="text-xs text-gray-400 mt-0.5">Rep: {String(meta.rep_id).slice(0, 8)}…</p>
+              {typeof meta.rep_id === "string" && (
+                <p className="text-xs text-gray-400 mt-0.5">Rep: {meta.rep_id.slice(0, 8)}…</p>
               )}
             </div>
             <div className="text-right shrink-0">
