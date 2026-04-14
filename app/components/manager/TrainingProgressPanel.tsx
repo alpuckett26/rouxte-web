@@ -33,6 +33,8 @@ export default function TrainingProgressPanel() {
   const [reps, setReps]       = useState<RepRow[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [genResult, setGenResult]   = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/manager/training-progress");
@@ -43,6 +45,23 @@ export default function TrainingProgressPanel() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function generateQuizzes(force = false) {
+    setGenerating(true);
+    setGenResult(null);
+    const res  = await fetch("/api/admin/training/generate-quizzes", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ force }),
+    });
+    const data = await res.json();
+    setGenerating(false);
+    if (data.message) {
+      setGenResult(data.message);
+    } else {
+      setGenResult(`Generated ${data.generated} quiz${data.generated !== 1 ? "zes" : ""}${data.skipped ? `, skipped ${data.skipped} already compiled` : ""}${data.failed ? `, ${data.failed} failed` : ""}.`);
+    }
+  }
 
   if (loading) {
     return (
@@ -65,6 +84,37 @@ export default function TrainingProgressPanel() {
 
   return (
     <div className="flex flex-col gap-4">
+
+      {/* Quiz compile controls */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          onClick={() => generateQuizzes(false)}
+          disabled={generating}
+          className="flex items-center gap-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 py-2 rounded-xl transition-colors"
+        >
+          {generating ? (
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            </svg>
+          )}
+          {generating ? "Generating…" : "Compile Missing Quizzes"}
+        </button>
+        <button
+          onClick={() => generateQuizzes(true)}
+          disabled={generating}
+          className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-50 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors"
+        >
+          Regenerate All
+        </button>
+        {genResult && (
+          <p className="text-xs text-emerald-400">{genResult}</p>
+        )}
+      </div>
 
       {/* Summary pills */}
       <div className="flex flex-wrap gap-3">

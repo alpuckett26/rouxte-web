@@ -15,11 +15,20 @@ interface TrainingModule {
   } | null;
 }
 
+// Sent from server before grading (no correct/explanation)
 interface QuizQuestion {
+  question: string;
+  options: string[];
+}
+
+// Sent from server after grading (includes correct + explanation)
+interface GradedQuestion {
   question: string;
   options: string[];
   correct: number;
   explanation: string;
+  user_answer: number;
+  is_correct: boolean;
 }
 
 type View = "list" | "read" | "quiz" | "result";
@@ -76,8 +85,10 @@ export default function TrainingFlow() {
   const [view, setView]                 = useState<View>("list");
   const [activeModule, setActiveModule] = useState<{ id: string; title: string; content: string } | null>(null);
   const [questions, setQuestions]       = useState<QuizQuestion[]>([]);
+  const [graded, setGraded]             = useState<GradedQuestion[]>([]);
   const [answers, setAnswers]           = useState<(number | null)[]>([]);
   const [quizLoading, setQuizLoading]   = useState(false);
+  const [quizError, setQuizError]       = useState<string | null>(null);
   const [result, setResult]             = useState<{ correct: number; total: number; passed: boolean; attempts: number; pass_threshold?: number } | null>(null);
   const [readProgress, setReadProgress] = useState(0);
 
@@ -113,22 +124,27 @@ export default function TrainingFlow() {
     setActiveModule({ id: mod.id, title: mod.title, content: data.data?.content ?? "" });
     setView("read");
     setQuestions([]);
+    setGraded([]);
     setAnswers([]);
     setResult(null);
+    setQuizError(null);
     setReadProgress(0);
   }
 
   async function startQuiz() {
     if (!activeModule) return;
     setQuizLoading(true);
-    const res  = await fetch(`/api/training/${activeModule.id}/quiz`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    setQuizError(null);
+    // GET — returns questions with correct answers stripped
+    const res  = await fetch(`/api/training/${activeModule.id}/quiz`);
     const data = await res.json();
-    setQuestions(data.questions ?? []);
-    setAnswers(new Array(data.questions?.length ?? 0).fill(null));
+    if (!res.ok || !data.questions?.length) {
+      setQuizError(data.error ?? "Quiz not available for this module yet.");
+      setQuizLoading(false);
+      return;
+    }
+    setQuestions(data.questions);
+    setAnswers(new Array(data.questions.length).fill(null));
     setView("quiz");
     setQuizLoading(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -136,13 +152,15 @@ export default function TrainingFlow() {
 
   async function submitQuiz() {
     if (!activeModule || answers.some((a) => a === null)) return;
+    // POST — send only answers; server grades against stored quiz
     const res  = await fetch(`/api/training/${activeModule.id}/quiz`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers, questions }),
+      body: JSON.stringify({ answers }),
     });
     const data = await res.json();
     setResult(data);
+    setGraded(data.graded ?? []);
     setView("result");
     await fetchProgress();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -340,34 +358,41 @@ export default function TrainingFlow() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-500">
-            {canTakeQuiz
-              ? "Ready — take the quiz when you feel prepared."
-              : "Keep scrolling to unlock the quiz."}
-          </p>
-          <button
-            onClick={startQuiz}
-            disabled={quizLoading || !canTakeQuiz}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-blue-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            {quizLoading ? (
-              <>
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Generating…
-              </>
-            ) : (
-              <>
-                Take Quiz
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </>
-            )}
-          </button>
+        <div className="flex flex-col gap-2">
+          {quizError && (
+            <p className="text-xs text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 rounded-xl px-3 py-2">
+              {quizError}
+            </p>
+          )}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              {canTakeQuiz
+                ? "Ready — take the quiz when you feel prepared."
+                : "Keep scrolling to unlock the quiz."}
+            </p>
+            <button
+              onClick={startQuiz}
+              disabled={quizLoading || !canTakeQuiz}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-blue-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {quizLoading ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Loading…
+                </>
+              ) : (
+                <>
+                  Take Quiz
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -492,23 +517,20 @@ export default function TrainingFlow() {
           )}
         </div>
 
-        {/* Answer review */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Answer Review</p>
-          <div className="flex flex-col gap-2.5">
-            {questions.map((q, qi) => {
-              const userAnswer = answers[qi];
-              const correct    = q.correct;
-              const isRight    = userAnswer === correct;
-              return (
+        {/* Answer review — uses server-graded results */}
+        {graded.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Answer Review</p>
+            <div className="flex flex-col gap-2.5">
+              {graded.map((q, qi) => (
                 <div key={qi} className={`rounded-xl border px-4 py-3.5 ${
-                  isRight ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"
+                  q.is_correct ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"
                 }`}>
                   <div className="flex items-start gap-2.5 mb-2">
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      isRight ? "bg-emerald-500" : "bg-red-500"
+                      q.is_correct ? "bg-emerald-500" : "bg-red-500"
                     }`}>
-                      {isRight ? (
+                      {q.is_correct ? (
                         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         </svg>
@@ -520,20 +542,20 @@ export default function TrainingFlow() {
                     </div>
                     <p className="text-xs font-medium text-gray-200">{q.question}</p>
                   </div>
-                  {!isRight && userAnswer !== null && (
+                  {!q.is_correct && (
                     <p className="text-xs text-red-400 ml-7 mb-0.5">
-                      Your answer: {q.options[userAnswer]?.replace(/^[A-D]\.\s*/, "")}
+                      Your answer: {q.options[q.user_answer]?.replace(/^[A-D]\.\s*/, "")}
                     </p>
                   )}
                   <p className="text-xs text-emerald-400 font-medium ml-7">
-                    Correct: {q.options[correct]?.replace(/^[A-D]\.\s*/, "")}
+                    Correct: {q.options[q.correct]?.replace(/^[A-D]\.\s*/, "")}
                   </p>
                   <p className="text-xs text-gray-500 ml-7 mt-1">{q.explanation}</p>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3">
