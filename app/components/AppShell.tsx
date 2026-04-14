@@ -69,10 +69,18 @@ const CoachIcon = () => (
   </svg>
 );
 
+const MeetIcon = () => (
+  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+  </svg>
+);
+
 const ALL_NAV: NavItem[] = [
   { href: "/map",           label: "Map",      icon: <MapIcon /> },
   { href: "/leads",         label: "Leads",    icon: <LeadsIcon /> },
   { href: "/dashboard",     label: "Home",     icon: <DashIcon /> },
+  { href: "/meetings",      label: "Meet",     icon: <MeetIcon /> },
   { href: "/coach",         label: "Coach",    icon: <CoachIcon /> },
   { href: "/training",      label: "Training", icon: <TrainingIcon /> },
   { href: "/payroll",       label: "Pay",      icon: <PayIcon />,     roles: ["sales_rep", "team_lead"] },
