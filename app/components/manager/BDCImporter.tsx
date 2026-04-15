@@ -53,22 +53,25 @@ export default function BDCImporter() {
   const fileRef   = useRef<HTMLInputElement>(null);
   const [stage,   setStage]   = useState<Stage>("idle");
   const [file,    setFile]    = useState<File | null>(null);
+  const [fileSize, setFileSize] = useState(0);
   const [parsed,  setParsed]  = useState<ParsedRow[] | null>(null);
+  const [parsedCount, setParsedCount] = useState(0);
   const [techFilter, setTechFilter] = useState<"50" | "all">("50");
-  const [brcFilter,  setBrcFilter]  = useState<"R" | "all">("all");
-  const [progress, setProgress] = useState({ step: 0, total: 0, imported: 0 });
+  const [progress, setProgress] = useState({ step: 0, total: 0, imported: 0, parseRow: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [dupSkip,  setDupSkip]  = useState(0);
 
   // ── Step 1: parse file client-side ──────────────────────────────────────
   async function handleFile(f: File) {
     setFile(f);
+    setFileSize(f.size);
     setStage("parsing");
     setErrorMsg(null);
+    setParsed(null);
 
     // Detect ZIP — BDC downloads come as ZIP, must extract first
     if (f.name.toLowerCase().endsWith(".zip") || f.type === "application/zip" || f.type === "application/x-zip-compressed") {
-      setErrorMsg("The BDC file downloaded as a ZIP. Unzip it first, then upload the .csv file inside.");
+      setErrorMsg("This is a ZIP file. Open Files app → tap the ZIP → it extracts automatically → then upload the .csv file inside.");
       setStage("error");
       return;
     }
@@ -91,6 +94,9 @@ export default function BDCImporter() {
       }
 
       const rows: ParsedRow[] = [];
+      const total = lines.length - 1;
+      // Process in chunks to keep UI responsive on mobile
+      const CHUNK = 5000;
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
@@ -103,14 +109,14 @@ export default function BDCImporter() {
         if (isNaN(lat) || isNaN(lng)) continue;
 
         // Build address from whatever columns exist
-        // Some BDC files have address text; others only have coordinates
-        const streetNum  = get(row, "address_primary", "h_address", "street_address", "address");
-        const city       = get(row, "city");
+        // Most BDC availability files only have coordinates — no address text
+        const streetNum  = get(row, "address_primary", "h_address", "street_address", "address", "location_address");
+        const city       = get(row, "city", "city_name");
         const stateAbbr  = get(row, "state_abbr", "state");
         const zip        = get(row, "zip_code", "zip", "zipcode", "postal_code");
-        const addrParts  = [streetNum, city, stateAbbr + (zip ? " " + zip : "")].filter(Boolean);
-        // Fall back to coordinates if no address text in file
-        const addr = addrParts.length > 0 ? addrParts.join(", ") : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        const addrParts  = [streetNum, city, (stateAbbr + (zip ? " " + zip : "")).trim()].filter(Boolean);
+        // Fall back to coordinates as address if no text address in file
+        const addr = addrParts.length > 0 ? addrParts.join(", ") : `${lat.toFixed(6)},${lng.toFixed(6)}`;
 
         rows.push({
           address:    addr,
@@ -121,16 +127,25 @@ export default function BDCImporter() {
           max_down:   parseFloat(get(row, "max_advertised_download_speed", "max_download_speed", "maxdown")) || null,
           max_up:     parseFloat(get(row, "max_advertised_upload_speed",   "max_upload_speed",   "maxup"))   || null,
         });
+
+        // Yield to browser every CHUNK rows to keep UI alive
+        if (i % CHUNK === 0) {
+          setProgress((p) => ({ ...p, parseRow: i }));
+          setParsedCount(rows.length);
+          await new Promise((r) => setTimeout(r, 0));
+        }
       }
 
       if (rows.length === 0) {
         throw new Error(
-          "No valid rows found. The file parsed but had no usable lat/lng data.\n" +
-          `Columns detected: ${headers.slice(0, 10).join(", ")}`
+          `No valid rows found after scanning ${total.toLocaleString()} lines.\n` +
+          `Columns detected: ${headers.slice(0, 10).join(", ")}\n` +
+          "Make sure this is the Fixed Broadband Availability CSV (not a summary file)."
         );
       }
 
       setParsed(rows);
+      setParsedCount(rows.length);
       setStage("idle");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Parse failed");
