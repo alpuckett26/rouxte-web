@@ -99,133 +99,163 @@ async function streamCSV(
 }
 
 export default function BDCImporter() {
-  const availRef  = useRef<HTMLInputElement>(null);
-  const fabricRef = useRef<HTMLInputElement>(null);
+  const availRef   = useRef<HTMLInputElement>(null);
+  const censusRef  = useRef<HTMLInputElement>(null);
 
-  const [availFile,  setAvailFile]  = useState<File | null>(null);
-  const [fabricFile, setFabricFile] = useState<File | null>(null);
-  const [techFilter, setTechFilter] = useState<"50" | "all">("50");
+  const [availFile,   setAvailFile]   = useState<File | null>(null);
+  const [censusFile,  setCensusFile]  = useState<File | null>(null);
+  const [techFilter,  setTechFilter]  = useState<"50" | "all">("50");
 
-  const [stage,        setStage]       = useState<Stage>("idle");
-  const [phase1Pct,    setPhase1Pct]   = useState(0);
-  const [fiberIdCount, setFiberIdCount]= useState(0);
-  const [phase2Pct,    setPhase2Pct]   = useState(0);
-  const [imported,     setImported]    = useState(0);
-  const [dupSkip,      setDupSkip]     = useState(0);
-  const [coordMode,    setCoordMode]   = useState<"exact" | "h3">("h3");
-  const [errorMsg,     setErrorMsg]    = useState<string | null>(null);
-  const [errorDetail,  setErrorDetail] = useState<string | null>(null);
+  const [stage,         setStage]        = useState<Stage>("idle");
+  const [phase1Pct,     setPhase1Pct]    = useState(0);
+  const [fiberBlockCount, setFiberBlockCount] = useState(0);
+  const [phase2Pct,     setPhase2Pct]    = useState(0);
+  const [imported,      setImported]     = useState(0);
+  const [dupSkip,       setDupSkip]      = useState(0);
+  const [coordMode,     setCoordMode]    = useState<"census" | "h3">("h3");
+  const [errorMsg,      setErrorMsg]     = useState<string | null>(null);
+  const [errorDetail,   setErrorDetail]  = useState<string | null>(null);
 
   async function startImport() {
     if (!availFile) return;
 
     setStage("phase1");
-    setPhase1Pct(0); setFiberIdCount(0);
+    setPhase1Pct(0); setFiberBlockCount(0);
     setPhase2Pct(0); setImported(0); setDupSkip(0);
     setErrorMsg(null); setErrorDetail(null);
 
     const currentFilter = techFilter;
-    const fiberIds      = new Set<string>();   // location_id → for Fabric join
-    const h3Coords      = new Map<string, [number, number]>(); // location_id → [lat,lng] from H3
+    // Map<block_geoid, { brand_name, h3Fallback?: [lat,lng] }>
+    const fiberBlocks = new Map<string, { brand: string; h3?: [number, number] }>();
     let   totalImported = 0;
     let   totalSkipped  = 0;
 
     try {
-      // ── Phase 1: stream Availability file ─────────────────────────────
+      // ── Phase 1: stream Availability file — collect unique block GEOIDs ──
       let lastP1 = 0;
       await streamCSV(
         availFile,
         (headers) => {
           const hn = headers.map(norm);
-          if (!hn.some(h => h === "locationid")) throw new Error(
-            `Missing "location_id" column.\n\nColumns: ${headers.slice(0, 12).join(", ")}\n\n` +
-            "Upload the Fixed Broadband Availability file (columns: frn, provider_id, brand_name, location_id, technology, …)"
+          if (!hn.some(h => h === "blockgeoid" || h === "geoid")) throw new Error(
+            `Missing "block_geoid" column.\n\nColumns: ${headers.slice(0, 12).join(", ")}\n\n` +
+            "Upload the Fixed Broadband Availability file (columns: frn, provider_id, brand_name, location_id, technology, …, block_geoid, h3_res8_id)"
           );
         },
         (row, bytes) => {
           const tech = get(row, "technology");
           if (currentFilter === "50" && tech !== "50") return;
-          const lid = get(row, "location_id", "locationid");
-          if (!lid) return;
-          fiberIds.add(lid);
-          // Stash H3 coords now so we don't re-read the Availability file in phase 2
-          if (!h3Coords.has(lid)) {
+          const geoid = get(row, "block_geoid", "geoid", "blockgeoid");
+          if (!geoid) return;
+          if (!fiberBlocks.has(geoid)) {
+            const brand = get(row, "brand_name", "brandname", "provider");
+            // Stash H3 as fallback so we don't re-read the Availability file
             const h3id = get(row, "h3_res8_id", "h3res8id");
-            if (h3id) { const c = h3ToLatLng(h3id); if (c) h3Coords.set(lid, c); }
+            const h3c  = h3id ? h3ToLatLng(h3id) ?? undefined : undefined;
+            fiberBlocks.set(geoid, { brand, h3: h3c });
           }
           const p = pct(bytes, availFile.size);
-          if (p !== lastP1) { lastP1 = p; setPhase1Pct(p); setFiberIdCount(fiberIds.size); }
+          if (p !== lastP1) { lastP1 = p; setPhase1Pct(p); setFiberBlockCount(fiberBlocks.size); }
         },
       );
-      setPhase1Pct(100); setFiberIdCount(fiberIds.size);
-      if (fiberIds.size === 0) throw new Error(
-        `No ${currentFilter === "50" ? "fiber (tech 50) " : ""}locations found.\n\n` +
+      setPhase1Pct(100); setFiberBlockCount(fiberBlocks.size);
+      if (fiberBlocks.size === 0) throw new Error(
+        `No ${currentFilter === "50" ? "fiber (tech 50) " : ""}blocks found.\n\n` +
         "Check that this is the Fixed Broadband Availability CSV."
       );
 
-      // ── Phase 2a: Fabric file → exact lat/lng per location_id ─────────
-      if (fabricFile) {
-        setCoordMode("exact"); setStage("phase2");
-        const exactCoords = new Map<string, { lat: number; lng: number; addr: string }>();
+      // ── Phase 2a: Census Gazetteer file → block centroids (~50-200 m) ────
+      if (censusFile) {
+        setCoordMode("census"); setStage("phase2");
+        // Census Gazetteer columns: USPS  GEOID  POP100  HU100  INTPTLAT  INTPTLONG  ALAND  AWATER
+        // Tab-separated, header on row 1
+        const blockCoords = new Map<string, [number, number]>();
         let lastP2 = 0;
         await streamCSV(
-          fabricFile,
+          censusFile,
           (headers) => {
             const hn = headers.map(norm);
-            if (!hn.some(h => h === "latitude" || h === "lat") || !hn.some(h => h === "locationid"))
+            if (!hn.some(h => h === "geoid") || !hn.some(h => h === "intptlat" || h === "intptlat20"))
               throw new Error(
-                `Fabric CSV missing required columns.\n\nColumns found: ${headers.slice(0,12).join(", ")}\n\n` +
-                "Upload the Broadband Serviceable Locations (BSL) CSV with columns: location_id, latitude, longitude, address_primary, …"
+                `Census Blocks file missing required columns.\n\nColumns found: ${headers.slice(0,12).join(", ")}\n\n` +
+                "Download the Census Gazetteer Blocks file from census.gov (columns: USPS, GEOID, INTPTLAT, INTPTLONG, …)"
               );
           },
           (row, bytes) => {
-            const lid = get(row, "location_id", "locationid");
-            if (!fiberIds.has(lid)) return;
-            const lat = parseFloat(get(row, "latitude", "lat"));
-            const lng = parseFloat(get(row, "longitude", "long", "lng", "lon"));
+            const geoid = get(row, "geoid");
+            if (!geoid || !fiberBlocks.has(geoid)) return;
+            const lat = parseFloat(get(row, "intptlat", "intptlat20"));
+            const lng = parseFloat(get(row, "intptlong", "intptlong20", "intptlon"));
             if (isNaN(lat) || isNaN(lng)) return;
-            const sn = get(row, "address_primary", "h_address", "street_address", "address");
-            const ci = get(row, "city", "city_name");
-            const st = get(row, "state_usps", "state_abbr", "state");
-            const zp = get(row, "zip_code", "zip", "zipcode");
-            const parts = [sn, ci, (st + (zp ? " " + zp : "")).trim()].filter(Boolean);
-            exactCoords.set(lid, { lat, lng, addr: parts.join(", ") || `${lat.toFixed(6)},${lng.toFixed(6)}` });
-            const p = pct(bytes, fabricFile.size);
+            blockCoords.set(geoid, [lat, lng]);
+            const p = pct(bytes, censusFile.size);
             if (p !== lastP2) { lastP2 = p; setPhase2Pct(p); }
           },
         );
 
-        // Import Fabric-matched rows with exact coords + brand from h3Coords context
+        // Import one row per matched census block at its centroid
         const rows: ParsedRow[] = [];
-        for (const [lid, coords] of exactCoords) {
-          rows.push({ address: coords.addr, lat: coords.lat, lng: coords.lng, brand_name: "", technology: "50", max_down: null, max_up: null });
+        for (const [geoid, [lat, lng]] of blockCoords) {
+          const info = fiberBlocks.get(geoid)!;
+          rows.push({
+            address: `block:${geoid}`,
+            lat, lng,
+            brand_name: info.brand,
+            technology: "50",
+            max_down: null,
+            max_up: null,
+          });
           if (rows.length >= BATCH) {
-            const res = await fetch("/api/leads/import-bdc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: rows.splice(0, BATCH) }) });
+            const batch = rows.splice(0, BATCH);
+            const res = await fetch("/api/leads/import-bdc", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rows: batch }),
+            });
             if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Import error"); }
             const d = await res.json();
             totalImported += d.imported ?? 0; setImported(totalImported);
           }
         }
         if (rows.length > 0) {
-          const res = await fetch("/api/leads/import-bdc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows }) });
+          const res = await fetch("/api/leads/import-bdc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rows }),
+          });
           if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Final batch error"); }
           const d = await res.json();
           totalImported += d.imported ?? 0;
-          totalSkipped  += fiberIds.size - totalImported;
+          totalSkipped  += blockCoords.size - totalImported;
         }
+        // Count blocks with no Census match (imported via H3 fallback is skipped here)
+        totalSkipped += fiberBlocks.size - blockCoords.size;
 
       } else {
-        // ── Phase 2b: No Fabric — import using H3 cell centers ─────────
+        // ── Phase 2b: No Census file — import one point per unique block using H3 ──
         setCoordMode("h3"); setStage("phase2");
         const pending: ParsedRow[] = [];
         let done = 0;
-        const total = h3Coords.size;
-        for (const [, [lat, lng]] of h3Coords) {
-          pending.push({ address: `${lat.toFixed(6)},${lng.toFixed(6)}`, lat, lng, brand_name: "", technology: "50", max_down: null, max_up: null });
+        const total = fiberBlocks.size;
+        for (const [, info] of fiberBlocks) {
+          if (!info.h3) { done++; totalSkipped++; continue; }
+          const [lat, lng] = info.h3;
+          pending.push({
+            address: `${lat.toFixed(6)},${lng.toFixed(6)}`,
+            lat, lng,
+            brand_name: info.brand,
+            technology: "50",
+            max_down: null,
+            max_up: null,
+          });
           done++;
           if (pending.length >= BATCH) {
             const batch = pending.splice(0, BATCH);
-            const res = await fetch("/api/leads/import-bdc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: batch }) });
+            const res = await fetch("/api/leads/import-bdc", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rows: batch }),
+            });
             if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Import error"); }
             const d = await res.json();
             totalImported += d.imported ?? 0; totalSkipped += batch.length - (d.imported ?? 0);
@@ -234,7 +264,11 @@ export default function BDCImporter() {
           if (done % 5000 === 0) await new Promise(r => setTimeout(r, 0));
         }
         if (pending.length > 0) {
-          const res = await fetch("/api/leads/import-bdc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: pending }) });
+          const res = await fetch("/api/leads/import-bdc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rows: pending }),
+          });
           if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Final batch error"); }
           const d = await res.json();
           totalImported += d.imported ?? 0; totalSkipped += pending.length - (d.imported ?? 0);
@@ -253,11 +287,11 @@ export default function BDCImporter() {
   }
 
   function reset() {
-    setStage("idle"); setAvailFile(null); setFabricFile(null);
-    setPhase1Pct(0); setFiberIdCount(0); setPhase2Pct(0);
+    setStage("idle"); setAvailFile(null); setCensusFile(null);
+    setPhase1Pct(0); setFiberBlockCount(0); setPhase2Pct(0);
     setImported(0); setDupSkip(0); setErrorMsg(null); setErrorDetail(null);
     if (availRef.current)  availRef.current.value  = "";
-    if (fabricRef.current) fabricRef.current.value = "";
+    if (censusRef.current) censusRef.current.value = "";
   }
 
   return (
@@ -265,7 +299,7 @@ export default function BDCImporter() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">BDC Fiber Import</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Import FCC fiber availability data as leads. The Fabric file is optional but gives exact per-address coordinates.
+          Import FCC fiber availability data as leads. Add the Census Blocks file for ~50–200 m block-centroid accuracy.
         </p>
       </div>
 
@@ -305,41 +339,41 @@ export default function BDCImporter() {
             {availFile && <button onClick={() => { setAvailFile(null); if (availRef.current) availRef.current.value=""; }} className="text-xs text-gray-400 underline">Remove</button>}
           </div>
 
-          {/* File 2: Fabric (optional) */}
-          <div className={`rounded-2xl border px-5 py-4 space-y-2 ${fabricFile ? "border-green-200 bg-green-50" : "border-dashed border-gray-300 bg-gray-50"}`}>
+          {/* File 2: Census Blocks Gazetteer (optional) */}
+          <div className={`rounded-2xl border px-5 py-4 space-y-2 ${censusFile ? "border-green-200 bg-green-50" : "border-dashed border-gray-300 bg-gray-50"}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  Fabric (BSL) CSV
-                  <span className="ml-2 text-xs font-normal text-gray-400">optional — exact per-address dots</span>
+                  Census Blocks file
+                  <span className="ml-2 text-xs font-normal text-gray-400">optional — ~50–200 m accuracy</span>
                 </p>
-                <p className="text-xs text-gray-500">Requires free FCC account → Data → Broadband Serviceable Locations</p>
+                <p className="text-xs text-gray-500">census.gov → Gazetteer Files → Blocks → select your state</p>
               </div>
-              {fabricFile && <span className="text-xs font-medium text-green-700 bg-green-100 border border-green-200 px-2 py-1 rounded-lg">✓ Exact coords</span>}
+              {censusFile && <span className="text-xs font-medium text-green-700 bg-green-100 border border-green-200 px-2 py-1 rounded-lg">✓ Block centroids</span>}
             </div>
-            {!fabricFile && (
+            {!censusFile && (
               <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
                 <p className="text-xs text-amber-700">
-                  Without this file, coordinates come from H3 cell centers (~460 m accuracy) — multiple addresses share the same dot.
+                  Without this file, one dot per census block is placed at the H3 cell center (~460 m). Adding the Census file improves placement to the true block centroid.
                 </p>
               </div>
             )}
-            {fabricFile
-              ? <p className="text-xs text-gray-600 truncate">{fabricFile.name} — {fmtMB(fabricFile.size)}</p>
+            {censusFile
+              ? <p className="text-xs text-gray-600 truncate">{censusFile.name} — {fmtMB(censusFile.size)}</p>
               : <label className="flex items-center gap-2 text-sm text-gray-500 font-medium cursor-pointer hover:text-gray-700">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
-                  Add Fabric file (optional)
-                  <input ref={fabricRef} type="file" accept=".csv,.tsv,.txt,.CSV,.TSV" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) setFabricFile(f); }} />
+                  Add Census Blocks file (optional)
+                  <input ref={censusRef} type="file" accept=".csv,.tsv,.txt,.CSV,.TSV" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) setCensusFile(f); }} />
                 </label>
             }
-            {fabricFile && <button onClick={() => { setFabricFile(null); if (fabricRef.current) fabricRef.current.value=""; }} className="text-xs text-gray-400 underline">Remove</button>}
+            {censusFile && <button onClick={() => { setCensusFile(null); if (censusRef.current) censusRef.current.value=""; }} className="text-xs text-gray-400 underline">Remove</button>}
           </div>
 
           <button onClick={startImport} disabled={!availFile}
             className="w-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 px-4 py-3 rounded-xl">
             {availFile
-              ? fabricFile ? "Start Import (exact coordinates) →" : "Start Import (H3 approximate) →"
+              ? censusFile ? "Start Import (block centroids) →" : "Start Import (H3 approximate) →"
               : "Select Availability file to continue"}
           </button>
         </div>
@@ -358,7 +392,7 @@ export default function BDCImporter() {
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-blue-700 font-medium">
               <span>{phase1Pct}% read</span>
-              <span>{fiberIdCount.toLocaleString()} fiber IDs found</span>
+              <span>{fiberBlockCount.toLocaleString()} fiber blocks found</span>
             </div>
             <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{width:`${phase1Pct}%`}}/>
@@ -375,9 +409,9 @@ export default function BDCImporter() {
             <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0"/>
             <div>
               <p className="text-sm font-semibold text-blue-800">
-                {coordMode === "exact" ? "Phase 2 — Importing exact locations…" : "Phase 2 — Importing (H3 approximate)…"}
+                {coordMode === "census" ? "Phase 2 — Matching census block centroids…" : "Phase 2 — Importing (H3 approximate)…"}
               </p>
-              <p className="text-xs text-blue-600">{fiberIdCount.toLocaleString()} fiber locations to process</p>
+              <p className="text-xs text-blue-600">{fiberBlockCount.toLocaleString()} fiber blocks to process</p>
             </div>
           </div>
           <div className="space-y-1">
@@ -405,12 +439,17 @@ export default function BDCImporter() {
             <div>
               <p className="text-base font-bold text-green-800">Import complete</p>
               <p className="text-sm text-green-700">
-                {imported.toLocaleString()} locations added.
-                {dupSkip > 0 ? ` ${dupSkip.toLocaleString()} duplicates skipped.` : ""}
+                {imported.toLocaleString()} blocks added.
+                {dupSkip > 0 ? ` ${dupSkip.toLocaleString()} skipped.` : ""}
               </p>
               {coordMode === "h3" && (
                 <p className="text-xs text-amber-700 mt-1">
-                  Coordinates are H3 cell centers (~460 m). Re-import with the Fabric file for exact per-address dots.
+                  Coordinates are H3 cell centers (~460 m). Re-import with the Census Blocks file for tighter placement.
+                </p>
+              )}
+              {coordMode === "census" && (
+                <p className="text-xs text-green-600 mt-1">
+                  Block centroids used — ~50–200 m accuracy in urban areas.
                 </p>
               )}
             </div>

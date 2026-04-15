@@ -72,6 +72,7 @@ export default function MapboxMap({
   const [mapStyle, setMapStyle] = useState<"streets" | "satellite">("streets");
   const [drawMode, setDrawMode] = useState(false);
   const [showAttDots, setShowAttDots] = useState(false);
+  const [showFiberHeat, setShowFiberHeat] = useState(false);
   const [drawAreaOpen, setDrawAreaOpen] = useState(false);
   const [drawAreaBbox, setDrawAreaBbox] = useState<{ south: number; north: number; west: number; east: number } | null>(null);
   const [bulkLeads, setBulkLeads] = useState<Lead[]>([]);
@@ -534,6 +535,32 @@ export default function MapboxMap({
       },
     }, firstSymbolId);
 
+    // ── BDC fiber heat map ────────────────────────────────────────────────────
+    map.addSource("fiber-heat", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    map.addLayer({
+      id: "fiber-heat-layer",
+      type: "heatmap",
+      source: "fiber-heat",
+      paint: {
+        "heatmap-weight": 1,
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 14, 1.5],
+        "heatmap-radius":   ["interpolate", ["linear"], ["zoom"], 6, 12, 10, 20, 14, 30],
+        "heatmap-opacity":  ["interpolate", ["linear"], ["zoom"], 8, 0.85, 14, 0.6],
+        "heatmap-color": [
+          "interpolate", ["linear"], ["heatmap-density"],
+          0,   "rgba(0,0,0,0)",
+          0.15,"rgba(103,169,207,0.6)",
+          0.35,"rgba(65,182,196,0.8)",
+          0.55,"rgba(35,139,69,0.9)",
+          0.75,"rgba(161,217,155,0.95)",
+          1,   "rgba(255,255,178,1)",
+        ],
+      },
+    }, firstSymbolId);
+
     // ── AT&T fiber address dots ───────────────────────────────────────────────
     // Individual address-level points from FCC BDC data — shown as blue dots.
     // Inserted below symbol layers so road labels remain visible.
@@ -757,6 +784,56 @@ export default function MapboxMap({
       if (attDotsFetchTimer.current) clearTimeout(attDotsFetchTimer.current);
     };
   }, [styleLoaded, showAttDots, fetchAttDots]);
+
+  // ── Fiber heat map fetch ───────────────────────────────────────────────────
+  const heatFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchFiberHeat = useCallback((map: mapboxgl.Map) => {
+    const src = map.getSource("fiber-heat") as mapboxgl.GeoJSONSource | undefined;
+    if (!src) return;
+    if (map.getZoom() < 7) {
+      src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    const bounds = map.getBounds();
+    if (!bounds) return;
+    const params = new URLSearchParams({
+      north: String(bounds.getNorth()),
+      south: String(bounds.getSouth()),
+      east:  String(bounds.getEast()),
+      west:  String(bounds.getWest()),
+    });
+    fetch(`/api/leads/fiber-heatmap?${params}`)
+      .then(async (r) => {
+        const geojson = await r.json();
+        if (!geojson.type) return;
+        const m = mapRef.current;
+        if (!m) return;
+        const s = m.getSource("fiber-heat") as mapboxgl.GeoJSONSource | undefined;
+        if (s) s.setData(geojson);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!styleLoaded || !map) return;
+    const src = map.getSource("fiber-heat") as mapboxgl.GeoJSONSource | undefined;
+    if (!showFiberHeat) {
+      if (src) src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    fetchFiberHeat(map);
+    const onMoveEnd = () => {
+      if (heatFetchTimer.current) clearTimeout(heatFetchTimer.current);
+      heatFetchTimer.current = setTimeout(() => fetchFiberHeat(map), 400);
+    };
+    map.on("moveend", onMoveEnd);
+    return () => {
+      map.off("moveend", onMoveEnd);
+      if (heatFetchTimer.current) clearTimeout(heatFetchTimer.current);
+    };
+  }, [styleLoaded, showFiberHeat, fetchFiberHeat]);
 
   // ── Fetch leads and sync to map ────────────────────────────────────────────
   const fetchAndSyncLeads = useCallback(async () => {
@@ -1127,6 +1204,19 @@ export default function MapboxMap({
           )}
         </button>
 
+        {/* Fiber heat map toggle */}
+        <button
+          onClick={() => setShowFiberHeat((v) => !v)}
+          className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
+            showFiberHeat
+              ? "bg-green-600 border-green-700 text-white hover:bg-green-700"
+              : "bg-white/90 border-gray-200 text-gray-700 hover:bg-white"
+          }`}
+        >
+          <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${showFiberHeat ? "bg-yellow-300" : "bg-gradient-to-r from-blue-400 to-green-400"}`} />
+          Fiber Heat Map
+        </button>
+
         {/* AT&T fiber dots toggle */}
         <button
           onClick={() => setShowAttDots((v) => !v)}
@@ -1143,6 +1233,12 @@ export default function MapboxMap({
         {/* Map legend */}
         <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
           <p className="font-semibold mb-1.5 text-gray-900">Legend</p>
+          {showFiberHeat && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="w-10 h-2.5 rounded inline-block bg-gradient-to-r from-blue-400 via-green-400 to-yellow-200" />
+              Fiber coverage density
+            </div>
+          )}
           {showAttDots && (
             <div className="flex items-center gap-1.5 mb-1">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-700 inline-block" />
