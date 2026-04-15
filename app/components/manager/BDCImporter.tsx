@@ -66,19 +66,28 @@ export default function BDCImporter() {
     setStage("parsing");
     setErrorMsg(null);
 
+    // Detect ZIP — BDC downloads come as ZIP, must extract first
+    if (f.name.toLowerCase().endsWith(".zip") || f.type === "application/zip" || f.type === "application/x-zip-compressed") {
+      setErrorMsg("The BDC file downloaded as a ZIP. Unzip it first, then upload the .csv file inside.");
+      setStage("error");
+      return;
+    }
+
     try {
       const text = await f.text();
       const lines = text.split(/\r?\n/);
       if (lines.length < 2) throw new Error("File appears empty");
 
       const headers = parseCSVLine(lines[0]);
+      const headerNorms = headers.map(norm);
 
-      // Check it looks like a BDC file
-      const headerStr = headers.map(norm).join(",");
-      const hasTech = headers.some((h) => norm(h) === "technology");
-      const hasLatLng = headers.some((h) => norm(h) === "latitude" || norm(h) === "lat");
-      if (!hasTech && !hasLatLng) {
-        throw new Error("This doesn't look like a BDC file — expected 'technology' and 'latitude' columns.");
+      // Must have lat/lng at minimum
+      const hasLatLng = headerNorms.some((h) => h === "latitude" || h === "lat");
+      if (!hasLatLng) {
+        throw new Error(
+          `Unexpected file format. Columns found: ${headers.slice(0, 8).join(", ")}…\n` +
+          "Expected a BDC availability CSV with 'latitude' and 'longitude' columns."
+        );
       }
 
       const rows: ParsedRow[] = [];
@@ -93,22 +102,32 @@ export default function BDCImporter() {
         const lng = parseFloat(get(row, "longitude", "long", "lng", "lon"));
         if (isNaN(lat) || isNaN(lng)) continue;
 
+        // Build address from whatever columns exist
+        // Some BDC files have address text; others only have coordinates
         const streetNum  = get(row, "address_primary", "h_address", "street_address", "address");
         const city       = get(row, "city");
-        const state      = get(row, "state_abbr", "state");
-        const zip        = get(row, "zip_code", "zip", "zipcode");
-        const addr       = [streetNum, city, state + (zip ? " " + zip : "")].filter(Boolean).join(", ");
-        if (!addr) continue;
+        const stateAbbr  = get(row, "state_abbr", "state");
+        const zip        = get(row, "zip_code", "zip", "zipcode", "postal_code");
+        const addrParts  = [streetNum, city, stateAbbr + (zip ? " " + zip : "")].filter(Boolean);
+        // Fall back to coordinates if no address text in file
+        const addr = addrParts.length > 0 ? addrParts.join(", ") : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 
         rows.push({
           address:    addr,
           lat,
           lng,
-          brand_name: get(row, "brand_name", "brandname", "provider"),
+          brand_name: get(row, "brand_name", "brandname", "provider", "provider_name"),
           technology: get(row, "technology"),
-          max_down:   parseFloat(get(row, "max_advertised_download_speed", "maxdown")) || null,
-          max_up:     parseFloat(get(row, "max_advertised_upload_speed",   "maxup"))   || null,
+          max_down:   parseFloat(get(row, "max_advertised_download_speed", "max_download_speed", "maxdown")) || null,
+          max_up:     parseFloat(get(row, "max_advertised_upload_speed",   "max_upload_speed",   "maxup"))   || null,
         });
+      }
+
+      if (rows.length === 0) {
+        throw new Error(
+          "No valid rows found. The file parsed but had no usable lat/lng data.\n" +
+          `Columns detected: ${headers.slice(0, 10).join(", ")}`
+        );
       }
 
       setParsed(rows);
@@ -193,7 +212,7 @@ export default function BDCImporter() {
       </div>
 
       {/* File picker */}
-      {stage === "idle" && !parsed && (
+      {stage === "idle" && parsed === null && (
         <label className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-10 cursor-pointer hover:bg-gray-100 transition-colors">
           <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -222,7 +241,7 @@ export default function BDCImporter() {
       )}
 
       {/* Preview + filters */}
-      {stage === "idle" && parsed && (
+      {stage === "idle" && parsed !== null && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 space-y-3">
             <p className="text-sm font-semibold text-gray-800">
