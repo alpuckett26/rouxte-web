@@ -87,6 +87,15 @@ export default function MapboxMap({
   // Quick-log sheet (Spotio)
   const [quickLogLead, setQuickLogLead] = useState<Lead | null>(null);
 
+  // UI auto-fade: controls dim after 4 s of inactivity so the map is visible
+  const [uiOpaque, setUiOpaque]     = useState(false);
+  const uiIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function wakeUi() {
+    setUiOpaque(true);
+    if (uiIdleTimer.current) clearTimeout(uiIdleTimer.current);
+    uiIdleTimer.current = setTimeout(() => setUiOpaque(false), 4000);
+  }
+
   // Knock counter — persisted in localStorage per calendar day
   // Key is stable (no user-id dependency) so the initial read is always correct.
   const knockKey = `knock_${new Date().toDateString()}`;
@@ -546,9 +555,9 @@ export default function MapboxMap({
       source: "fiber-heat",
       paint: {
         "heatmap-weight": 1,
-        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 14, 1.5],
-        "heatmap-radius":   ["interpolate", ["linear"], ["zoom"], 6, 12, 10, 20, 14, 30],
-        "heatmap-opacity":  ["interpolate", ["linear"], ["zoom"], 8, 0.85, 14, 0.6],
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 12, 2.0],
+        "heatmap-radius":   ["interpolate", ["linear"], ["zoom"], 6, 25, 9, 50, 12, 80, 15, 60],
+        "heatmap-opacity":  ["interpolate", ["linear"], ["zoom"], 7, 0.85, 14, 0.65],
         "heatmap-color": [
           "interpolate", ["linear"], ["heatmap-density"],
           0,   "rgba(0,0,0,0)",
@@ -1121,8 +1130,16 @@ export default function MapboxMap({
         </button>
       )}
 
-      {/* Map controls overlay — hidden in field mode */}
-      <div className={`absolute top-3 left-3 z-10 flex flex-col gap-2 transition-opacity ${fieldMode ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+      {/* Map controls overlay — hidden in field mode, auto-fades when idle */}
+      <div
+        onPointerDown={wakeUi}
+        onPointerEnter={wakeUi}
+        className={`absolute top-3 left-3 z-10 flex flex-col gap-2 transition-opacity duration-500 ${
+          fieldMode ? "opacity-0 pointer-events-none"
+          : (uiOpaque || drawMode || showFiberHeat) ? "opacity-100"
+          : "opacity-30"
+        }`}
+      >
         {/* Zip code jump */}
         <form onSubmit={goToZip} className="flex items-center gap-1">
           <input
@@ -1217,19 +1234,6 @@ export default function MapboxMap({
           Fiber Heat Map
         </button>
 
-        {/* AT&T fiber dots toggle */}
-        <button
-          onClick={() => setShowAttDots((v) => !v)}
-          className={`flex items-center gap-1.5 rounded-xl backdrop-blur-sm border shadow-sm px-3 py-1.5 text-xs font-medium transition-colors ${
-            showAttDots
-              ? "bg-blue-500 border-blue-600 text-white hover:bg-blue-600"
-              : "bg-white/90 border-gray-200 text-gray-700 hover:bg-white"
-          }`}
-        >
-          <span className={`w-2.5 h-2.5 rounded-full border border-blue-700 shrink-0 ${showAttDots ? "bg-white" : "bg-blue-400"}`} />
-          AT&T Fiber
-        </button>
-
         {/* Map legend */}
         <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
           <p className="font-semibold mb-1.5 text-gray-900">Legend</p>
@@ -1237,12 +1241,6 @@ export default function MapboxMap({
             <div className="flex items-center gap-1.5 mb-1">
               <span className="w-10 h-2.5 rounded inline-block bg-gradient-to-r from-blue-400 via-green-400 to-yellow-200" />
               Fiber coverage density
-            </div>
-          )}
-          {showAttDots && (
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-700 inline-block" />
-              AT&T fiber address
             </div>
           )}
           <div className="flex items-center gap-1.5 mb-1">

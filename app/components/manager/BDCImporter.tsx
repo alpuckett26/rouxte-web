@@ -238,10 +238,30 @@ export default function BDCImporter() {
           if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Final batch error"); }
           const d = await res.json();
           totalImported += d.imported ?? 0;
-          totalSkipped  += tractCoords.size - totalImported;
         }
-        // Count tracts with no Census match
-        totalSkipped += fiberTracts.size - tractCoords.size;
+
+        // H3 fallback for tracts NOT in the Census file (e.g. importing a multi-state
+        // BDC file with a single-state Census Tracts file — unmatched tracts still import)
+        const h3Rows: ParsedRow[] = [];
+        for (const [geoid, info] of fiberTracts) {
+          if (tractCoords.has(geoid) || !info.h3) continue;
+          const [lat, lng] = info.h3;
+          h3Rows.push({ address: `${lat.toFixed(6)},${lng.toFixed(6)}`, lat, lng, brand_name: info.brand, technology: "50", max_down: null, max_up: null });
+          if (h3Rows.length >= BATCH) {
+            const batch = h3Rows.splice(0, BATCH);
+            const res = await fetch("/api/leads/import-bdc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: batch }) });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "H3 fallback error"); }
+            const d = await res.json();
+            totalImported += d.imported ?? 0; setImported(totalImported);
+          }
+        }
+        if (h3Rows.length > 0) {
+          const res = await fetch("/api/leads/import-bdc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: h3Rows }) });
+          if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "H3 fallback final error"); }
+          const d = await res.json();
+          totalImported += d.imported ?? 0;
+        }
+        totalSkipped = fiberTracts.size - totalImported;
 
       } else {
         // ── Phase 2b: No Census file — import one point per unique tract using H3 ──

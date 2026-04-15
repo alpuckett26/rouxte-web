@@ -47,9 +47,11 @@ export async function POST(request: NextRequest) {
     source: "import",
   }));
 
+  // Upsert so that re-importing the same area doesn't fail on duplicate addresses.
+  // ignoreDuplicates silently skips rows whose (org_id, address) already exist.
   const { data, error } = await admin
     .from("leads")
-    .insert(inserts)
+    .upsert(inserts, { onConflict: "org_id,address", ignoreDuplicates: true })
     .select("id");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
