@@ -186,7 +186,16 @@ export default function BDCImporter() {
           },
           (row, bytes) => {
             const geoid = get(row, "geoid");
-            if (!geoid || !fiberTracts.has(geoid)) return;
+            if (!geoid) return;
+            // Census Tracts GEOIDs are exactly 11 chars (state 2 + county 3 + tract 6).
+            // Places, counties, ZCTAs etc. have different lengths — catch the wrong file.
+            if (geoid.length !== 11) throw new Error(
+              `Wrong Census file — this appears to be a ${geoid.length}-digit GEOID file (e.g. Places or Counties).\n\n` +
+              "Download the National Census Tracts Gazetteer File from census.gov " +
+              "(Gazetteer Files → Census Tracts → \"Download the National Census Tracts Gazetteer Files\"). " +
+              "Tract GEOIDs are 11 digits and match the BDC block_geoid prefix."
+            );
+            if (!fiberTracts.has(geoid)) return;
             const lat = parseFloat(get(row, "intptlat", "intptlat20"));
             const lng = parseFloat(get(row, "intptlong", "intptlong20", "intptlon"));
             if (isNaN(lat) || isNaN(lng)) return;
