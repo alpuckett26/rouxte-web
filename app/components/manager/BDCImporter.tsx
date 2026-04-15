@@ -3,7 +3,10 @@
 import { useRef, useState } from "react";
 
 // ── BDC column name normalizer ─────────────────────────────────────────────
-function norm(s: string) { return s.toLowerCase().replace(/[\s_\-\.]/g, ""); }
+// Strips UTF-8 BOM (U+FEFF) that many FCC/government CSVs include on the first column
+function norm(s: string) {
+  return s.replace(/^\uFEFF/, "").toLowerCase().replace(/[\s_\-\.]/g, "");
+}
 
 function get(row: Record<string, string>, ...names: string[]): string {
   for (const name of names) {
@@ -50,16 +53,20 @@ const BATCH = 2000;
 type Stage = "idle" | "parsing" | "importing" | "done" | "error";
 
 export default function BDCImporter() {
-  const fileRef   = useRef<HTMLInputElement>(null);
-  const [stage,   setStage]   = useState<Stage>("idle");
-  const [file,    setFile]    = useState<File | null>(null);
+  const fileRef    = useRef<HTMLInputElement>(null);
+  const [stage,    setStage]    = useState<Stage>("idle");
+  const [file,     setFile]     = useState<File | null>(null);
   const [fileSize, setFileSize] = useState(0);
-  const [parsed,  setParsed]  = useState<ParsedRow[] | null>(null);
+  const [parsed,   setParsed]   = useState<ParsedRow[] | null>(null);
   const [parsedCount, setParsedCount] = useState(0);
+  const [linesRead,   setLinesRead]   = useState(0);
   const [techFilter, setTechFilter] = useState<"50" | "all">("50");
   const [progress, setProgress] = useState({ step: 0, total: 0, imported: 0, parseRow: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [dupSkip,  setDupSkip]  = useState(0);
+
+  function fmt(n: number) { return (n / 1_048_576).toFixed(1) + " MB"; }
 
   // ── Step 1: parse file client-side ──────────────────────────────────────
   async function handleFile(f: File) {
@@ -67,19 +74,34 @@ export default function BDCImporter() {
     setFileSize(f.size);
     setStage("parsing");
     setErrorMsg(null);
+    setErrorDetail(null);
     setParsed(null);
+    setParsedCount(0);
+    setLinesRead(0);
 
     // Detect ZIP — BDC downloads come as ZIP, must extract first
-    if (f.name.toLowerCase().endsWith(".zip") || f.type === "application/zip" || f.type === "application/x-zip-compressed") {
-      setErrorMsg("This is a ZIP file. Open Files app → tap the ZIP → it extracts automatically → then upload the .csv file inside.");
+    if (
+      f.name.toLowerCase().endsWith(".zip") ||
+      f.type === "application/zip" ||
+      f.type === "application/x-zip-compressed"
+    ) {
+      setErrorMsg("This is a ZIP file — please extract it first.");
+      setErrorDetail(
+        "On iPhone: tap and hold the ZIP in Files → Quick Look, or tap once to expand it. Then re-upload the .csv file inside."
+      );
       setStage("error");
       return;
     }
 
     try {
-      const text = await f.text();
+      let text = await f.text();
+      // Strip UTF-8 BOM (U+FEFF) — many FCC government CSVs include this on byte 0
+      if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+
       const lines = text.split(/\r?\n/);
-      if (lines.length < 2) throw new Error("File appears empty");
+      if (lines.length < 2) {
+        throw new Error("File appears empty — fewer than 2 lines found.");
+      }
 
       const headers = parseCSVLine(lines[0]);
       const headerNorms = headers.map(norm);
@@ -88,14 +110,15 @@ export default function BDCImporter() {
       const hasLatLng = headerNorms.some((h) => h === "latitude" || h === "lat");
       if (!hasLatLng) {
         throw new Error(
-          `Unexpected file format. Columns found: ${headers.slice(0, 8).join(", ")}…\n` +
-          "Expected a BDC availability CSV with 'latitude' and 'longitude' columns."
+          `Could not find a "latitude" column.\n\n` +
+          `Columns found in this file (first 10):\n  ${headers.slice(0, 10).join(", ")}\n\n` +
+          "This does not look like the FCC Fixed Broadband Availability CSV. " +
+          "Make sure you downloaded the Availability file (not Coverage or Summary)."
         );
       }
 
       const rows: ParsedRow[] = [];
       const total = lines.length - 1;
-      // Process in chunks to keep UI responsive on mobile
       const CHUNK = 5000;
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -110,12 +133,12 @@ export default function BDCImporter() {
 
         // Build address from whatever columns exist
         // Most BDC availability files only have coordinates — no address text
-        const streetNum  = get(row, "address_primary", "h_address", "street_address", "address", "location_address");
-        const city       = get(row, "city", "city_name");
-        const stateAbbr  = get(row, "state_abbr", "state");
-        const zip        = get(row, "zip_code", "zip", "zipcode", "postal_code");
-        const addrParts  = [streetNum, city, (stateAbbr + (zip ? " " + zip : "")).trim()].filter(Boolean);
-        // Fall back to coordinates as address if no text address in file
+        const streetNum = get(row, "address_primary", "h_address", "street_address", "address", "location_address");
+        const city      = get(row, "city", "city_name");
+        const stateAbbr = get(row, "state_abbr", "state");
+        const zip       = get(row, "zip_code", "zip", "zipcode", "postal_code");
+        const addrParts = [streetNum, city, (stateAbbr + (zip ? " " + zip : "")).trim()].filter(Boolean);
+        // Fall back to coordinates as address when no text address in file
         const addr = addrParts.length > 0 ? addrParts.join(", ") : `${lat.toFixed(6)},${lng.toFixed(6)}`;
 
         rows.push({
@@ -128,9 +151,9 @@ export default function BDCImporter() {
           max_up:     parseFloat(get(row, "max_advertised_upload_speed",   "max_upload_speed",   "maxup"))   || null,
         });
 
-        // Yield to browser every CHUNK rows to keep UI alive
+        // Yield to browser every CHUNK rows to keep UI alive on mobile
         if (i % CHUNK === 0) {
-          setProgress((p) => ({ ...p, parseRow: i }));
+          setLinesRead(i);
           setParsedCount(rows.length);
           await new Promise((r) => setTimeout(r, 0));
         }
@@ -138,17 +161,23 @@ export default function BDCImporter() {
 
       if (rows.length === 0) {
         throw new Error(
-          `No valid rows found after scanning ${total.toLocaleString()} lines.\n` +
-          `Columns detected: ${headers.slice(0, 10).join(", ")}\n` +
-          "Make sure this is the Fixed Broadband Availability CSV (not a summary file)."
+          `Parsed ${total.toLocaleString()} lines but found 0 valid coordinate rows.\n\n` +
+          `Columns detected: ${headers.slice(0, 10).join(", ")}\n\n` +
+          "Every row was skipped because lat/lng values could not be read. " +
+          "Make sure this is the Fixed Broadband Availability CSV (not a summary or coverage file)."
         );
       }
 
       setParsed(rows);
       setParsedCount(rows.length);
+      setLinesRead(total);
       setStage("idle");
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Parse failed");
+      const msg = err instanceof Error ? err.message : "Parse failed";
+      // Split on first blank line — first paragraph = headline, rest = detail
+      const parts = msg.split(/\n\n/);
+      setErrorMsg(parts[0]);
+      setErrorDetail(parts.slice(1).join("\n\n") || null);
       setStage("error");
     }
   }
@@ -169,7 +198,7 @@ export default function BDCImporter() {
     let totalSkipped  = 0;
 
     for (let i = 0; i < filtered.length; i += BATCH) {
-      const batch = filtered.slice(i, i + BATCH);
+      const batch   = filtered.slice(i, i + BATCH);
       const stepNum = Math.floor(i / BATCH) + 1;
       setProgress({ step: stepNum, total: totalBatches, imported: totalImported, parseRow: 0 });
 
@@ -182,6 +211,7 @@ export default function BDCImporter() {
 
       if (!res.ok) {
         setErrorMsg(data.error ?? "Import failed on batch " + stepNum);
+        setErrorDetail(null);
         setStage("error");
         return;
       }
@@ -200,6 +230,9 @@ export default function BDCImporter() {
     setParsed(null);
     setStage("idle");
     setErrorMsg(null);
+    setErrorDetail(null);
+    setParsedCount(0);
+    setLinesRead(0);
     setProgress({ step: 0, total: 0, imported: 0, parseRow: 0 });
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -223,6 +256,7 @@ export default function BDCImporter() {
           <li>Click <strong>By State</strong></li>
           <li>Select your state</li>
           <li>Download <strong>Fixed Broadband — Availability</strong> CSV</li>
+          <li>If it downloads as a ZIP, extract it first, then upload the .csv inside</li>
         </ol>
       </div>
 
@@ -249,9 +283,25 @@ export default function BDCImporter() {
 
       {/* Parsing spinner */}
       {stage === "parsing" && (
-        <div className="flex flex-col items-center gap-3 py-10">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-600">Reading file… large files may take a moment.</p>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-8 flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-blue-800">
+              {file?.name ?? "Reading file…"}
+            </p>
+            {fileSize > 0 && (
+              <p className="text-xs text-blue-600">{fmt(fileSize)} file</p>
+            )}
+            {linesRead > 0 && (
+              <p className="text-xs text-blue-600">
+                {linesRead.toLocaleString()} lines scanned · {parsedCount.toLocaleString()} locations found
+              </p>
+            )}
+            {linesRead === 0 && (
+              <p className="text-xs text-blue-500">Loading file into memory… this may take 10–30 seconds for large files.</p>
+            )}
+          </div>
+          <p className="text-xs text-blue-400">Do not close this page.</p>
         </div>
       )}
 
@@ -372,16 +422,30 @@ export default function BDCImporter() {
         </div>
       )}
 
-      {/* Error */}
+      {/* Error — deliberately large and hard to miss */}
       {stage === "error" && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 space-y-3">
-          <p className="text-sm font-semibold text-red-800">Import failed</p>
-          <p className="text-xs text-red-700">{errorMsg}</p>
+        <div className="rounded-2xl border-2 border-red-300 bg-red-50 px-5 py-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-red-800">Could not read file</p>
+              <p className="text-sm text-red-700 mt-1 whitespace-pre-wrap">{errorMsg}</p>
+            </div>
+          </div>
+          {errorDetail && (
+            <div className="bg-white rounded-xl border border-red-200 px-4 py-3">
+              <p className="text-xs text-red-600 whitespace-pre-wrap">{errorDetail}</p>
+            </div>
+          )}
           <button
             onClick={reset}
-            className="text-sm text-red-700 underline"
+            className="w-full text-sm font-semibold text-white bg-red-600 hover:bg-red-700 px-4 py-2.5 rounded-xl"
           >
-            Try again
+            Try a different file
           </button>
         </div>
       )}
