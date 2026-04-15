@@ -164,14 +164,14 @@ export default function BDCImporter() {
   // ── Step 2: import in batches ────────────────────────────────────────────
   async function runImport() {
     setStage("importing");
-    setProgress({ step: 0, total: totalBatches, imported: 0 });
+    setProgress({ step: 0, total: totalBatches, imported: 0, parseRow: 0 });
     let totalImported = 0;
     let totalSkipped  = 0;
 
     for (let i = 0; i < filtered.length; i += BATCH) {
       const batch = filtered.slice(i, i + BATCH);
       const stepNum = Math.floor(i / BATCH) + 1;
-      setProgress({ step: stepNum, total: totalBatches, imported: totalImported });
+      setProgress({ step: stepNum, total: totalBatches, imported: totalImported, parseRow: 0 });
 
       const res  = await fetch("/api/leads/import-bdc", {
         method:  "POST",
@@ -200,7 +200,7 @@ export default function BDCImporter() {
     setParsed(null);
     setStage("idle");
     setErrorMsg(null);
-    setProgress({ step: 0, total: 0, imported: 0 });
+    setProgress({ step: 0, total: 0, imported: 0, parseRow: 0 });
     if (fileRef.current) fileRef.current.value = "";
   }
 
