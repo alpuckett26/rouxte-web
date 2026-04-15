@@ -4,8 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /**
  * GET /api/fcc/check?lat=30.123&lng=-97.456
  *
- * Returns whether AT&T fiber is available within 100m of the given coordinates
- * based on FCC BDC data imported into fcc_att_locations.
+ * Returns whether AT&T fiber is available near the given coordinates.
+ *
+ * Strategy (in priority order):
+ * 1. fcc_att_locations table (populated by scripts/import-fcc-bdc.ts) — exact
+ * 2. BDC-imported leads (source='bdc_import') within ~2 km radius — fallback
+ *    using the census tract centroid data the user imports via the BDC importer
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -18,16 +22,33 @@ export async function GET(request: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Use PostGIS ST_DWithin to find any AT&T fiber location within 100 metres
-  const { data, error } = await admin.rpc("fcc_att_available", { p_lat: lat, p_lng: lng });
-
-  if (error) {
-    // If the function doesn't exist yet (migration not run), fall back gracefully
-    if (error.message.includes("fcc_att_available") || error.message.includes("does not exist")) {
-      return NextResponse.json({ available: null, source: "fcc_unavailable" });
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  // 1. Try PostGIS fcc_att_available (exact address-level check)
+  const { data: fccData, error: fccError } = await admin.rpc("fcc_att_available", { p_lat: lat, p_lng: lng });
+  if (!fccError && fccData === true) {
+    return NextResponse.json({ available: true, source: "fcc_bdc" });
   }
 
-  return NextResponse.json({ available: data === true, source: "fcc_bdc" });
+  // Skip BDC fallback if the fcc function errored (function missing → table not set up)
+  // but always try BDC leads as secondary signal
+  const DEG_2KM = 0.018; // ~2 km in degrees at mid-US latitudes
+  const { data: bdcLeads } = await admin
+    .from("leads")
+    .select("id")
+    .eq("source", "bdc_import")
+    .gte("lat", lat - DEG_2KM)
+    .lte("lat", lat + DEG_2KM)
+    .gte("lng", lng - DEG_2KM * 1.3) // longitude degrees are shorter
+    .lte("lng", lng + DEG_2KM * 1.3)
+    .limit(1);
+
+  if ((bdcLeads ?? []).length > 0) {
+    return NextResponse.json({ available: true, source: "bdc_leads" });
+  }
+
+  // Neither source found coverage
+  if (fccError && (fccError.message.includes("fcc_att_available") || fccError.message.includes("does not exist"))) {
+    return NextResponse.json({ available: false, source: "fcc_unavailable" });
+  }
+
+  return NextResponse.json({ available: false, source: "fcc_bdc" });
 }

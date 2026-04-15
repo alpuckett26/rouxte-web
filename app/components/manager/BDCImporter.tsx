@@ -105,6 +105,8 @@ export default function BDCImporter() {
   const [availFile,   setAvailFile]   = useState<File | null>(null);
   const [censusFile,  setCensusFile]  = useState<File | null>(null);
   const [techFilter,  setTechFilter]  = useState<"50" | "all">("50");
+  const [clearFirst,  setClearFirst]  = useState(true);
+  const [clearing,    setClearing]    = useState(false);
 
   const [stage,         setStage]        = useState<Stage>("idle");
   const [phase1Pct,     setPhase1Pct]    = useState(0);
@@ -123,6 +125,18 @@ export default function BDCImporter() {
     setPhase1Pct(0); setFiberBlockCount(0);
     setPhase2Pct(0); setImported(0); setDupSkip(0);
     setErrorMsg(null); setErrorDetail(null);
+
+    // Optionally delete all previous BDC leads before importing fresh data
+    if (clearFirst) {
+      setClearing(true);
+      const delRes = await fetch("/api/leads/import-bdc", { method: "DELETE" });
+      setClearing(false);
+      if (!delRes.ok) {
+        const d = await delRes.json();
+        setErrorMsg(d.error ?? "Failed to clear existing BDC data");
+        setStage("error"); return;
+      }
+    }
 
     const currentFilter = techFilter;
     // Map<tract_geoid (11 chars), { brand, h3 fallback }>
@@ -322,6 +336,7 @@ export default function BDCImporter() {
     setStage("idle"); setAvailFile(null); setCensusFile(null);
     setPhase1Pct(0); setFiberBlockCount(0); setPhase2Pct(0);
     setImported(0); setDupSkip(0); setErrorMsg(null); setErrorDetail(null);
+    setClearing(false);
     if (availRef.current)  availRef.current.value  = "";
     if (censusRef.current) censusRef.current.value = "";
   }
@@ -402,6 +417,16 @@ export default function BDCImporter() {
             {censusFile && <button onClick={() => { setCensusFile(null); if (censusRef.current) censusRef.current.value=""; }} className="text-xs text-gray-400 underline">Remove</button>}
           </div>
 
+          {/* Clear existing data option */}
+          <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-3">
+            <input type="checkbox" checked={clearFirst} onChange={e => setClearFirst(e.target.checked)}
+              className="w-4 h-4 accent-blue-600 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-gray-800">Clear existing BDC data first</p>
+              <p className="text-xs text-gray-400">Recommended — removes stale H3-approximate data before importing</p>
+            </div>
+          </label>
+
           <button onClick={startImport} disabled={!availFile}
             className="w-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 px-4 py-3 rounded-xl">
             {availFile
@@ -417,7 +442,9 @@ export default function BDCImporter() {
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0"/>
             <div>
-              <p className="text-sm font-semibold text-blue-800">Phase 1 — Reading availability data…</p>
+              <p className="text-sm font-semibold text-blue-800">
+                {clearing ? "Clearing existing BDC data…" : "Phase 1 — Reading availability data…"}
+              </p>
               <p className="text-xs text-blue-600 truncate">{availFile?.name}</p>
             </div>
           </div>

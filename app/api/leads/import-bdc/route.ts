@@ -87,3 +87,36 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ imported: data?.length ?? 0 });
 }
+
+/**
+ * DELETE /api/leads/import-bdc
+ * Removes all BDC-imported leads (source='bdc_import') for the org.
+ * Used to clear stale H3-approximate data before re-importing with
+ * Census Tract centroids.
+ */
+export async function DELETE(_request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("user_profiles")
+    .select("org_id, role")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+  if (!["admin", "sales_manager"].includes(profile.role)) {
+    return NextResponse.json({ error: "Forbidden — admin/manager only" }, { status: 403 });
+  }
+
+  const { count, error } = await admin
+    .from("leads")
+    .delete({ count: "exact" })
+    .eq("org_id", profile.org_id)
+    .eq("source", "bdc_import");
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ deleted: count ?? 0 });
+}

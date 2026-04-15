@@ -555,9 +555,9 @@ export default function MapboxMap({
       source: "fiber-heat",
       paint: {
         "heatmap-weight": 1,
-        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 12, 2.0],
-        "heatmap-radius":   ["interpolate", ["linear"], ["zoom"], 6, 25, 9, 50, 12, 80, 15, 60],
-        "heatmap-opacity":  ["interpolate", ["linear"], ["zoom"], 7, 0.85, 14, 0.65],
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 7, 0.8, 13, 1.8],
+        "heatmap-radius":   ["interpolate", ["linear"], ["zoom"], 7, 14, 10, 22, 13, 35],
+        "heatmap-opacity":  ["interpolate", ["linear"], ["zoom"], 7, 0.80, 14, 0.60],
         "heatmap-color": [
           "interpolate", ["linear"], ["heatmap-density"],
           0,   "rgba(0,0,0,0)",
