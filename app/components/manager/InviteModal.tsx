@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import { UserRole } from "@/lib/types";
 
 interface Team { id: string; name: string }
-interface InviteResult { token: string; email: string; emailSent: boolean }
+interface InviteResult { token: string; email: string }
 
 interface Props {
   open: boolean;
@@ -26,11 +26,16 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 
 export default function InviteModal({ open, onClose, onCreated, callerRole, fixedTeamId }: Props) {
   const [email, setEmail] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
   const [role, setRole] = useState<UserRole>("sales_rep");
   const [teamId, setTeamId] = useState<string>(fixedTeamId ?? "");
   const [teams, setTeams] = useState<Team[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailValid = EMAIL_RE.test(email.trim());
+  const emailError = emailTouched && !emailValid ? "Enter a valid email address" : "";
 
   const canPickTeam = !fixedTeamId && ["admin", "sales_manager"].includes(callerRole);
 
@@ -42,7 +47,8 @@ export default function InviteModal({ open, onClose, onCreated, callerRole, fixe
   }, [canPickTeam]);
 
   async function handleSubmit() {
-    if (!email.trim()) { setError("Email is required"); return; }
+    setEmailTouched(true);
+    if (!emailValid) return;
     setError("");
     setSaving(true);
     try {
@@ -57,8 +63,9 @@ export default function InviteModal({ open, onClose, onCreated, callerRole, fixe
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Failed to create invite");
-      onCreated({ token: d.data.token, email: d.data.email, emailSent: d.email_sent ?? false });
+      onCreated({ token: d.data.token, email: d.data.email });
       setEmail("");
+      setEmailTouched(false);
       setRole("sales_rep");
       setTeamId("");
     } catch (err: unknown) {
@@ -76,7 +83,9 @@ export default function InviteModal({ open, onClose, onCreated, callerRole, fixe
           type="email"
           value={email}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+          onBlur={() => setEmailTouched(true)}
           placeholder="rep@example.com"
+          error={emailError}
         />
 
         <div className="flex flex-col gap-1">
