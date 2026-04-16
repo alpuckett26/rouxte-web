@@ -81,11 +81,17 @@ export default function DrawAreaLeadModal({ bbox, reps, teams, onClose, onDone }
             ? { lead_ids: importJson.lead_ids, team_id: selectedTeam }
             : { lead_ids: importJson.lead_ids, assign_to: selectedRep };
 
-        await fetch("/api/leads/bulk-assign", {
+        const assignRes = await fetch("/api/leads/bulk-assign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(assignBody),
         });
+        if (!assignRes.ok) {
+          const assignJson = await assignRes.json();
+          setError(assignJson.error ?? "Leads created but assignment failed.");
+          setPhase("error");
+          return;
+        }
       }
 
       setPhase("done");

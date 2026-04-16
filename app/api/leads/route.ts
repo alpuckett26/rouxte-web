@@ -9,12 +9,13 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
-  const carrier = searchParams.get("carrier");
-  const status = searchParams.get("status") as LeadStatus | null;
-  const tags = searchParams.get("tags")?.split(",").filter(Boolean);
-  const isDNK = searchParams.get("is_do_not_knock");
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const pageSize = Math.min(parseInt(searchParams.get("page_size") ?? "50"), 2000);
+  const carrier    = searchParams.get("carrier");
+  const status     = searchParams.get("status") as LeadStatus | null;
+  const tags       = searchParams.get("tags")?.split(",").filter(Boolean);
+  const isDNK      = searchParams.get("is_do_not_knock");
+  const assignedTo = searchParams.get("assigned_to");
+  const page       = parseInt(searchParams.get("page") ?? "1");
+  const pageSize   = Math.min(parseInt(searchParams.get("page_size") ?? "50"), 2000);
 
   let query = supabase
     .from("leads")
@@ -22,9 +23,10 @@ export async function GET(request: NextRequest) {
     .order("updated_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
-  if (status) query = query.eq("status", status);
+  if (status)     query = query.eq("status", status);
   if (isDNK !== null) query = query.eq("is_do_not_knock", isDNK === "true");
   if (carrier === "att") query = query.eq("carrier_availability->att", true);
+  if (assignedTo) query = query.eq("assigned_to", assignedTo);
 
   const { data, error, count } = await query;
 
@@ -49,27 +51,18 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("leads")
     .insert({
       ...body,
       org_id: profile.org_id,
       created_by: user.id,
+      source: body.source ?? "map",
     })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  // Auto-log
-  await supabase.from("sales_activity_log").insert({
-    org_id: profile.org_id,
-    lead_id: data.id,
-    actor_id: user.id,
-    event_type: "lead_assigned",
-    summary: `Lead created at ${data.address}`,
-    is_incident: false,
-  });
 
   return NextResponse.json({ data }, { status: 201 });
 }

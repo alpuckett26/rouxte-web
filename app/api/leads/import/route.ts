@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     .upsert(inserts, { onConflict: "org_id,address", ignoreDuplicates: true })
     .select("id");
 
+  let savedData: { id: string }[] = data ?? [];
   if (error) {
     // Constraint may not exist in all environments — fall back to plain insert
     const { data: insertData, error: insertError } = await admin
@@ -61,13 +62,13 @@ export async function POST(request: NextRequest) {
       .insert(inserts)
       .select("id");
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
-    return NextResponse.json({ imported: insertData?.length ?? 0, lead_ids: (insertData ?? []).map((r) => r.id) });
+    savedData = insertData ?? [];
   }
 
   // Log notes as lead notes if provided
   if (body.notes_map) {
     const notesMap: Record<number, string> = body.notes_map;
-    const noteInserts = (data ?? [])
+    const noteInserts = savedData
       .map((lead, i) => notesMap[i] ? { lead_id: lead.id, author_id: user.id, body: notesMap[i] } : null)
       .filter(Boolean);
     if (noteInserts.length) {
@@ -75,16 +76,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Batch-check AT&T fiber availability for leads that have coordinates.
-  // This populates carrier_availability.att so green rings appear on the map.
-  const leadsData = data ?? [];
-  const coordPairs = leadsData
+  // Batch-check AT&T fiber availability for leads with coordinates
+  const coordPairs = savedData
     .map((row, i) => ({ id: row.id, lat: inserts[i]?.lat, lng: inserts[i]?.lng }))
     .filter((r): r is { id: string; lat: number; lng: number } => r.lat != null && r.lng != null);
 
   if (coordPairs.length) {
     try {
-      // Use batch spatial query (one DB round-trip regardless of lead count)
       const { data: fccResults, error: fccErr } = await admin.rpc("batch_fcc_check", {
         points_json: JSON.stringify(coordPairs.map((r) => ({ lat: r.lat, lng: r.lng }))),
       });
@@ -103,7 +101,6 @@ export async function POST(request: NextRequest) {
               }),
             );
 
-      // Only update the leads that have AT&T available (others stay as {} → false)
       const attIds = coordPairs.filter((_, i) => results[i] === true).map((r) => r.id);
       if (attIds.length) {
         await admin.from("leads").update({ carrier_availability: { att: true } }).in("id", attIds);
@@ -113,5 +110,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ imported: data?.length ?? 0, lead_ids: (data ?? []).map((r) => r.id) });
+  return NextResponse.json({ imported: savedData.length, lead_ids: savedData.map((r) => r.id) });
 }

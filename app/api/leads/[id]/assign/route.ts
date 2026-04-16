@@ -23,9 +23,14 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
+  const now = new Date().toISOString();
   const { data, error } = await admin
     .from("leads")
-    .update({ assigned_to: assign_to ?? null, updated_at: new Date().toISOString() })
+    .update({
+      assigned_to: assign_to ?? null,
+      assigned_at: assign_to ? now : null,
+      updated_at:  now,
+    })
     .eq("id", id)
     .select()
     .single();

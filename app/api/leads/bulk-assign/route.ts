@@ -87,10 +87,11 @@ export async function POST(request: NextRequest) {
       byRep[u.assigned_to].push(u.id);
     }
 
+    const now = new Date().toISOString();
     for (const [repId, ids] of Object.entries(byRep)) {
       const { error: updateErr } = await admin
         .from("leads")
-        .update({ assigned_to: repId, updated_at: new Date().toISOString() })
+        .update({ assigned_to: repId, assigned_at: now, updated_at: now })
         .in("id", ids);
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
@@ -111,9 +112,14 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Single rep / unassign mode ─────────────────────────────────────────────
+  const now2 = new Date().toISOString();
   const { error } = await admin
     .from("leads")
-    .update({ assigned_to: assignTo ?? null, updated_at: new Date().toISOString() })
+    .update({
+      assigned_to: assignTo ?? null,
+      assigned_at: assignTo ? now2 : null,
+      updated_at:  now2,
+    })
     .in("id", validIds);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Lead, LeadFilters } from "@/lib/types";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from "@/lib/utils/leads";
@@ -17,11 +18,15 @@ const PAGE_SIZE = 100;
 
 export default function LeadsListPage() {
   const { profile } = useProfile();
+  const searchParams = useSearchParams();
   const [leads, setLeads]     = useState<Lead[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<LeadFilters>({});
+  const [filters, setFilters] = useState<LeadFilters>(() => {
+    const assignedTo = searchParams.get("assigned_to");
+    return assignedTo ? { assigned_to: assignedTo } : {};
+  });
   const [importOpen, setImportOpen] = useState(false);
   const [reps, setReps]   = useState<Rep[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -37,9 +42,10 @@ export default function LeadsListPage() {
 
   const fetchLeads = useCallback(() => {
     const params = new URLSearchParams();
-    if (filters.carrier) params.set("carrier", filters.carrier);
-    if (filters.status)  params.set("status", filters.status);
+    if (filters.carrier)     params.set("carrier", filters.carrier);
+    if (filters.status)      params.set("status", filters.status);
     if (filters.tags?.length) params.set("tags", filters.tags.join(","));
+    if (filters.assigned_to) params.set("assigned_to", filters.assigned_to);
     params.set("page", String(page));
     params.set("page_size", String(PAGE_SIZE));
 
