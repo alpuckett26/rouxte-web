@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyLeadAssigned } from "@/lib/notifications";
 
 // POST /api/leads/bulk-assign
 // Assign to a single rep:   { lead_ids, assign_to: userId }
@@ -107,6 +108,23 @@ export async function POST(request: NextRequest) {
       }))
     );
 
+    // Notify each rep (best-effort)
+    const { data: assignerProfile } = await admin
+      .from("user_profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const assignerName = assignerProfile?.full_name ?? "Your manager";
+    for (const [repId, ids] of Object.entries(byRep)) {
+      notifyLeadAssigned({
+        orgId:          profile.org_id,
+        recipientId:    repId,
+        leadCount:      ids.length,
+        assignerName,
+        assignerUserId: user.id,
+      }).catch((e) => console.error("[notify] bulk-assign team:", e));
+    }
+
     return NextResponse.json({ assigned: validIds.length, mode: "distributed", reps: sortedReps.length });
   }
 
@@ -128,6 +146,21 @@ export async function POST(request: NextRequest) {
       is_incident: false,
     }))
   );
+
+  if (assignTo) {
+    const { data: assignerProfile } = await admin
+      .from("user_profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    notifyLeadAssigned({
+      orgId:          profile.org_id,
+      recipientId:    assignTo,
+      leadCount:      validIds.length,
+      assignerName:   assignerProfile?.full_name ?? "Your manager",
+      assignerUserId: user.id,
+    }).catch((e) => console.error("[notify] bulk-assign single:", e));
+  }
 
   return NextResponse.json({ assigned: validIds.length, mode: "single" });
 }

@@ -141,6 +141,61 @@ export function paystubReleasedEmail({ repName, periodLabel, netPay, viewUrl }: 
   };
 }
 
+// ── Lead assigned ────────────────────────────────────────────────────────────
+export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerName, orgName, leadsUrl }: {
+  repName: string; leadCount: number; leadAddress?: string;
+  assignerName: string; orgName: string; leadsUrl: string;
+}): { subject: string; html: string } {
+  const isOne = leadCount === 1;
+  return {
+    subject: isOne
+      ? `New lead assigned to you — ${orgName}`
+      : `${leadCount} new leads assigned to you — ${orgName}`,
+    html: wrapper(`
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
+        ${isOne ? "You have a new lead" : `${leadCount} leads assigned to you`}
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">
+        Hi <strong>${repName}</strong>, <strong>${assignerName}</strong> has assigned
+        ${isOne
+          ? `a lead${leadAddress ? ` at <strong>${leadAddress}</strong>` : ""}`
+          : `<strong>${leadCount} leads</strong>`}
+        to you in <strong>${orgName}</strong>.
+      </p>
+      ${cta(leadsUrl, "View My Leads")}
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+        Open your leads pipeline and get started.
+      </p>
+    `),
+  };
+}
+
+// ── Termination ──────────────────────────────────────────────────────────────
+export function terminationEmail({ repName, orgName, managerName, payUrl }: {
+  repName: string; orgName: string; managerName?: string; payUrl: string;
+}): { subject: string; html: string } {
+  const sender = managerName ? `${managerName} from ${orgName}` : orgName;
+  return {
+    subject: `Your position with ${orgName} has ended`,
+    html: wrapper(`
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Your position has ended</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi <strong>${repName}</strong>, ${sender} has ended your role at <strong>${orgName}</strong>.</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:0 0 24px;">
+        <p style="margin:0 0 10px;font-size:14px;font-weight:600;color:#0f172a;">Next steps</p>
+        <ul style="margin:0;padding-left:18px;font-size:14px;color:#475569;line-height:2;">
+          <li>Your final pay will be calculated and released by your manager</li>
+          <li>Any outstanding commissions from closed deals are included</li>
+          <li>Your full pay history is available at the link below</li>
+          <li>Questions? Reply to this email or reach out to your manager directly</li>
+        </ul>
+      </div>
+      ${cta(payUrl, "View Pay History")}
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Thank you for your time with ${orgName}.</p>
+    `),
+  };
+}
+
+
 // ── Store order confirmation ──────────────────────────────────────────────────
 export function orderConfirmationEmail({ buyerName, productLabel, totalCents, orderId, dashUrl }: {
   buyerName: string; productLabel: string; totalCents: number; orderId: string; dashUrl: string;
