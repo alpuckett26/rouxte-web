@@ -1293,7 +1293,10 @@ export default function MapboxMap({
           onDone={(count) => {
             setDrawAreaOpen(false);
             setDrawAreaBbox(null);
-            if (count > 0) fetchAndSyncLeads().then(syncLeadsToMap);
+            if (count > 0) {
+              fetchAndSyncLeads().then(syncLeadsToMap);
+              onLeadCreated?.();
+            }
           }}
         />
       )}
