@@ -12,13 +12,21 @@ export function getResend(): Resend {
 }
 
 // Returns true if the email was sent successfully, false otherwise.
-// Silently skips (returns false) when RESEND_API_KEY is not configured.
 export async function sendEmail(params: Parameters<Resend["emails"]["send"]>[0]): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) return false;
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[resend] RESEND_API_KEY not set — skipping email to", params.to);
+    return false;
+  }
   try {
-    const { error } = await getResend().emails.send(params);
-    return !error;
-  } catch {
+    const { data, error } = await getResend().emails.send(params);
+    if (error) {
+      console.error("[resend] send failed:", error);
+      return false;
+    }
+    console.log("[resend] sent id:", data?.id, "to:", params.to);
+    return true;
+  } catch (err) {
+    console.error("[resend] exception:", err);
     return false;
   }
 }

@@ -59,6 +59,8 @@ export default function PeoplePanel() {
   const [newInvite, setNewInvite] = useState<{ token: string; email: string } | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [pullTarget, setPullTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [confirmTerminate, setConfirmTerminate] = useState<string | null>(null);
+  const [terminating, setTerminating] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [membersRes, teamsRes, invitesRes] = await Promise.all([
@@ -76,6 +78,14 @@ export default function PeoplePanel() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  async function terminateMember(userId: string) {
+    setTerminating(userId);
+    await fetch(`/api/manager/members/${userId}`, { method: "DELETE" });
+    setConfirmTerminate(null);
+    setTerminating(null);
+    await fetchAll();
+  }
 
   async function updateMember(userId: string, patch: { role?: UserRole; team_id?: string | null }) {
     setSaving(userId);
@@ -181,6 +191,33 @@ export default function PeoplePanel() {
                 label={ROLE_LABELS[member.role]}
                 color={ROLE_COLORS[member.role]}
               />
+
+              {confirmTerminate === member.user_id ? (
+                <div className="flex items-center gap-1.5 ml-1">
+                  <span className="text-xs text-red-600 font-medium">Terminate?</span>
+                  <button
+                    onClick={() => terminateMember(member.user_id)}
+                    disabled={terminating === member.user_id}
+                    className="text-xs bg-red-600 hover:bg-red-700 text-white font-medium px-2 py-0.5 rounded-lg disabled:opacity-50 transition-colors"
+                  >
+                    {terminating === member.user_id ? "…" : "Yes"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmTerminate(null)}
+                    className="text-xs text-gray-500 hover:text-gray-700 font-medium px-2 py-0.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmTerminate(member.user_id)}
+                  className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-0.5 rounded-lg hover:bg-red-50 transition-colors ml-1"
+                  title="Terminate this member"
+                >
+                  Terminate
+                </button>
+              )}
             </div>
           </Card>
         ))}

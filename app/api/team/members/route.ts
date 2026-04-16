@@ -20,6 +20,7 @@ export async function GET() {
     .from("user_profiles")
     .select("user_id, full_name, role, team_id")
     .eq("org_id", profile.org_id)
+    .is("terminated_at", null)
     .order("full_name");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
