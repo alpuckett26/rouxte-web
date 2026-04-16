@@ -5,10 +5,11 @@ import { useState } from "react";
 interface Props {
   token: string;
   email: string;
+  emailSent: boolean;
   onDismiss: () => void;
 }
 
-export default function InviteLinkCard({ token, email, onDismiss }: Props) {
+export default function InviteLinkCard({ token, email, emailSent, onDismiss }: Props) {
   const [copied, setCopied] = useState(false);
   const url = `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${token}`;
 
@@ -23,7 +24,11 @@ export default function InviteLinkCard({ token, email, onDismiss }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-green-800">Invite created for {email}</p>
-          <p className="text-xs text-green-600 mt-0.5">Share this link — expires in 7 days</p>
+          <p className="text-xs text-green-600 mt-0.5">
+            {emailSent
+              ? `Invitation email sent to ${email}`
+              : "Email not configured — share this link manually"}
+          </p>
         </div>
         <button onClick={onDismiss} className="text-green-400 hover:text-green-600 text-lg leading-none">
           ×

@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     inviterName: (profile as { full_name?: string }).full_name ?? undefined,
   });
 
-  await sendEmail({ from: FROM, to: email, subject, html });
+  const emailSent = await sendEmail({ from: FROM, to: email, subject, html });
 
-  return NextResponse.json({ data, invite_url: inviteUrl }, { status: 201 });
+  return NextResponse.json({ data, invite_url: inviteUrl, email_sent: emailSent }, { status: 201 });
 }

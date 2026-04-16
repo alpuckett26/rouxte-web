@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import { UserRole } from "@/lib/types";
 
 interface Team { id: string; name: string }
-interface InviteResult { token: string; email: string }
+interface InviteResult { token: string; email: string; emailSent: boolean }
 
 interface Props {
   open: boolean;
@@ -57,7 +57,7 @@ export default function InviteModal({ open, onClose, onCreated, callerRole, fixe
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Failed to create invite");
-      onCreated({ token: d.data.token, email: d.data.email });
+      onCreated({ token: d.data.token, email: d.data.email, emailSent: d.email_sent ?? false });
       setEmail("");
       setRole("sales_rep");
       setTeamId("");

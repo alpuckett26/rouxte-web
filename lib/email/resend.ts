@@ -11,8 +11,14 @@ export function getResend(): Resend {
   return _resend;
 }
 
-// Convenience wrapper — silently skips if no API key configured
-export async function sendEmail(params: Parameters<Resend["emails"]["send"]>[0]): Promise<void> {
-  if (!process.env.RESEND_API_KEY) return;
-  await getResend().emails.send(params).catch(() => {});
+// Returns true if the email was sent successfully, false otherwise.
+// Silently skips (returns false) when RESEND_API_KEY is not configured.
+export async function sendEmail(params: Parameters<Resend["emails"]["send"]>[0]): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  try {
+    const { error } = await getResend().emails.send(params);
+    return !error;
+  } catch {
+    return false;
+  }
 }

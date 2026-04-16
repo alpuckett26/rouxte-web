@@ -43,7 +43,7 @@ export default function TeamLeadPanel({ callerRole }: Props) {
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [newInvite, setNewInvite] = useState<{ token: string; email: string } | null>(null);
+  const [newInvite, setNewInvite] = useState<{ token: string; email: string; emailSent: boolean } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [teamRes, invitesRes] = await Promise.all([
@@ -93,6 +93,7 @@ export default function TeamLeadPanel({ callerRole }: Props) {
         <InviteLinkCard
           token={newInvite.token}
           email={newInvite.email}
+          emailSent={newInvite.emailSent}
           onDismiss={() => setNewInvite(null)}
         />
       )}

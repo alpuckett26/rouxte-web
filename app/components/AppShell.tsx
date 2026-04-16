@@ -78,7 +78,7 @@ const MeetIcon = () => (
 
 const ALL_NAV: NavItem[] = [
   { href: "/map",           label: "Map",      icon: <MapIcon /> },
-  { href: "/leads",         label: "Leads",    icon: <LeadsIcon /> },
+  { href: "/leads",         label: "Leads",    icon: <LeadsIcon />,   roles: ["sales_rep", "team_lead"] },
   { href: "/dashboard",     label: "Home",     icon: <DashIcon /> },
   { href: "/meetings",      label: "Meet",     icon: <MeetIcon /> },
   { href: "/coach",         label: "Coach",    icon: <CoachIcon /> },
