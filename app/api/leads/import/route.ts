@@ -54,7 +54,15 @@ export async function POST(request: NextRequest) {
     .upsert(inserts, { onConflict: "org_id,address", ignoreDuplicates: true })
     .select("id");
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    // Constraint may not exist in all environments — fall back to plain insert
+    const { data: insertData, error: insertError } = await admin
+      .from("leads")
+      .insert(inserts)
+      .select("id");
+    if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+    return NextResponse.json({ imported: insertData?.length ?? 0, lead_ids: (insertData ?? []).map((r) => r.id) });
+  }
 
   // Log notes as lead notes if provided
   if (body.notes_map) {
