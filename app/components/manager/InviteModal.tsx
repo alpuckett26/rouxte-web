@@ -82,8 +82,10 @@ export default function InviteModal({ open, onClose, onCreated, callerRole, fixe
           label="Email address"
           type="email"
           value={email}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-          onBlur={() => setEmailTouched(true)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            setEmail(e.target.value);
+            setEmailTouched(true);
+          }}
           placeholder="rep@example.com"
           error={emailError}
         />
