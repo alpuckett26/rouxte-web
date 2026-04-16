@@ -82,6 +82,83 @@ const ROLE_LABELS: Record<string, string> = {
   sales_rep: "Sales Rep",
 };
 
+function DigitalCardCard() {
+  const { profile } = useProfile();
+  const [phone, setPhone] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!profile) return;
+    fetch("/api/me/phone").then((r) => r.json()).then((d) => {
+      if (d.phone) setPhone(d.phone);
+    });
+  }, [profile]);
+
+  async function savePhone() {
+    setSaving(true);
+    await fetch("/api/me/phone", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function copyCardLink() {
+    if (!profile) return;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin;
+    await navigator.clipboard.writeText(`${appUrl}/card/${profile.user_id}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (!profile) return null;
+
+  const cardUrl = `/card/${profile.user_id}`;
+
+  return (
+    <Card padding="md">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-4">Digital Card</p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="text-xs text-gray-500 mb-1 block">Phone number</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="e.g. (555) 867-5309"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+        <button onClick={savePhone} disabled={saving}
+          className="rounded-xl bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          {saving ? "Saving…" : saved ? "Saved ✓" : "Save Phone"}
+        </button>
+        <div className="flex gap-2 mt-1">
+          <Link href={cardUrl} target="_blank"
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Preview Card
+          </Link>
+          <button onClick={copyCardLink}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            {copied ? "Copied!" : "Copy Link"}
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function SettingsView() {
   const router = useRouter();
   const { profile, loading } = useProfile();
@@ -128,6 +205,9 @@ export default function SettingsView() {
           </div>
         )}
       </Card>
+
+      {/* Digital card — all roles */}
+      <DigitalCardCard />
 
       {/* Org settings — admin only */}
       {profile?.role === "admin" && <OrgSettingsCard />}
