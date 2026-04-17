@@ -20,6 +20,12 @@ interface QuoteLine {
   device: number;
   device_promo: number;
   line_total: number;
+  // Port-in info
+  is_portin: boolean;
+  portin_phone: string;
+  portin_carrier: string;
+  portin_account: string;
+  portin_pin: string;
 }
 
 const PLAN_LABELS: Record<PlanType, string> = {
@@ -39,11 +45,71 @@ const APPRECIATION_TYPES = [
   "Nurse/Healthcare", "Teacher", "Union Member", "Employee", "Other",
 ];
 
+// Carrier port-in guide
+const CARRIER_GUIDE: { carrier: string; steps: string[]; tip?: string }[] = [
+  {
+    carrier: "T-Mobile / Metro by T-Mobile",
+    steps: [
+      "Open T-Mobile app → Account → Profile → Customer Service PIN",
+      "Or call 611 and ask for your account number + transfer PIN",
+      "Account number is on your bill or in app under Account → Profile",
+    ],
+    tip: "PIN is 4–6 digits set by customer. If forgotten, reset in app.",
+  },
+  {
+    carrier: "Verizon",
+    steps: [
+      "My Verizon app → Account → Transfer your number → Generate Transfer PIN",
+      "Or visit verizon.com/account/profile and generate a Transfer PIN",
+      "Or call 1-800-922-0204",
+    ],
+    tip: "Verizon Transfer PINs are 6 digits and expire after 7 days.",
+  },
+  {
+    carrier: "Cricket Wireless",
+    steps: [
+      "Cricket app or cricketwireless.com → My Account → Profile → Account PIN",
+      "Or call 1-800-274-2538",
+    ],
+    tip: "Account number is on the bill or in app under My Account.",
+  },
+  {
+    carrier: "Boost Mobile",
+    steps: [
+      "My Boost app → Settings → Account PIN",
+      "Or call 1-833-502-6678",
+    ],
+  },
+  {
+    carrier: "Straight Talk / TracFone / Total Wireless",
+    steps: [
+      "Visit straighttalk.com → My Account → Port Out PIN",
+      "Or call 1-877-430-2355",
+    ],
+    tip: "Account number is the phone number. PIN is set during account creation.",
+  },
+  {
+    carrier: "US Cellular",
+    steps: [
+      "My Account portal → Security → PIN",
+      "Or call 1-888-944-9400",
+    ],
+  },
+  {
+    carrier: "Dish / Boost (new)",
+    steps: [
+      "My Dish app → Account → Transfer PIN",
+      "Or call 1-844-483-9264",
+    ],
+  },
+];
+
 function buildLines(
   premiumCount: number,
   extraCount: number,
   starterCount: number,
   totalLines: number,
+  portInCount: number,
   autopay: boolean,
   discount: DiscountType,
   existing: QuoteLine[],
@@ -69,6 +135,11 @@ function buildLines(
       device: prev?.device ?? 0,
       device_promo: prev?.device_promo ?? 0,
       line_total: 0,
+      is_portin: i < portInCount,
+      portin_phone: prev?.portin_phone ?? "",
+      portin_carrier: prev?.portin_carrier ?? "",
+      portin_account: prev?.portin_account ?? "",
+      portin_pin: prev?.portin_pin ?? "",
     };
   }).map(l => ({ ...l, line_total: calcLineTotal(l) }));
 }
@@ -106,6 +177,7 @@ export default function QuoteBuilder({ leadId, initialCustomerName }: Props) {
 
   // Step 2
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  const [showCarrierGuide, setShowCarrierGuide] = useState(false);
 
   // Saving
   const [saving, setSaving] = useState(false);
@@ -115,10 +187,10 @@ export default function QuoteBuilder({ leadId, initialCustomerName }: Props) {
 
   useEffect(() => {
     if (totalLines === 0) return;
-    setLines(prev => buildLines(premiumCount, extraCount, starterCount, totalLines, autopay, discount, prev));
-  }, [premiumCount, extraCount, starterCount, autopay, discount]);
+    setLines(prev => buildLines(premiumCount, extraCount, starterCount, totalLines, portIn, autopay, discount, prev));
+  }, [premiumCount, extraCount, starterCount, portIn, autopay, discount]);
 
-  function updateLine(i: number, field: keyof QuoteLine, value: number | boolean) {
+  function updateLine(i: number, field: keyof QuoteLine, value: number | boolean | string) {
     setLines(prev => prev.map((l, idx) => {
       if (idx !== i) return l;
       const updated = { ...l, [field]: value };
@@ -164,6 +236,10 @@ export default function QuoteBuilder({ leadId, initialCustomerName }: Props) {
           device: l.device,
           device_promo: l.device_promo,
           line_total: l.line_total,
+          portin_phone: l.portin_phone || null,
+          portin_carrier: l.portin_carrier || null,
+          portin_account: l.portin_account || null,
+          portin_pin: l.portin_pin || null,
         })),
       }),
     });
@@ -288,6 +364,55 @@ export default function QuoteBuilder({ leadId, initialCustomerName }: Props) {
             )}
           </div>
 
+          {/* Carrier port-in guide */}
+          {portIn > 0 && (
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 space-y-3">
+              <button
+                onClick={() => setShowCarrierGuide(v => !v)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-blue-900">Port-In — What You Need</p>
+                  <p className="text-xs text-blue-600 mt-0.5">Account number + port-in PIN from current carrier</p>
+                </div>
+                <svg className={`h-4 w-4 text-blue-400 transition-transform ${showCarrierGuide ? "rotate-180" : ""}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <div className="rounded-xl bg-white border border-blue-100 px-4 py-3 space-y-1 text-xs text-blue-800">
+                <p className="font-semibold mb-2">Collect from each porting customer:</p>
+                <div className="flex gap-2"><span>📋</span><span><strong>Account number</strong> — on their current bill or carrier app</span></div>
+                <div className="flex gap-2"><span>🔐</span><span><strong>Port-in PIN / Transfer PIN</strong> — NOT their account password</span></div>
+                <div className="flex gap-2"><span>📱</span><span><strong>Phone number</strong> being ported</span></div>
+                <div className="flex gap-2 mt-2 text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
+                  <span>⚠️</span>
+                  <span>PIN is different from their account login password. Most carriers require the customer to generate it first.</span>
+                </div>
+              </div>
+
+              {showCarrierGuide && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold text-blue-800">How to get port-in PIN by carrier:</p>
+                  {CARRIER_GUIDE.map(c => (
+                    <div key={c.carrier} className="rounded-xl bg-white border border-blue-100 px-4 py-3">
+                      <p className="text-xs font-bold text-blue-900 mb-2">{c.carrier}</p>
+                      <ol className="flex flex-col gap-1 text-xs text-gray-600 list-decimal list-inside">
+                        {c.steps.map((s, i) => <li key={i}>{s}</li>)}
+                      </ol>
+                      {c.tip && (
+                        <p className="text-xs text-amber-700 mt-2 bg-amber-50 rounded-lg px-3 py-1.5 border border-amber-100">
+                          💡 {c.tip}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             disabled={totalLines === 0}
             onClick={() => setStep(2)}
@@ -403,6 +528,55 @@ export default function QuoteBuilder({ leadId, initialCustomerName }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Port-in info */}
+              {line.is_portin && (
+                <div className="mt-3 pt-3 border-t border-blue-100 space-y-2">
+                  <p className="text-xs font-semibold text-blue-700">Port-In Details</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] text-gray-400 mb-0.5 block">Phone # being ported</label>
+                      <input
+                        type="tel"
+                        placeholder="(555) 555-5555"
+                        value={line.portin_phone}
+                        onChange={e => updateLine(i, "portin_phone", e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-400 mb-0.5 block">Current carrier</label>
+                      <select
+                        value={line.portin_carrier}
+                        onChange={e => updateLine(i, "portin_carrier", e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-200"
+                      >
+                        <option value="">Select…</option>
+                        {CARRIER_GUIDE.map(c => <option key={c.carrier} value={c.carrier}>{c.carrier}</option>)}
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-400 mb-0.5 block">Account number</label>
+                      <input
+                        placeholder="From bill or carrier app"
+                        value={line.portin_account}
+                        onChange={e => updateLine(i, "portin_account", e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-400 mb-0.5 block">Port-in PIN</label>
+                      <input
+                        placeholder="Transfer PIN / port PIN"
+                        value={line.portin_pin}
+                        onChange={e => updateLine(i, "portin_pin", e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
 
