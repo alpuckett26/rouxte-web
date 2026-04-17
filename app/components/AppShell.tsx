@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { UserRole } from "@/lib/types";
 import IdleTimeout from "./IdleTimeout";
+import NotificationBell from "./NotificationBell";
 
 interface NavItem {
   href: string;
@@ -145,6 +146,8 @@ export default function AppShell({
           })}
         </nav>
 
+        <div className="flex items-center gap-2">
+        <NotificationBell />
         <Link href="/settings" className="text-gray-400 hover:text-gray-600 transition-colors">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -152,6 +155,7 @@ export default function AppShell({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </Link>
+        </div>
       </div>
     </header>
   );
