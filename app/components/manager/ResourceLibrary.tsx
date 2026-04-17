@@ -57,6 +57,8 @@ export default function ResourceLibrary() {
   const [showUpload, setShowUpload] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [copying, setCopying] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   // Upload form state
   const fileRef = useRef<HTMLInputElement>(null);
@@ -107,6 +109,17 @@ export default function ResourceLibrary() {
     setUploadFile(null); setUploadName(""); setUploadDesc(""); setUploadCat("promos");
     if (fileRef.current) fileRef.current.value = "";
     fetchDocs();
+  }
+
+  async function copyContent(id: string) {
+    setCopying(id);
+    const res = await fetch(`/api/manager/documents/${id}/content`);
+    const json = await res.json();
+    setCopying(null);
+    if (!res.ok) { alert(json.error ?? "Cannot parse this file type"); return; }
+    await navigator.clipboard.writeText(JSON.stringify(json, null, 2));
+    setCopied(id);
+    setTimeout(() => setCopied(null), 3000);
   }
 
   async function deleteDoc(id: string) {
@@ -297,6 +310,27 @@ export default function ResourceLibrary() {
                     </svg>
                     Open
                   </a>
+                )}
+                {isManager && (doc.mime_type.includes("sheet") || doc.mime_type.includes("excel") || doc.mime_type.includes("csv") || doc.mime_type.includes("text")) && (
+                  <button
+                    onClick={() => copyContent(doc.id)}
+                    disabled={copying === doc.id}
+                    className="flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+                    title="Copy parsed content to clipboard — paste into Claude"
+                  >
+                    {copying === doc.id ? (
+                      <span className="animate-pulse">Reading…</span>
+                    ) : copied === doc.id ? (
+                      "Copied ✓"
+                    ) : (
+                      <>
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        Copy to Claude
+                      </>
+                    )}
+                  </button>
                 )}
                 {isManager && (
                   confirmDelete === doc.id ? (
