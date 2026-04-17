@@ -21,6 +21,7 @@ const TABS: NavTab[] = [
   { href: "/manager/onboarding",  label: "Onboarding",  roles: ["admin", "sales_manager", "team_lead"] },
   { href: "/manager/compliance",  label: "Compliance",  roles: ["admin", "sales_manager", "team_lead"] },
   { href: "/manager/payroll",     label: "Payroll",     roles: ["admin", "sales_manager"] },
+  { href: "/manager/quotes",     label: "Quotes",      roles: ["admin", "sales_manager", "team_lead", "sales_rep"] },
   { href: "/manager/import-bdc", label: "BDC Import",  roles: ["admin", "sales_manager"] },
   { href: "/manager/resources",  label: "Resources",   roles: ["admin", "sales_manager", "team_lead"] },
   { href: "/manager/coach",       label: "AI Coach",    roles: ["admin", "sales_manager", "team_lead"] },
