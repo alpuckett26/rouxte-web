@@ -38,10 +38,9 @@ CREATE POLICY "fcc_att_blocks_public_read"
   ON fcc_att_blocks FOR SELECT
   USING (true);
 
--- ── 4. spatial_ref_sys — enable RLS, no policies (PostGIS system table) ───
-ALTER TABLE spatial_ref_sys ENABLE ROW LEVEL SECURITY;
+-- spatial_ref_sys is owned by the PostGIS extension — cannot enable RLS (known Supabase false positive)
 
--- ── 5. team_tiers — org-scoped RLS ────────────────────────────────────────
+-- ── 4. team_tiers — org-scoped RLS ────────────────────────────────────────
 ALTER TABLE team_tiers ENABLE ROW LEVEL SECURITY;
 
 -- Members of the org can read tier info
