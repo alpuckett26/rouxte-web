@@ -1,10 +1,10 @@
 import ManagerShell from "@/components/manager/ManagerShell";
-import QuoteBuilder from "@/components/quotes/QuoteBuilder";
+import QuotesTabs from "@/components/quotes/QuotesTabs";
 
 export default function QuotesPage() {
   return (
     <ManagerShell>
-      <QuoteBuilder />
+      <QuotesTabs />
     </ManagerShell>
   );
 }
