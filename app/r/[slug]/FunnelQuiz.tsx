@@ -306,6 +306,7 @@ export default function FunnelQuiz({ slug, repName, repPhone }: Props) {
                 </div>
               )}
               <input
+                autoComplete="name"
                 placeholder="Your name *"
                 value={answers.customer_name}
                 onChange={e => setAnswers(p => ({ ...p, customer_name: e.target.value }))}
@@ -313,6 +314,7 @@ export default function FunnelQuiz({ slug, repName, repPhone }: Props) {
               />
               <input
                 type="tel"
+                autoComplete="tel"
                 placeholder="Phone number *"
                 value={answers.phone}
                 onChange={e => setAnswers(p => ({ ...p, phone: e.target.value }))}
@@ -320,6 +322,7 @@ export default function FunnelQuiz({ slug, repName, repPhone }: Props) {
               />
               <input
                 type="email"
+                autoComplete="email"
                 placeholder="Email (optional)"
                 value={answers.email}
                 onChange={e => setAnswers(p => ({ ...p, email: e.target.value }))}
@@ -333,7 +336,7 @@ export default function FunnelQuiz({ slug, repName, repPhone }: Props) {
                   className="mt-0.5 w-4 h-4 accent-blue-600 flex-shrink-0"
                 />
                 <span className="text-xs text-gray-500">
-                  I agree to receive text messages about offers. Message & data rates may apply. Reply STOP to opt out.
+                  I agree to receive text messages about offers. Message &amp; data rates may apply. Reply STOP to opt out.
                 </span>
               </label>
               {error && <p className="text-sm text-red-600">{error}</p>}
