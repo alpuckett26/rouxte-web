@@ -372,7 +372,7 @@ export default function TrainingFlow() {
             </p>
             <button
               onClick={startQuiz}
-              disabled={quizLoading || !canTakeQuiz}
+              disabled={quizLoading || !canTakeQuiz || !!quizError}
               className="flex items-center gap-2 rounded-xl bg-blue-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-blue-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {quizLoading ? (
