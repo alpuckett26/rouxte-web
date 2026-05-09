@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Props {
   slug: string;
@@ -91,8 +91,39 @@ export default function FunnelQuiz({ slug, repName, repPhone }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ score: number; temperature: string } | null>(null);
+  const [contactPickerSupported, setContactPickerSupported] = useState(false);
+  const [contactFilled, setContactFilled] = useState(false);
 
   const totalSteps = 7;
+
+  useEffect(() => {
+    setContactPickerSupported(
+      typeof navigator !== "undefined" &&
+      "contacts" in navigator &&
+      "ContactsManager" in window
+    );
+  }, []);
+
+  async function pickContact() {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const contacts = await (navigator as any).contacts.select(
+        ["name", "tel", "email"],
+        { multiple: false }
+      );
+      if (!contacts?.length) return;
+      const c = contacts[0];
+      setAnswers(prev => ({
+        ...prev,
+        customer_name: c.name?.[0]  ?? prev.customer_name,
+        phone:         c.tel?.[0]   ?? prev.phone,
+        email:         c.email?.[0] ?? prev.email,
+      }));
+      setContactFilled(true);
+    } catch {
+      // user cancelled
+    }
+  }
 
   function pick(field: StepId, value: string) {
     setAnswers(prev => ({ ...prev, [field]: value }));
@@ -255,6 +286,25 @@ export default function FunnelQuiz({ slug, repName, repPhone }: Props) {
             <h2 className="text-lg font-black text-gray-900 mb-1">How can we reach you?</h2>
             <p className="text-xs text-gray-400 mb-5">Your info is shared only with {repName}</p>
             <div className="flex flex-col gap-3">
+              {contactPickerSupported && (
+                <button
+                  onClick={pickContact}
+                  className={`flex items-center justify-center gap-2 w-full rounded-xl border-2 py-3.5 text-sm font-bold transition-colors ${
+                    contactFilled
+                      ? "border-green-400 bg-green-50 text-green-700"
+                      : "border-[#1BAEE1] bg-[#1BAEE1]/5 text-[#1BAEE1] hover:bg-[#1BAEE1]/10"
+                  }`}
+                >
+                  {contactFilled ? "✓ Contact info loaded" : "📇 Use My Contact Info"}
+                </button>
+              )}
+              {contactPickerSupported && !contactFilled && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-px bg-gray-100" />
+                  <span className="text-[10px] text-gray-300 uppercase tracking-wide">or type below</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
+              )}
               <input
                 placeholder="Your name *"
                 value={answers.customer_name}
