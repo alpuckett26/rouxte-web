@@ -15,8 +15,9 @@ const PASS_THRESHOLD = 4; // 4/5 = 80%
 
 /**
  * GET /api/training/[id]/quiz
- * Returns the pre-compiled quiz questions for this module.
- * The `correct` field is STRIPPED — grading is server-side only.
+ * Randomly selects one of the 3 pre-generated variants and returns it
+ * with correct answers stripped. Returns the chosen variant index so
+ * the client can send it back for server-side grading.
  */
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
@@ -27,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const admin = createAdminClient();
   const { data: quiz } = await admin
     .from("training_quizzes")
-    .select("questions")
+    .select("questions, quiz_variants")
     .eq("document_id", id)
     .maybeSingle();
 
@@ -35,20 +36,30 @@ export async function GET(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Quiz not yet available for this module" }, { status: 404 });
   }
 
-  // Strip `correct` and `explanation` — client never sees the answers
-  const sanitized = (quiz.questions as StoredQuestion[]).map(({ question, options }) => ({
-    question,
-    options,
-  }));
+  // Prefer quiz_variants (3-variant format); fall back to legacy single questions array
+  const variants = quiz.quiz_variants as StoredQuestion[][] | null;
+  const variantIdx = variants?.length
+    ? Math.floor(Math.random() * variants.length)
+    : 0;
+  const questions: StoredQuestion[] = variants?.length
+    ? variants[variantIdx]
+    : (quiz.questions as StoredQuestion[]);
 
-  return NextResponse.json({ questions: sanitized });
+  if (!questions?.length) {
+    return NextResponse.json({ error: "Quiz not yet available for this module" }, { status: 404 });
+  }
+
+  // Strip correct + explanation — client never sees the answers
+  const sanitized = questions.map(({ question, options }) => ({ question, options }));
+
+  return NextResponse.json({ questions: sanitized, variant: variantIdx });
 }
 
 /**
  * POST /api/training/[id]/quiz
- * Body: { answers: number[] }
- * Grades against the stored quiz server-side. Returns score + pass status.
- * Explanations are included in the response AFTER grading (so reps learn from mistakes).
+ * Body: { answers: number[], variant: number }
+ * Grades against the specific variant that was served. Returns score + pass status.
+ * Explanations are revealed after grading so reps learn from mistakes.
  */
 export async function POST(request: NextRequest, { params }: Params) {
   const { id } = await params;
@@ -58,6 +69,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const body = await request.json();
   const answers: number[] = body.answers;
+  const variantIdx: number = typeof body.variant === "number" ? body.variant : 0;
 
   if (!Array.isArray(answers)) {
     return NextResponse.json({ error: "answers array is required" }, { status: 400 });
@@ -65,10 +77,9 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const admin = createAdminClient();
 
-  // Fetch stored quiz with answers (server-side only)
   const { data: quiz } = await admin
     .from("training_quizzes")
-    .select("questions")
+    .select("questions, quiz_variants")
     .eq("document_id", id)
     .maybeSingle();
 
@@ -76,7 +87,11 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
   }
 
-  const questions = quiz.questions as StoredQuestion[];
+  // Resolve the same variant that was served
+  const variants = quiz.quiz_variants as StoredQuestion[][] | null;
+  const questions: StoredQuestion[] = variants?.length
+    ? (variants[variantIdx] ?? variants[0])
+    : (quiz.questions as StoredQuestion[]);
 
   if (answers.length !== questions.length) {
     return NextResponse.json({ error: "Answer count mismatch" }, { status: 400 });
@@ -104,7 +119,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     .eq("document_id", id)
     .maybeSingle();
 
-  const attempts     = (existing?.quiz_attempts ?? 0) + 1;
+  const attempts      = (existing?.quiz_attempts ?? 0) + 1;
   const alreadyPassed = existing?.quiz_passed ?? false;
 
   if (existing) {
@@ -117,12 +132,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data: profile } = await admin
       .from("user_profiles").select("org_id").eq("user_id", user.id).maybeSingle();
     await admin.from("training_progress").insert({
-      user_id:      user.id,
-      org_id:       profile?.org_id,
-      document_id:  id,
-      started_at:   new Date().toISOString(),
-      completed_at: passed ? new Date().toISOString() : null,
-      quiz_passed:  passed,
+      user_id:       user.id,
+      org_id:        profile?.org_id,
+      document_id:   id,
+      started_at:    new Date().toISOString(),
+      completed_at:  passed ? new Date().toISOString() : null,
+      quiz_passed:   passed,
       quiz_attempts: attempts,
     });
   }
@@ -137,6 +152,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     passed,
     attempts,
     pass_threshold: PASS_THRESHOLD,
-    graded,         // full question breakdown with explanations
+    graded,
   });
 }

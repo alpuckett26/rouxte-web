@@ -87,6 +87,7 @@ export default function TrainingFlow() {
   const [questions, setQuestions]       = useState<QuizQuestion[]>([]);
   const [graded, setGraded]             = useState<GradedQuestion[]>([]);
   const [answers, setAnswers]           = useState<(number | null)[]>([]);
+  const [quizVariant, setQuizVariant]   = useState<number>(0);
   const [quizLoading, setQuizLoading]   = useState(false);
   const [quizError, setQuizError]       = useState<string | null>(null);
   const [result, setResult]             = useState<{ correct: number; total: number; passed: boolean; attempts: number; pass_threshold?: number } | null>(null);
@@ -135,7 +136,7 @@ export default function TrainingFlow() {
     if (!activeModule) return;
     setQuizLoading(true);
     setQuizError(null);
-    // GET — returns questions with correct answers stripped
+    // GET — returns questions with correct answers stripped + variant index
     const res  = await fetch(`/api/training/${activeModule.id}/quiz`);
     const data = await res.json();
     if (!res.ok || !data.questions?.length) {
@@ -144,6 +145,7 @@ export default function TrainingFlow() {
       return;
     }
     setQuestions(data.questions);
+    setQuizVariant(data.variant ?? 0);
     setAnswers(new Array(data.questions.length).fill(null));
     setView("quiz");
     setQuizLoading(false);
@@ -152,11 +154,11 @@ export default function TrainingFlow() {
 
   async function submitQuiz() {
     if (!activeModule || answers.some((a) => a === null)) return;
-    // POST — send only answers; server grades against stored quiz
+    // POST — send answers + variant index so server grades the right question set
     const res  = await fetch(`/api/training/${activeModule.id}/quiz`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify({ answers, variant: quizVariant }),
     });
     const data = await res.json();
     setResult(data);
