@@ -14,7 +14,7 @@ const HEADER = `
 
 const FOOTER = `
   <tr><td style="padding:16px 32px;border-top:1px solid #f1f5f9;text-align:center;">
-    <p style="margin:0;font-size:11px;color:#cbd5e1;">Rouxte · Fiber Sales Platform</p>
+    <p style="margin:0;font-size:11px;color:#cbd5e1;">Rouxte &middot; Fiber Sales Platform</p>
   </td></tr>`;
 
 function wrapper(inner: string) {
@@ -34,12 +34,12 @@ function wrapper(inner: string) {
 }
 
 function cta(href: string, label: string) {
-  return `<a href="${href}" style="display:block;background:#0f172a;color:#ffffff;text-align:center;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:24px;">${label} →</a>`;
+  return `<a href="${href}" style="display:block;background:#0f172a;color:#ffffff;text-align:center;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:24px;">${label} &rarr;</a>`;
 }
 
 const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-// ── Invite ────────────────────────────────────────────────────────────────────
+// ── Invite ────────────────────────────────────────────────────────────────────────────
 export function inviteEmail({ orgName, role, inviteUrl, inviterName }: {
   orgName: string; role: string; inviteUrl: string; inviterName?: string;
 }): { subject: string; html: string } {
@@ -50,13 +50,13 @@ export function inviteEmail({ orgName, role, inviteUrl, inviterName }: {
     html: wrapper(`
       <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">${from}</p>
       <p style="margin:0 0 24px;font-size:15px;color:#475569;">to join <strong>${orgName}</strong> as a <strong>${roleLabel}</strong>.</p>
-      <a href="${inviteUrl}" style="display:block;background:#1BAEE1;color:#ffffff;text-align:center;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:24px;">Accept Invite →</a>
+      <a href="${inviteUrl}" style="display:block;background:#1BAEE1;color:#ffffff;text-align:center;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:24px;">Accept Invite &rarr;</a>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">This invite expires in 7 days. If you didn't expect this, you can safely ignore it.</p>
     `),
   };
 }
 
-// ── Invite accepted (to manager) ─────────────────────────────────────────────
+// ── Invite accepted (to manager) ─────────────────────────────────────────────────────
 export function inviteAcceptedEmail({ repName, repEmail, orgName, role, dashUrl }: {
   repName: string; repEmail: string; orgName: string; role: string; dashUrl: string;
 }): { subject: string; html: string } {
@@ -72,7 +72,7 @@ export function inviteAcceptedEmail({ repName, repEmail, orgName, role, dashUrl 
   };
 }
 
-// ── Onboarding complete (to rep) ─────────────────────────────────────────────
+// ── Onboarding complete (to rep) ───────────────────────────────────────────────────────────────
 export function onboardingCompleteRepEmail({ repName, orgName, dashUrl }: {
   repName: string; orgName: string; dashUrl: string;
 }): { subject: string; html: string } {
@@ -87,7 +87,7 @@ export function onboardingCompleteRepEmail({ repName, orgName, dashUrl }: {
   };
 }
 
-// ── Onboarding complete (to manager) ─────────────────────────────────────────
+// ── Onboarding complete (to manager) ─────────────────────────────────────────────────────
 export function onboardingCompleteManagerEmail({ repName, repEmail, orgName, dashUrl }: {
   repName: string; repEmail: string; orgName: string; dashUrl: string;
 }): { subject: string; html: string } {
@@ -101,7 +101,7 @@ export function onboardingCompleteManagerEmail({ repName, repEmail, orgName, das
   };
 }
 
-// ── Paystub generated / available ────────────────────────────────────────────
+// ── Paystub generated / available ────────────────────────────────────────────────────────────────
 export function paystubEmail({ repName, periodLabel, netPay, viewUrl }: {
   repName: string; periodLabel: string; netPay: number; viewUrl: string;
 }): { subject: string; html: string } {
@@ -121,7 +121,7 @@ export function paystubEmail({ repName, periodLabel, netPay, viewUrl }: {
   };
 }
 
-// ── Paystub released ─────────────────────────────────────────────────────────
+// ── Paystub released ─────────────────────────────────────────────────────────────────────────────────
 export function paystubReleasedEmail({ repName, periodLabel, netPay, viewUrl }: {
   repName: string; periodLabel: string; netPay: number; viewUrl: string;
 }): { subject: string; html: string } {
@@ -141,7 +141,7 @@ export function paystubReleasedEmail({ repName, periodLabel, netPay, viewUrl }: 
   };
 }
 
-// ── Lead assigned ────────────────────────────────────────────────────────────
+// ── Lead assigned ─────────────────────────────────────────────────────────────────────────────────
 export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerName, orgName, leadsUrl }: {
   repName: string; leadCount: number; leadAddress?: string;
   assignerName: string; orgName: string; leadsUrl: string;
@@ -169,7 +169,7 @@ export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerNam
     `),
   };
 }
-// ── Termination ──────────────────────────────────────────────────────────────
+// ── Termination ──────────────────────────────────────────────────────────────────────────────────
 export function terminationEmail({ repName, orgName, managerName, payUrl }: {
   repName: string; orgName: string; managerName?: string; payUrl: string;
 }): { subject: string; html: string } {
@@ -194,7 +194,42 @@ export function terminationEmail({ repName, orgName, managerName, payUrl }: {
   };
 }
 
-// ── Store order confirmation ──────────────────────────────────────────────────
+// ── Fiber quote (to customer) ────────────────────────────────────────────────────────────────────────
+export function fiberQuoteEmail({ customerName, repName, orgName, planLabel, planSpeed, monthly, quoteUrl, promoNote }: {
+  customerName: string; repName: string; orgName: string;
+  planLabel: string; planSpeed: string; monthly: number;
+  quoteUrl: string; promoNote?: string;
+}): { subject: string; html: string } {
+  const promoBlock = promoNote ? `
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px 20px;margin:0 0 24px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.06em;">Current Promotion</p>
+      <p style="margin:0;font-size:14px;color:#166534;">${promoNote}</p>
+    </div>` : "";
+
+  return {
+    subject: `Your AT&T Fiber Internet Quote — ${planLabel}`,
+    html: wrapper(`
+      <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Fiber Internet Quote</p>
+      <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#0f172a;">Hi${customerName ? ` ${customerName}` : ""},</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">
+        <strong>${repName}</strong> from <strong>${orgName}</strong> has prepared a fiber internet quote for you.
+      </p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;margin:0 0 24px;">
+        <p style="margin:0 0 4px;font-size:13px;color:#3b82f6;">${planLabel} &middot; ${planSpeed}</p>
+        <p style="margin:0;font-size:36px;font-weight:800;color:#1d4ed8;">${fmt(monthly)}<span style="font-size:16px;font-weight:500;color:#60a5fa;">/mo</span></p>
+        <p style="margin:4px 0 0;font-size:12px;color:#93c5fd;">Estimated monthly total &middot; excludes taxes &amp; fees</p>
+      </div>
+      ${promoBlock}
+      ${cta(quoteUrl, "View My Full Quote")}
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+        No activation fee &middot; Gateway included &middot; No annual contract<br>
+        Pricing subject to change. Questions? Reply to your rep directly.
+      </p>
+    `),
+  };
+}
+
+// ── Store order confirmation ──────────────────────────────────────────────────────────────────────
 export function orderConfirmationEmail({ buyerName, productLabel, totalCents, orderId, dashUrl }: {
   buyerName: string; productLabel: string; totalCents: number; orderId: string; dashUrl: string;
 }): { subject: string; html: string } {
