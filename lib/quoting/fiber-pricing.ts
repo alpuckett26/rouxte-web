@@ -13,6 +13,7 @@ export interface FiberPlan {
   speed: string;
   basePrice: number;
   autopayPrice: number;
+  notes?: string;
 }
 
 export const FIBER_PLANS: FiberPlan[] = [
