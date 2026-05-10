@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
   const { data: profile } = await admin
-    .from("user_profiles").select("org_id, full_name").eq("user_id", user.id).maybeSingle();
+    .from("user_profiles").select("org_id, full_name, phone").eq("user_id", user.id).maybeSingle();
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
 
   const body = await request.json();
@@ -64,6 +64,8 @@ export async function POST(request: NextRequest) {
     const quoteUrl = `${appUrl}/quote/${quote.id}`;
     const fiberPlan = FIBER_PLANS.find(p => p.id === quote.fiber_plan);
     const repName = profile.full_name ?? "Your Rep";
+    const repPhone = (profile as { phone?: string }).phone ?? undefined;
+    const repEmail = user.email ?? undefined;
 
     const { data: org } = await admin
       .from("orgs").select("name").eq("id", profile.org_id).maybeSingle();
@@ -72,6 +74,8 @@ export async function POST(request: NextRequest) {
     const { subject, html, text } = fiberQuoteEmail({
       customerName: quote.customer_name ?? "",
       repName,
+      repPhone,
+      repEmail,
       orgName,
       planLabel:  fiberPlan?.label  ?? quote.fiber_plan ?? "Fiber Internet",
       planSpeed:  fiberPlan?.speed  ?? "",

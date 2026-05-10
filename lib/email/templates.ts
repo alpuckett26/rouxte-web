@@ -169,6 +169,7 @@ export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerNam
     `),
   };
 }
+
 // ── Termination ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function terminationEmail({ repName, orgName, managerName, payUrl }: {
   repName: string; orgName: string; managerName?: string; payUrl: string;
@@ -195,9 +196,9 @@ export function terminationEmail({ repName, orgName, managerName, payUrl }: {
 }
 
 // ── Fiber quote (to customer) ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function fiberQuoteEmail({ customerName, repName, orgName, planLabel, planSpeed, monthly, quoteUrl, promoNote }: {
-  customerName: string; repName: string; orgName: string;
-  planLabel: string; planSpeed: string; monthly: number;
+export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, orgName, planLabel, planSpeed, monthly, quoteUrl, promoNote }: {
+  customerName: string; repName: string; repPhone?: string; repEmail?: string;
+  orgName: string; planLabel: string; planSpeed: string; monthly: number;
   quoteUrl: string; promoNote?: string;
 }): { subject: string; html: string; text: string } {
   const promoBlock = promoNote ? `
@@ -206,45 +207,67 @@ export function fiberQuoteEmail({ customerName, repName, orgName, planLabel, pla
       <p style="margin:0;font-size:14px;color:#166534;">${promoNote}</p>
     </div>` : "";
 
-  const greeting = customerName ? `Hi ${customerName},` : "Hi,";
+  const contactParts = [
+    repPhone ? `<span style="margin-right:16px;">&#128222; ${repPhone}</span>` : "",
+    repEmail ? `<span>&#9993;&#65039; ${repEmail}</span>` : "",
+  ].filter(Boolean).join("");
+
+  const contactBlock = contactParts ? `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:0 0 24px;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">Your rep</p>
+      <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#0f172a;">${repName}</p>
+      <p style="margin:0;font-size:13px;color:#64748b;">${contactParts}</p>
+    </div>` : `
+    <p style="margin:0 0 24px;font-size:14px;color:#64748b;">Questions? Reply to this email and <strong>${repName}</strong> will get back to you.</p>`;
+
+  const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
   const promoText = promoNote ? `\nCURRENT PROMOTION: ${promoNote}\n` : "";
+  const contactText = [
+    `Your rep: ${repName}`,
+    repPhone ? `Phone: ${repPhone}` : "",
+    repEmail ? `Email: ${repEmail}` : "",
+  ].filter(Boolean).join("\n");
 
   const text = [
     greeting,
     "",
-    `${repName} from ${orgName} has prepared a fiber internet quote for you.`,
+    `Thank you for taking the time to speak with ${repName} from ${orgName}. We appreciate your interest and put together this quote based on your conversation.`,
     "",
     `Plan: ${planLabel}${planSpeed ? ` (${planSpeed})` : ""}`,
     `Estimated Monthly Total: ${fmt(monthly)}/mo`,
     "(Excludes taxes and fees)",
     promoText,
-    `View your full quote here: ${quoteUrl}`,
+    `View your full quote: ${quoteUrl}`,
     "",
     "No activation fee · Gateway included · No annual contract",
-    "Pricing subject to change. Reply to this email with any questions.",
     "",
-    "— Rouxte",
-  ].join("\n");
+    contactText,
+    "",
+    "Don't hesitate to reach out with any questions — we're happy to help.",
+    "",
+    `— ${repName} & the ${orgName} team`,
+  ].filter(l => l !== undefined).join("\n");
 
   return {
-    subject: `Fiber Internet Quote from ${orgName} — ${planLabel}`,
+    subject: `Your Fiber Internet Quote from ${orgName}`,
     text,
     html: wrapper(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Fiber Internet Quote</p>
-      <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#0f172a;">${greeting}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;">
-        <strong>${repName}</strong> from <strong>${orgName}</strong> has prepared a fiber internet quote for you.
+      <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#0f172a;">${greeting}</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
+        Thank you for taking the time to speak with <strong>${repName}</strong> from <strong>${orgName}</strong>. We appreciate your interest and put together this quote based on your conversation.
       </p>
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;margin:0 0 24px;">
-        <p style="margin:0 0 4px;font-size:13px;color:#3b82f6;">${planLabel} &middot; ${planSpeed}</p>
+        <p style="margin:0 0 4px;font-size:13px;color:#3b82f6;">${planLabel}${planSpeed ? ` &middot; ${planSpeed}` : ""}</p>
         <p style="margin:0;font-size:36px;font-weight:800;color:#1d4ed8;">${fmt(monthly)}<span style="font-size:16px;font-weight:500;color:#60a5fa;">/mo</span></p>
         <p style="margin:4px 0 0;font-size:12px;color:#93c5fd;">Estimated monthly total &middot; excludes taxes &amp; fees</p>
       </div>
       ${promoBlock}
       ${cta(quoteUrl, "View My Full Quote")}
+      ${contactBlock}
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
         No activation fee &middot; Gateway included &middot; No annual contract<br>
-        Pricing subject to change. Questions? Reply to your rep directly.
+        Pricing subject to change. Don't hesitate to reach out with any questions.
       </p>
     `),
   };
