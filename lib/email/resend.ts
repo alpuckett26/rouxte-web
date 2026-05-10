@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-export const FROM = process.env.RESEND_FROM ?? "Rouxte <noreply@rouxte.app>";
+export const FROM = process.env.RESEND_FROM ?? "Rouxte <noreply@rouxte.com>";
 
 let _resend: Resend | null = null;
 

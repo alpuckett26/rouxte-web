@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, FROM } from "@/lib/email/resend";
-import { fiberQuoteEmail } from "@/lib/email/templates";
+import { fiberQuoteEmail, wirelessQuoteEmail } from "@/lib/email/templates";
 import { FIBER_PLANS } from "@/lib/quoting/fiber-pricing";
 import { renderFiberQuotePDF } from "@/lib/quoting/quote-pdf";
+import { renderWirelessQuotePDF } from "@/lib/quoting/wireless-quote-pdf";
 
 export async function GET() {
   const supabase = await createClient();
@@ -131,6 +132,61 @@ export async function POST(request: NextRequest) {
       source:               "quote",
       status:               "new",
       carrier_availability: {},
+    });
+  }
+
+  // ── Wireless quote post-actions ────────────────────────────────────────────────
+  if (quote.quote_type === "wireless" && quote.customer_email) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const quoteUrl = `${appUrl}/quote/${quote.id}`;
+    const repName  = profile.full_name ?? "Your Rep";
+    const repPhone = (profileExt as { phone?: string } | null)?.phone ?? undefined;
+    const repEmail = user.email ?? undefined;
+
+    const { data: org } = await admin
+      .from("orgs").select("name").eq("id", profile.org_id).maybeSingle();
+    const orgName = org?.name ?? "Rouxte";
+
+    const { subject, html, text } = wirelessQuoteEmail({
+      customerName: quote.customer_name ?? "",
+      repName,
+      repPhone,
+      repEmail,
+      orgName,
+      quoteUrl,
+    });
+
+    const { data: savedLines } = await admin
+      .from("quote_lines").select("*").eq("quote_id", quote.id);
+
+    let pdfBuffer: Buffer | undefined;
+    try {
+      pdfBuffer = await renderWirelessQuotePDF({
+        customerName:    quote.customer_name ?? undefined,
+        orgName,
+        monthly:         quote.monthly_total,
+        totalLines:      quote.total_lines ?? 1,
+        autopayPaperless: quote.autopay_paperless === true,
+        discountType:    quote.discount_type ?? "none",
+        lines:           (savedLines ?? []).sort((a: { line_number: number }, b: { line_number: number }) => a.line_number - b.line_number),
+        activationFee:   quote.activation_fee ?? 0,
+        repName,
+        repPhone,
+        repEmail,
+      });
+    } catch (pdfErr) {
+      console.error("[pdf] wireless render failed:", pdfErr);
+    }
+
+    await sendEmail({
+      from: FROM,
+      to: quote.customer_email,
+      subject,
+      html,
+      text,
+      attachments: pdfBuffer
+        ? [{ filename: "quote.pdf", content: pdfBuffer }]
+        : undefined,
     });
   }
 

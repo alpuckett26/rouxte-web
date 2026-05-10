@@ -258,6 +258,69 @@ export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, org
   };
 }
 
+// ── Wireless quote (to customer) ─────────────────────────────────────────────────────────────────────────────────────────────────────
+export function wirelessQuoteEmail({ customerName, repName, repPhone, repEmail, orgName, quoteUrl }: {
+  customerName: string; repName: string; repPhone?: string; repEmail?: string;
+  orgName: string; quoteUrl: string;
+}): { subject: string; html: string; text: string } {
+  const contactParts = [
+    repPhone ? `<span style="margin-right:16px;">&#128222; ${repPhone}</span>` : "",
+    repEmail ? `<span>&#9993;&#65039; ${repEmail}</span>` : "",
+  ].filter(Boolean).join("");
+
+  const contactBlock = contactParts ? `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:0 0 24px;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">Your rep</p>
+      <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#0f172a;">${repName}</p>
+      <p style="margin:0;font-size:13px;color:#64748b;">${contactParts}</p>
+    </div>` : `
+    <p style="margin:0 0 24px;font-size:14px;color:#64748b;">Questions? Reply to this email and <strong>${repName}</strong> will get back to you.</p>`;
+
+  const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
+  const contactText = [
+    `Your rep: ${repName}`,
+    repPhone ? `Phone: ${repPhone}` : "",
+    repEmail ? `Email: ${repEmail}` : "",
+  ].filter(Boolean).join("\n");
+
+  const text = [
+    greeting,
+    "",
+    `Thank you for taking the time to speak with ${repName} from ${orgName} today. It was great connecting with you.`,
+    "",
+    "Your personalized wireless quote is attached to this email as a PDF. You can also view it online at any time using the link below:",
+    "",
+    quoteUrl,
+    "",
+    "If you have any questions or would like to move forward, don't hesitate to reach out — we're happy to help.",
+    "",
+    contactText,
+    "",
+    `— ${repName} & the ${orgName} team`,
+  ].filter(l => l !== undefined).join("\n");
+
+  return {
+    subject: `Your Wireless Quote from ${orgName}`,
+    text,
+    html: wrapper(`
+      <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Wireless Quote</p>
+      <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#0f172a;">${greeting}</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">
+        Thank you for taking the time to speak with <strong>${repName}</strong> from <strong>${orgName}</strong> today. It was great connecting with you.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
+        Your personalized wireless quote is <strong>attached to this email as a PDF</strong>. You can also view it online at any time:
+      </p>
+      ${cta(quoteUrl, "View My Full Quote")}
+      ${contactBlock}
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+        If you have any questions or would like to move forward, don't hesitate to reach out.<br>
+        Pricing subject to change.
+      </p>
+    `),
+  };
+}
+
 // ── Store order confirmation ──────────────────────────────────────────────────────────────────────────────────────────────────
 export function orderConfirmationEmail({ buyerName, productLabel, totalCents, orderId, dashUrl }: {
   buyerName: string; productLabel: string; totalCents: number; orderId: string; dashUrl: string;
