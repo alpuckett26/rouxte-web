@@ -39,7 +39,7 @@ function cta(href: string, label: string) {
 
 const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-// ── Invite ────────────────────────────────────────────────────────────────────────────
+// ── Invite ────────────────────────────────────────────────────────────────────────────────────
 export function inviteEmail({ orgName, role, inviteUrl, inviterName }: {
   orgName: string; role: string; inviteUrl: string; inviterName?: string;
 }): { subject: string; html: string } {
@@ -56,7 +56,7 @@ export function inviteEmail({ orgName, role, inviteUrl, inviterName }: {
   };
 }
 
-// ── Invite accepted (to manager) ─────────────────────────────────────────────────────
+// ── Invite accepted (to manager) ─────────────────────────────────────────────────────────────
 export function inviteAcceptedEmail({ repName, repEmail, orgName, role, dashUrl }: {
   repName: string; repEmail: string; orgName: string; role: string; dashUrl: string;
 }): { subject: string; html: string } {
@@ -72,7 +72,7 @@ export function inviteAcceptedEmail({ repName, repEmail, orgName, role, dashUrl 
   };
 }
 
-// ── Onboarding complete (to rep) ───────────────────────────────────────────────────────────────
+// ── Onboarding complete (to rep) ────────────────────────────────────────────────────────────────────────────────────────
 export function onboardingCompleteRepEmail({ repName, orgName, dashUrl }: {
   repName: string; orgName: string; dashUrl: string;
 }): { subject: string; html: string } {
@@ -87,7 +87,7 @@ export function onboardingCompleteRepEmail({ repName, orgName, dashUrl }: {
   };
 }
 
-// ── Onboarding complete (to manager) ─────────────────────────────────────────────────────
+// ── Onboarding complete (to manager) ──────────────────────────────────────────────────────────────────────
 export function onboardingCompleteManagerEmail({ repName, repEmail, orgName, dashUrl }: {
   repName: string; repEmail: string; orgName: string; dashUrl: string;
 }): { subject: string; html: string } {
@@ -101,7 +101,7 @@ export function onboardingCompleteManagerEmail({ repName, repEmail, orgName, das
   };
 }
 
-// ── Paystub generated / available ────────────────────────────────────────────────────────────────
+// ── Paystub generated / available ────────────────────────────────────────────────────────────────────────────────────
 export function paystubEmail({ repName, periodLabel, netPay, viewUrl }: {
   repName: string; periodLabel: string; netPay: number; viewUrl: string;
 }): { subject: string; html: string } {
@@ -121,7 +121,7 @@ export function paystubEmail({ repName, periodLabel, netPay, viewUrl }: {
   };
 }
 
-// ── Paystub released ─────────────────────────────────────────────────────────────────────────────────
+// ── Paystub released ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function paystubReleasedEmail({ repName, periodLabel, netPay, viewUrl }: {
   repName: string; periodLabel: string; netPay: number; viewUrl: string;
 }): { subject: string; html: string } {
@@ -141,7 +141,7 @@ export function paystubReleasedEmail({ repName, periodLabel, netPay, viewUrl }: 
   };
 }
 
-// ── Lead assigned ─────────────────────────────────────────────────────────────────────────────────
+// ── Lead assigned ───────────────────────────────────────────────────────────────────────────────────────────────────────
 export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerName, orgName, leadsUrl }: {
   repName: string; leadCount: number; leadAddress?: string;
   assignerName: string; orgName: string; leadsUrl: string;
@@ -169,7 +169,7 @@ export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerNam
     `),
   };
 }
-// ── Termination ──────────────────────────────────────────────────────────────────────────────────
+// ── Termination ────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function terminationEmail({ repName, orgName, managerName, payUrl }: {
   repName: string; orgName: string; managerName?: string; payUrl: string;
 }): { subject: string; html: string } {
@@ -194,23 +194,44 @@ export function terminationEmail({ repName, orgName, managerName, payUrl }: {
   };
 }
 
-// ── Fiber quote (to customer) ────────────────────────────────────────────────────────────────────────
+// ── Fiber quote (to customer) ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function fiberQuoteEmail({ customerName, repName, orgName, planLabel, planSpeed, monthly, quoteUrl, promoNote }: {
   customerName: string; repName: string; orgName: string;
   planLabel: string; planSpeed: string; monthly: number;
   quoteUrl: string; promoNote?: string;
-}): { subject: string; html: string } {
+}): { subject: string; html: string; text: string } {
   const promoBlock = promoNote ? `
     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px 20px;margin:0 0 24px;">
       <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.06em;">Current Promotion</p>
       <p style="margin:0;font-size:14px;color:#166534;">${promoNote}</p>
     </div>` : "";
 
+  const greeting = customerName ? `Hi ${customerName},` : "Hi,";
+  const promoText = promoNote ? `\nCURRENT PROMOTION: ${promoNote}\n` : "";
+
+  const text = [
+    greeting,
+    "",
+    `${repName} from ${orgName} has prepared a fiber internet quote for you.`,
+    "",
+    `Plan: ${planLabel}${planSpeed ? ` (${planSpeed})` : ""}`,
+    `Estimated Monthly Total: ${fmt(monthly)}/mo`,
+    "(Excludes taxes and fees)",
+    promoText,
+    `View your full quote here: ${quoteUrl}`,
+    "",
+    "No activation fee · Gateway included · No annual contract",
+    "Pricing subject to change. Reply to this email with any questions.",
+    "",
+    "— Rouxte",
+  ].join("\n");
+
   return {
-    subject: `Your AT&T Fiber Internet Quote — ${planLabel}`,
+    subject: `Fiber Internet Quote from ${orgName} — ${planLabel}`,
+    text,
     html: wrapper(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Fiber Internet Quote</p>
-      <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#0f172a;">Hi${customerName ? ` ${customerName}` : ""},</p>
+      <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#0f172a;">${greeting}</p>
       <p style="margin:0 0 24px;font-size:15px;color:#475569;">
         <strong>${repName}</strong> from <strong>${orgName}</strong> has prepared a fiber internet quote for you.
       </p>
@@ -229,7 +250,7 @@ export function fiberQuoteEmail({ customerName, repName, orgName, planLabel, pla
   };
 }
 
-// ── Store order confirmation ──────────────────────────────────────────────────────────────────────
+// ── Store order confirmation ──────────────────────────────────────────────────────────────────────────────────────────────────
 export function orderConfirmationEmail({ buyerName, productLabel, totalCents, orderId, dashUrl }: {
   buyerName: string; productLabel: string; totalCents: number; orderId: string; dashUrl: string;
 }): { subject: string; html: string } {

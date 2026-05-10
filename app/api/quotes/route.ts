@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       .from("orgs").select("name").eq("id", profile.org_id).maybeSingle();
     const orgName = org?.name ?? "Rouxte";
 
-    const { subject, html } = fiberQuoteEmail({
+    const { subject, html, text } = fiberQuoteEmail({
       customerName: quote.customer_name ?? "",
       repName,
       orgName,
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       quoteUrl,
       promoNote:  quote.promo_note ?? undefined,
     });
-    await sendEmail({ from: FROM, to: quote.customer_email, subject, html });
+    await sendEmail({ from: FROM, to: quote.customer_email, subject, html, text });
 
     await admin.from("leads").insert({
       org_id:               profile.org_id,
