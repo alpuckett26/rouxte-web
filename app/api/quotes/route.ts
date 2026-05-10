@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, FROM } from "@/lib/email/resend";
 import { fiberQuoteEmail } from "@/lib/email/templates";
-import { FIBER_PLANS } from "@/lib/quoting/fiber-pricing";
 
 export async function GET() {
   const supabase = await createClient();
@@ -58,11 +57,10 @@ export async function POST(request: NextRequest) {
     if (linesErr) return NextResponse.json({ error: linesErr.message }, { status: 500 });
   }
 
-  // ── Fiber quote post-actions ──────────────────────────────────────────────
+  // ── Fiber quote post-actions ──────────────────────────────────────────
   if (quote.quote_type === "fiber" && quote.customer_email) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const quoteUrl = `${appUrl}/quote/${quote.id}`;
-    const fiberPlan = FIBER_PLANS.find(p => p.id === quote.fiber_plan);
     const repName = profile.full_name ?? "Your Rep";
 
     const { data: org } = await admin
@@ -74,11 +72,7 @@ export async function POST(request: NextRequest) {
       customerName: quote.customer_name ?? "",
       repName,
       orgName,
-      planLabel:  fiberPlan?.label  ?? quote.fiber_plan ?? "Fiber Internet",
-      planSpeed:  fiberPlan?.speed  ?? "",
-      monthly:    quote.monthly_total,
       quoteUrl,
-      promoNote:  quote.promo_note ?? undefined,
     });
     await sendEmail({ from: FROM, to: quote.customer_email, subject, html });
 

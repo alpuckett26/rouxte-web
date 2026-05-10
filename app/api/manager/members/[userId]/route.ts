@@ -144,7 +144,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const { subject, html } = terminationEmail({
       repName: targetProfile.full_name,
       orgName: org?.name ?? "your company",
-      managerName: (callerProfile as { full_name?: string }).full_name ?? undefined,
+      managerName: (callerProfile as { full_name?: string }).full_name ?? "Your Manager",
       payUrl: `${appUrl}/payroll`,
     });
     await sendEmail({ from: FROM, to: email, subject, html });
