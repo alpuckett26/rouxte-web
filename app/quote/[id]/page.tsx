@@ -110,26 +110,26 @@ export default async function QuotePage({ params }: Params) {
           <div className="bg-white rounded-2xl border border-gray-100 px-6 py-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-900 mb-3">What to Expect</p>
             <ul className="flex flex-col gap-2.5 text-xs text-gray-600">
-              <li className="flex gap-2.5">
-                <span className="text-base leading-none">📋</span>
-                Your first bill will include a <strong>full month + a partial month</strong> based on your install date.
+              <li className="flex items-start gap-2.5">
+                <span className="text-base leading-none shrink-0">📋</span>
+                <span>Your first bill will include a <strong>full month + a partial month</strong> based on your install date.</span>
               </li>
-              <li className="flex gap-2.5">
-                <span className="text-base leading-none">🛠️</span>
-                AT&T will schedule a <strong>professional installation</strong> — no DIY required.
+              <li className="flex items-start gap-2.5">
+                <span className="text-base leading-none shrink-0">🛠️</span>
+                <span>AT&T will schedule a <strong>professional installation</strong> — no DIY required.</span>
               </li>
-              <li className="flex gap-2.5">
-                <span className="text-base leading-none">📦</span>
-                Your <strong>Wi-Fi gateway is included</strong> at no additional cost.
+              <li className="flex items-start gap-2.5">
+                <span className="text-base leading-none shrink-0">📦</span>
+                <span>Your <strong>Wi-Fi gateway is included</strong> at no additional cost.</span>
               </li>
-              <li className="flex gap-2.5">
-                <span className="text-base leading-none">💳</span>
-                <strong>No activation fee</strong> and no annual contract required.
+              <li className="flex items-start gap-2.5">
+                <span className="text-base leading-none shrink-0">💳</span>
+                <span><strong>No activation fee</strong> and no annual contract required.</span>
               </li>
               {bundleOn && (
-                <li className="flex gap-2.5">
-                  <span className="text-base leading-none">📱</span>
-                  Your <strong>wireless bundle discount</strong> will appear within 1–2 billing cycles after both services are active.
+                <li className="flex items-start gap-2.5">
+                  <span className="text-base leading-none shrink-0">📱</span>
+                  <span>Your <strong>wireless bundle discount</strong> will appear within 1–2 billing cycles after both services are active.</span>
                 </li>
               )}
             </ul>
@@ -224,26 +224,26 @@ export default async function QuotePage({ params }: Params) {
         <div className="bg-white rounded-2xl border border-gray-100 px-6 py-5 shadow-sm">
           <p className="text-sm font-semibold text-gray-900 mb-3">What to Expect</p>
           <ul className="flex flex-col gap-2.5 text-xs text-gray-600">
-            <li className="flex gap-2.5">
-              <span className="text-base leading-none">📋</span>
-              Your first bill will include a <strong>full month + a partial month</strong> based on your activation date.
+            <li className="flex items-start gap-2.5">
+              <span className="text-base leading-none shrink-0">📋</span>
+              <span>Your first bill will include a <strong>full month + a partial month</strong> based on your activation date.</span>
             </li>
-            <li className="flex gap-2.5">
-              <span className="text-base leading-none">⏱️</span>
-              Promotions begin applying within <strong>2–3 billing cycles</strong> after all required steps are complete.
+            <li className="flex items-start gap-2.5">
+              <span className="text-base leading-none shrink-0">⏱️</span>
+              <span>Promotions begin applying within <strong>2–3 billing cycles</strong> after all required steps are complete.</span>
             </li>
-            <li className="flex gap-2.5">
-              <span className="text-base leading-none">✅</span>
-              Plan promotions require registration at <strong>att.com/signature</strong> once phones arrive.
+            <li className="flex items-start gap-2.5">
+              <span className="text-base leading-none shrink-0">✅</span>
+              <span>Plan promotions require registration at <strong>att.com/signature</strong> once phones arrive.</span>
             </li>
-            <li className="flex gap-2.5">
-              <span className="text-base leading-none">📱</span>
-              Trade-in devices must be returned within <strong>30 days of activation</strong>.
+            <li className="flex items-start gap-2.5">
+              <span className="text-base leading-none shrink-0">📱</span>
+              <span>Trade-in devices must be returned within <strong>30 days of activation</strong>.</span>
             </li>
             {quote.activation_fee > 0 && (
-              <li className="flex gap-2.5">
-                <span className="text-base leading-none">💳</span>
-                An activation fee of <strong>{fmt(quote.activation_fee)}</strong> will appear on your first bill.
+              <li className="flex items-start gap-2.5">
+                <span className="text-base leading-none shrink-0">💳</span>
+                <span>An activation fee of <strong>{fmt(quote.activation_fee)}</strong> will appear on your first bill.</span>
               </li>
             )}
           </ul>
