@@ -81,6 +81,14 @@ export default async function QuotePage({ params }: Params) {
             </p>
           </div>
 
+          {/* Promo note */}
+          {quote.promo_note && (
+            <div className="bg-green-50 rounded-2xl border border-green-200 px-6 py-4 shadow-sm">
+              <p className="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">Current Promotion</p>
+              <p className="text-sm font-medium text-green-800">{quote.promo_note}</p>
+            </div>
+          )}
+
           {/* Plan details */}
           <div className="bg-white rounded-2xl border border-gray-100 px-6 py-5 shadow-sm">
             <p className="text-sm font-semibold text-gray-900 mb-4">Plan Details</p>

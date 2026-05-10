@@ -35,6 +35,8 @@ export default function FiberQuoteBuilder({ leadId, initialCustomerName }: Props
   const [autopay,        setAutopay]        = useState(true);
   const [wirelessBundle, setWirelessBundle] = useState(false);
   const [customerName,   setCustomerName]   = useState(initialCustomerName ?? "");
+  const [customerEmail,  setCustomerEmail]  = useState("");
+  const [promoNote,      setPromoNote]      = useState("");
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState<string | null>(null);
 
@@ -57,6 +59,8 @@ export default function FiberQuoteBuilder({ leadId, initialCustomerName }: Props
       body: JSON.stringify({
         lead_id:           leadId ?? null,
         customer_name:     customerName || null,
+        customer_email:    customerEmail || null,
+        promo_note:        promoNote || null,
         quote_type:        "fiber",
         fiber_plan:        selectedPlanId,
         total_lines:       1,
@@ -117,7 +121,7 @@ export default function FiberQuoteBuilder({ leadId, initialCustomerName }: Props
       {step === 1 && (
         <div className="flex flex-col gap-5">
 
-          {/* Customer name */}
+          {/* Customer name + email */}
           <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 space-y-3">
             <p className="text-sm font-semibold text-gray-800">Customer</p>
             <input
@@ -126,6 +130,20 @@ export default function FiberQuoteBuilder({ leadId, initialCustomerName }: Props
               placeholder="Customer name (optional)"
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
+            <div className="relative">
+              <input
+                type="email"
+                value={customerEmail}
+                onChange={e => setCustomerEmail(e.target.value)}
+                placeholder="Customer email (sends them the quote)"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+              {customerEmail && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] bg-green-100 text-green-700 font-semibold rounded px-1.5 py-0.5">
+                  Quote will be emailed
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Plan groups */}
@@ -233,6 +251,21 @@ export default function FiberQuoteBuilder({ leadId, initialCustomerName }: Props
                 Customer must qualify via SNAP, Medicaid, or a similar program.
               </p>
             )}
+          </div>
+
+          {/* Current promotion */}
+          <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 space-y-2">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">Current Promotion</p>
+              <p className="text-xs text-gray-400 mt-0.5">Shown on the customer&apos;s quote — e.g. &quot;$100 gift card for new subscribers&quot;</p>
+            </div>
+            <textarea
+              rows={2}
+              value={promoNote}
+              onChange={e => setPromoNote(e.target.value)}
+              placeholder="Leave blank if no active promo"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none"
+            />
           </div>
 
           {/* Price breakdown */}
