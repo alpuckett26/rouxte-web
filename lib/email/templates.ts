@@ -196,17 +196,10 @@ export function terminationEmail({ repName, orgName, managerName, payUrl }: {
 }
 
 // ── Fiber quote (to customer) ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, orgName, planLabel, planSpeed, monthly, quoteUrl, promoNote }: {
+export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, orgName, quoteUrl }: {
   customerName: string; repName: string; repPhone?: string; repEmail?: string;
-  orgName: string; planLabel: string; planSpeed: string; monthly: number;
-  quoteUrl: string; promoNote?: string;
+  orgName: string; quoteUrl: string;
 }): { subject: string; html: string; text: string } {
-  const promoBlock = promoNote ? `
-    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px 20px;margin:0 0 24px;">
-      <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.06em;">Current Promotion</p>
-      <p style="margin:0;font-size:14px;color:#166534;">${promoNote}</p>
-    </div>` : "";
-
   const contactParts = [
     repPhone ? `<span style="margin-right:16px;">&#128222; ${repPhone}</span>` : "",
     repEmail ? `<span>&#9993;&#65039; ${repEmail}</span>` : "",
@@ -221,7 +214,6 @@ export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, org
     <p style="margin:0 0 24px;font-size:14px;color:#64748b;">Questions? Reply to this email and <strong>${repName}</strong> will get back to you.</p>`;
 
   const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
-  const promoText = promoNote ? `\nCURRENT PROMOTION: ${promoNote}\n` : "";
   const contactText = [
     `Your rep: ${repName}`,
     repPhone ? `Phone: ${repPhone}` : "",
@@ -231,19 +223,15 @@ export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, org
   const text = [
     greeting,
     "",
-    `Thank you for taking the time to speak with ${repName} from ${orgName}. We appreciate your interest and put together this quote based on your conversation.`,
+    `Thank you for taking the time to speak with ${repName} from ${orgName} today. It was a pleasure connecting with you.`,
     "",
-    `Plan: ${planLabel}${planSpeed ? ` (${planSpeed})` : ""}`,
-    `Estimated Monthly Total: ${fmt(monthly)}/mo`,
-    "(Excludes taxes and fees)",
-    promoText,
-    `View your full quote: ${quoteUrl}`,
+    "Your personalized fiber internet quote is attached to this email as a PDF. You can also view it online at any time using the link below:",
     "",
-    "No activation fee · Gateway included · No annual contract",
+    quoteUrl,
+    "",
+    "If you have any questions or would like to move forward, don't hesitate to reach out — we're happy to help.",
     "",
     contactText,
-    "",
-    "Don't hesitate to reach out with any questions — we're happy to help.",
     "",
     `— ${repName} & the ${orgName} team`,
   ].filter(l => l !== undefined).join("\n");
@@ -254,20 +242,17 @@ export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, org
     html: wrapper(`
       <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Fiber Internet Quote</p>
       <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#0f172a;">${greeting}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
-        Thank you for taking the time to speak with <strong>${repName}</strong> from <strong>${orgName}</strong>. We appreciate your interest and put together this quote based on your conversation.
+      <p style="margin:0 0 16px;font-size:15px;color:#475569;line-height:1.6;">
+        Thank you for taking the time to speak with <strong>${repName}</strong> from <strong>${orgName}</strong> today. It was a pleasure connecting with you.
       </p>
-      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;margin:0 0 24px;">
-        <p style="margin:0 0 4px;font-size:13px;color:#3b82f6;">${planLabel}${planSpeed ? ` &middot; ${planSpeed}` : ""}</p>
-        <p style="margin:0;font-size:36px;font-weight:800;color:#1d4ed8;">${fmt(monthly)}<span style="font-size:16px;font-weight:500;color:#60a5fa;">/mo</span></p>
-        <p style="margin:4px 0 0;font-size:12px;color:#93c5fd;">Estimated monthly total &middot; excludes taxes &amp; fees</p>
-      </div>
-      ${promoBlock}
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
+        Your personalized fiber internet quote is <strong>attached to this email as a PDF</strong>. You can also view it online at any time:
+      </p>
       ${cta(quoteUrl, "View My Full Quote")}
       ${contactBlock}
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
-        No activation fee &middot; Gateway included &middot; No annual contract<br>
-        Pricing subject to change. Don't hesitate to reach out with any questions.
+        If you have any questions or would like to move forward, don't hesitate to reach out.<br>
+        Pricing subject to change.
       </p>
     `),
   };

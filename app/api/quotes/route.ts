@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, FROM } from "@/lib/email/resend";
 import { fiberQuoteEmail } from "@/lib/email/templates";
 import { FIBER_PLANS } from "@/lib/quoting/fiber-pricing";
+import { renderFiberQuotePDF } from "@/lib/quoting/quote-pdf";
 
 export async function GET() {
   const supabase = await createClient();
@@ -84,13 +85,38 @@ export async function POST(request: NextRequest) {
       repPhone,
       repEmail,
       orgName,
-      planLabel: fiberPlan?.label  ?? quote.fiber_plan ?? "Fiber Internet",
-      planSpeed: fiberPlan?.speed  ?? "",
-      monthly:   quote.monthly_total,
       quoteUrl,
-      promoNote: quote.promo_note ?? undefined,
     });
-    await sendEmail({ from: FROM, to: quote.customer_email, subject, html, text });
+
+    let pdfBuffer: Buffer | undefined;
+    try {
+      pdfBuffer = await renderFiberQuotePDF({
+        customerName: quote.customer_name ?? undefined,
+        orgName,
+        planLabel: fiberPlan?.label ?? quote.fiber_plan ?? "Fiber Internet",
+        planSpeed:  fiberPlan?.speed ?? undefined,
+        monthly:    quote.monthly_total,
+        autopayPaperless: quote.autopay_paperless === true,
+        wirelessBundle:   quote.wireless_bundle   === true,
+        promoNote:  quote.promo_note ?? undefined,
+        repName,
+        repPhone,
+        repEmail,
+      });
+    } catch (pdfErr) {
+      console.error("[pdf] render failed:", pdfErr);
+    }
+
+    await sendEmail({
+      from: FROM,
+      to: quote.customer_email,
+      subject,
+      html,
+      text,
+      attachments: pdfBuffer
+        ? [{ filename: "quote.pdf", content: pdfBuffer }]
+        : undefined,
+    });
 
     await admin.from("leads").insert({
       org_id:               profile.org_id,
