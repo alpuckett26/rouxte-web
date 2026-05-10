@@ -36,9 +36,16 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createAdminClient();
+
+  // Fetch core profile fields that are guaranteed to exist
   const { data: profile } = await admin
-    .from("user_profiles").select("org_id, full_name, phone").eq("user_id", user.id).maybeSingle();
+    .from("user_profiles").select("org_id, full_name").eq("user_id", user.id).maybeSingle();
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 400 });
+
+  // Phone added in migration 028 — fetch separately so a missing column doesn't
+  // break the whole quote save flow
+  const { data: profileExt } = await admin
+    .from("user_profiles").select("phone").eq("user_id", user.id).maybeSingle();
 
   const body = await request.json();
   const { lines, ...quoteData } = body;
@@ -63,8 +70,8 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const quoteUrl = `${appUrl}/quote/${quote.id}`;
     const fiberPlan = FIBER_PLANS.find(p => p.id === quote.fiber_plan);
-    const repName = profile.full_name ?? "Your Rep";
-    const repPhone = (profile as { phone?: string }).phone ?? undefined;
+    const repName  = profile.full_name ?? "Your Rep";
+    const repPhone = (profileExt as { phone?: string } | null)?.phone ?? undefined;
     const repEmail = user.email ?? undefined;
 
     const { data: org } = await admin
@@ -77,11 +84,11 @@ export async function POST(request: NextRequest) {
       repPhone,
       repEmail,
       orgName,
-      planLabel:  fiberPlan?.label  ?? quote.fiber_plan ?? "Fiber Internet",
-      planSpeed:  fiberPlan?.speed  ?? "",
-      monthly:    quote.monthly_total,
+      planLabel: fiberPlan?.label  ?? quote.fiber_plan ?? "Fiber Internet",
+      planSpeed: fiberPlan?.speed  ?? "",
+      monthly:   quote.monthly_total,
       quoteUrl,
-      promoNote:  quote.promo_note ?? undefined,
+      promoNote: quote.promo_note ?? undefined,
     });
     await sendEmail({ from: FROM, to: quote.customer_email, subject, html, text });
 
