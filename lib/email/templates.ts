@@ -41,156 +41,131 @@ const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", curren
 
 // ── Invite ────────────────────────────────────────────────────────────────────
 export function inviteEmail({ orgName, role, inviteUrl, inviterName }: {
-  orgName: string; role: string; inviteUrl: string; inviterName?: string;
-}): { subject: string; html: string } {
+  orgName: string; role: string; inviteUrl: string; inviterName: string;
+}): { subject: string; html: string; text: string } {
   const roleLabel = ROLE_LABELS[role] ?? role;
-  const from = inviterName ? `${inviterName} has invited you` : "You've been invited";
   return {
     subject: `You've been invited to join ${orgName} on Rouxte`,
     html: wrapper(`
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">${from}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;">to join <strong>${orgName}</strong> as a <strong>${roleLabel}</strong>.</p>
-      <a href="${inviteUrl}" style="display:block;background:#1BAEE1;color:#ffffff;text-align:center;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:24px;">Accept Invite →</a>
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">This invite expires in 7 days. If you didn't expect this, you can safely ignore it.</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">You're invited!</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">${inviterName} has invited you to join <strong>${orgName}</strong> as a <strong>${roleLabel}</strong> on Rouxte.</p>
+      ${cta(inviteUrl, "Accept Invitation")}
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">This invitation expires in 7 days. If you didn't expect this, you can ignore this email.</p>
     `),
+    text: `${inviterName} has invited you to join ${orgName} as a ${roleLabel} on Rouxte.\n\nAccept: ${inviteUrl}`,
   };
 }
 
-// ── Invite accepted (to manager) ─────────────────────────────────────────────
 export function inviteAcceptedEmail({ repName, repEmail, orgName, role, dashUrl }: {
   repName: string; repEmail: string; orgName: string; role: string; dashUrl: string;
-}): { subject: string; html: string } {
+}): { subject: string; html: string; text: string } {
   const roleLabel = ROLE_LABELS[role] ?? role;
   return {
-    subject: `${repName} has joined ${orgName} on Rouxte`,
+    subject: `${repName} has joined ${orgName}`,
     html: wrapper(`
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">New team member joined</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;"><strong>${repName}</strong> (${repEmail}) has accepted their invite and joined <strong>${orgName}</strong> as a <strong>${roleLabel}</strong>.</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">${repName} is now on board</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;"><strong>${repName}</strong> (${repEmail}) has accepted their invitation and joined <strong>${orgName}</strong> as a <strong>${roleLabel}</strong>.</p>
       ${cta(dashUrl, "View Team")}
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Their onboarding is in progress. You'll receive an update when they complete it.</p>
     `),
+    text: `${repName} (${repEmail}) has joined ${orgName} as a ${roleLabel}.\n\nView team: ${dashUrl}`,
   };
 }
 
-// ── Onboarding complete (to rep) ─────────────────────────────────────────────
 export function onboardingCompleteRepEmail({ repName, orgName, dashUrl }: {
   repName: string; orgName: string; dashUrl: string;
-}): { subject: string; html: string } {
+}): { subject: string; html: string; text: string } {
   return {
-    subject: `You're all set — welcome to ${orgName}!`,
+    subject: `Welcome to Rouxte, ${repName}!`,
     html: wrapper(`
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Onboarding complete 🎉</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi <strong>${repName}</strong>, you've finished onboarding with <strong>${orgName}</strong>. Your manager will clear you to work the field once they've reviewed your profile.</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">You're all set, ${repName}!</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">Your account with <strong>${orgName}</strong> is ready. Head to your dashboard to start tracking leads, building quotes, and logging activity.</p>
       ${cta(dashUrl, "Go to Dashboard")}
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Check your training modules while you wait — passing them all makes you promotion eligible.</p>
     `),
+    text: `Welcome to Rouxte, ${repName}! Your account with ${orgName} is ready.\n\nDashboard: ${dashUrl}`,
   };
 }
 
-// ── Onboarding complete (to manager) ─────────────────────────────────────────
 export function onboardingCompleteManagerEmail({ repName, repEmail, orgName, dashUrl }: {
   repName: string; repEmail: string; orgName: string; dashUrl: string;
-}): { subject: string; html: string } {
+}): { subject: string; html: string; text: string } {
   return {
-    subject: `${repName} has completed onboarding`,
+    subject: `${repName} completed onboarding`,
     html: wrapper(`
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Onboarding complete</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;"><strong>${repName}</strong> (${repEmail}) has signed all required documents and completed onboarding for <strong>${orgName}</strong>. They're waiting on your field clearance.</p>
-      ${cta(dashUrl, "Review & Clear Rep")}
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">${repName} is ready to sell</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;"><strong>${repName}</strong> (${repEmail}) has completed onboarding for <strong>${orgName}</strong>.</p>
+      ${cta(dashUrl, "View Team")}
     `),
+    text: `${repName} (${repEmail}) has completed onboarding for ${orgName}.\n\nView team: ${dashUrl}`,
   };
 }
 
-// ── Paystub generated / available ────────────────────────────────────────────
 export function paystubEmail({ repName, periodLabel, netPay, viewUrl }: {
   repName: string; periodLabel: string; netPay: number; viewUrl: string;
-}): { subject: string; html: string } {
+}): { subject: string; html: string; text: string } {
   return {
-    subject: `Your pay for ${periodLabel} is ready — ${fmt(netPay)}`,
+    subject: `Your paystub for ${periodLabel} is ready`,
     html: wrapper(`
-      <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Pay Statement Ready</p>
-      <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">Hi ${repName},</p>
-      <p style="margin:0 0 8px;font-size:15px;color:#475569;">Your pay for <strong>${periodLabel}</strong> is ready.</p>
-      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
-        <p style="margin:0 0 4px;font-size:13px;color:#16a34a;">Net Pay</p>
-        <p style="margin:0;font-size:32px;font-weight:800;color:#15803d;">${fmt(netPay)}</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Paystub ready</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#475569;">Hi ${repName}, your earnings statement for <strong>${periodLabel}</strong> is available.</p>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:0 0 24px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:13px;color:#16a34a;text-transform:uppercase;letter-spacing:0.5px;">Net Pay</p>
+        <p style="margin:0;font-size:36px;font-weight:800;color:#15803d;">${fmt(netPay)}</p>
       </div>
-      ${cta(viewUrl, "View Full Paystub")}
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Remember to set aside ~27% for self-employment taxes (SE: 15.3% + federal est: 12%).</p>
+      ${cta(viewUrl, "View Paystub")}
     `),
+    text: `Hi ${repName}, your paystub for ${periodLabel} is ready. Net pay: ${fmt(netPay)}.\n\nView: ${viewUrl}`,
   };
 }
 
-// ── Paystub released ─────────────────────────────────────────────────────────
 export function paystubReleasedEmail({ repName, periodLabel, netPay, viewUrl }: {
   repName: string; periodLabel: string; netPay: number; viewUrl: string;
-}): { subject: string; html: string } {
+}): { subject: string; html: string; text: string } {
   return {
-    subject: `💰 Your pay is released — ${fmt(netPay)}`,
+    subject: `Paystub released — ${periodLabel}`,
     html: wrapper(`
-      <p style="margin:0 0 4px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Pay Released</p>
-      <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">Your pay is on the way, ${repName}!</p>
-      <p style="margin:0 0 8px;font-size:15px;color:#475569;">Your paystub for <strong>${periodLabel}</strong> has been approved and released by your manager.</p>
-      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
-        <p style="margin:0 0 4px;font-size:13px;color:#2563eb;">Net Pay</p>
-        <p style="margin:0;font-size:32px;font-weight:800;color:#1d4ed8;">${fmt(netPay)}</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Paystub released</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#475569;">Hi ${repName}, your manager has released your paystub for <strong>${periodLabel}</strong>.</p>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin:0 0 24px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:13px;color:#16a34a;text-transform:uppercase;letter-spacing:0.5px;">Net Pay</p>
+        <p style="margin:0;font-size:36px;font-weight:800;color:#15803d;">${fmt(netPay)}</p>
       </div>
-      ${cta(viewUrl, "View & Print Paystub")}
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Remember to set aside ~27% for self-employment taxes.</p>
+      ${cta(viewUrl, "View Paystub")}
     `),
+    text: `Hi ${repName}, your paystub for ${periodLabel} has been released. Net pay: ${fmt(netPay)}.\n\nView: ${viewUrl}`,
   };
 }
 
-// ── Lead assigned ────────────────────────────────────────────────────────────
 export function leadAssignedEmail({ repName, leadCount, leadAddress, assignerName, orgName, leadsUrl }: {
-  repName: string; leadCount: number; leadAddress?: string;
-  assignerName: string; orgName: string; leadsUrl: string;
-}): { subject: string; html: string } {
-  const isOne = leadCount === 1;
+  repName: string; leadCount: number; leadAddress: string; assignerName: string; orgName: string; leadsUrl: string;
+}): { subject: string; html: string; text: string } {
+  const plural = leadCount !== 1;
   return {
-    subject: isOne
-      ? `New lead assigned to you — ${orgName}`
-      : `${leadCount} new leads assigned to you — ${orgName}`,
+    subject: `${leadCount} new lead${plural ? "s" : ""} assigned to you`,
     html: wrapper(`
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">
-        ${isOne ? "You have a new lead" : `${leadCount} leads assigned to you`}
-      </p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;">
-        Hi <strong>${repName}</strong>, <strong>${assignerName}</strong> has assigned
-        ${isOne
-          ? `a lead${leadAddress ? ` at <strong>${leadAddress}</strong>` : ""}`
-          : `<strong>${leadCount} leads</strong>`}
-        to you in <strong>${orgName}</strong>.
-      </p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">New lead${plural ? "s" : ""} assigned</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#475569;">Hi ${repName}, <strong>${assignerName}</strong> from <strong>${orgName}</strong> has assigned you ${leadCount} new lead${plural ? "s" : ""}.</p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin:0 0 24px;">
+        <p style="margin:0 0 4px;font-size:11px;color:#3b82f6;text-transform:uppercase;letter-spacing:0.5px;">Lead${plural ? "s" : ""}</p>
+        <p style="margin:0;font-size:15px;font-weight:600;color:#1e40af;">${leadAddress}${plural ? " + more" : ""}</p>
+      </div>
       ${cta(leadsUrl, "View My Leads")}
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
-        Open your leads pipeline and get started.
-      </p>
     `),
+    text: `Hi ${repName}, ${assignerName} has assigned you ${leadCount} new lead${plural ? "s" : ""}.\n\nView: ${leadsUrl}`,
   };
 }
-// ── Termination ──────────────────────────────────────────────────────────────
+
 export function terminationEmail({ repName, orgName, managerName, payUrl }: {
-  repName: string; orgName: string; managerName?: string; payUrl: string;
-}): { subject: string; html: string } {
-  const sender = managerName ? `${managerName} from ${orgName}` : orgName;
+  repName: string; orgName: string; managerName: string; payUrl: string;
+}): { subject: string; html: string; text: string } {
   return {
-    subject: `Your position with ${orgName} has ended`,
+    subject: `Important: Your account with ${orgName}`,
     html: wrapper(`
-      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Your position has ended</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi <strong>${repName}</strong>, ${sender} has ended your role at <strong>${orgName}</strong>.</p>
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:0 0 24px;">
-        <p style="margin:0 0 10px;font-size:14px;font-weight:600;color:#0f172a;">Next steps</p>
-        <ul style="margin:0;padding-left:18px;font-size:14px;color:#475569;line-height:2;">
-          <li>Your final pay will be calculated and released by your manager</li>
-          <li>Any outstanding commissions from closed deals are included</li>
-          <li>Your full pay history is available at the link below</li>
-          <li>Questions? Reply to this email or reach out to your manager directly</li>
-        </ul>
-      </div>
-      ${cta(payUrl, "View Pay History")}
-      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Thank you for your time with ${orgName}.</p>
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Account update</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi ${repName}, <strong>${managerName}</strong> has ended your active status with <strong>${orgName}</strong>. Your final earnings summary is available below.</p>
+      ${cta(payUrl, "View Final Earnings")}
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Questions? Contact ${managerName} or support@rouxte.com</p>
     `),
+    text: `Hi ${repName}, your active status with ${orgName} has ended. View final earnings: ${payUrl}`,
   };
 }
 
@@ -214,5 +189,53 @@ export function orderConfirmationEmail({ buyerName, productLabel, totalCents, or
       ${cta(dashUrl, "View Order Status")}
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Physical badges ship USPS First Class (5-7 business days). Questions? support@rouxte.com</p>
     `),
+  };
+}
+
+// ── Fiber quote ───────────────────────────────────────────────────────────────
+export function fiberQuoteEmail({ customerName, repName, repPhone, repEmail, orgName, quoteUrl }: {
+  customerName: string; repName: string; repPhone?: string; repEmail?: string;
+  orgName: string; quoteUrl: string;
+}): { subject: string; html: string; text: string } {
+  const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
+  const repContact = [repPhone, repEmail].filter(Boolean).join(" · ");
+  return {
+    subject: `Your Fiber Quote from ${orgName}`,
+    html: wrapper(`
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Your fiber quote is ready</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">${greeting} Thank you for speaking with ${repName} from ${orgName} today. Your fiber internet quote is attached as a PDF and available online.</p>
+      ${cta(quoteUrl, "View Your Quote")}
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:0 0 16px;">
+        <p style="margin:0 0 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Your Rep</p>
+        <p style="margin:0 0 2px;font-size:15px;font-weight:700;color:#0f172a;">${repName}</p>
+        ${repContact ? `<p style="margin:0;font-size:13px;color:#64748b;">${repContact}</p>` : ""}
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Pricing and promotions subject to change. Quote generated via Rouxte.</p>
+    `),
+    text: `${greeting}\n\nThank you for speaking with ${repName} from ${orgName}. Your fiber quote is attached as a PDF.\n\nView online: ${quoteUrl}\n\n${repContact ? `Contact: ${repContact}` : ""}`,
+  };
+}
+
+// ── Wireless quote ────────────────────────────────────────────────────────────
+export function wirelessQuoteEmail({ customerName, repName, repPhone, repEmail, orgName, quoteUrl }: {
+  customerName: string; repName: string; repPhone?: string; repEmail?: string;
+  orgName: string; quoteUrl: string;
+}): { subject: string; html: string; text: string } {
+  const greeting = customerName ? `Hi ${customerName},` : "Hi there,";
+  const repContact = [repPhone, repEmail].filter(Boolean).join(" · ");
+  return {
+    subject: `Your Wireless Quote from ${orgName}`,
+    html: wrapper(`
+      <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Your wireless quote is ready</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;">${greeting} Thank you for speaking with ${repName} from ${orgName} today. Your AT&amp;T wireless quote is attached as a PDF and available online.</p>
+      ${cta(quoteUrl, "View Your Quote")}
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:0 0 16px;">
+        <p style="margin:0 0 4px;font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Your Rep</p>
+        <p style="margin:0 0 2px;font-size:15px;font-weight:700;color:#0f172a;">${repName}</p>
+        ${repContact ? `<p style="margin:0;font-size:13px;color:#64748b;">${repContact}</p>` : ""}
+      </div>
+      <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">Pricing, plans, and promotions subject to change. Quote generated via Rouxte.</p>
+    `),
+    text: `${greeting}\n\nThank you for speaking with ${repName} from ${orgName}. Your wireless quote is attached as a PDF.\n\nView online: ${quoteUrl}\n\n${repContact ? `Contact: ${repContact}` : ""}`,
   };
 }
