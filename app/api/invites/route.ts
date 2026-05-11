@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { randomBytes } from "crypto";
 import { sendEmail, FROM } from "@/lib/email/resend";
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     orgName: org?.name ?? "your team",
     role,
     inviteUrl,
-    inviterName: (profile as { full_name?: string }).full_name ?? undefined,
+    inviterName: (profile as { full_name?: string }).full_name ?? "Your Manager",
   });
 
   const emailSent = await sendEmail({ from: FROM, to: email, subject, html });

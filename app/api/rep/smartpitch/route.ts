@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import QRCode from "qrcode";
 
@@ -27,7 +27,7 @@ export async function GET() {
     return NextResponse.json({ funnel: null, stats: null, recent: [], qr_data_url: null });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.rouxte.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.com";
   const funnelUrl = `${appUrl}/r/${funnel.slug}`;
 
   const [qrDataUrl, submissionsResult] = await Promise.all([

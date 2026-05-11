@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSquare, SQUARE_LOCATION_ID } from "@/lib/square";
 import { STORE_PRICES, StoreProductKey } from "@/lib/store-config";

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, FROM } from "@/lib/email/resend";
 import { inviteAcceptedEmail } from "@/lib/email/templates";

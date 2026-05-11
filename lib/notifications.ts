@@ -64,7 +64,7 @@ export async function notifyLeadAssigned(opts: LeadAssignOpts): Promise<void> {
     const { subject, html } = leadAssignedEmail({
       repName:      recipient.full_name,
       leadCount:    opts.leadCount,
-      leadAddress:  opts.leadAddress,
+      leadAddress:  opts.leadAddress ?? "",
       assignerName: opts.assignerName,
       orgName,
       leadsUrl:     `${appUrl}/leads`,

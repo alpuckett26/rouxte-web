@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, FROM } from "@/lib/email/resend";
 import { terminationEmail } from "@/lib/email/templates";
@@ -144,7 +144,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     const { subject, html } = terminationEmail({
       repName: targetProfile.full_name,
       orgName: org?.name ?? "your company",
-      managerName: (callerProfile as { full_name?: string }).full_name ?? undefined,
+      managerName: (callerProfile as { full_name?: string }).full_name ?? "Your Manager",
       payUrl: `${appUrl}/payroll`,
     });
     await sendEmail({ from: FROM, to: email, subject, html });
