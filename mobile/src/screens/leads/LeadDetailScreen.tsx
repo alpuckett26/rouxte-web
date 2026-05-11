@@ -8,6 +8,8 @@ import { Text, Card, Button, Badge, Input, Modal, Select, type SelectOption } fr
 import { colors } from '@/lib/colors';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_ORDER } from '@/lib/leads';
 import { LOG_EVENT_LABELS } from '@/lib/logs';
+import { KnockCounter } from '@/components/dashboard/KnockCounter';
+import { useProfile } from '@/hooks/useProfile';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { LeadsStackParamList, LeadStatus, LogEventType, Tag, Lead } from '@/types';
 
@@ -17,6 +19,8 @@ type Tab = 'overview' | 'notes' | 'tags' | 'log' | 'ai';
 export default function LeadDetailScreen({ route }: Props) {
   const { leadId } = route.params;
   const qc = useQueryClient();
+  const { profile } = useProfile();
+  const showKnockCounter = profile?.role === 'sales_rep' || profile?.role === 'team_lead';
   const [tab, setTab] = useState<Tab>('overview');
   const [logSaleOpen, setLogSaleOpen] = useState(false);
 
@@ -68,6 +72,7 @@ export default function LeadDetailScreen({ route }: Props) {
   ];
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
       {/* Header */}
       <View>
@@ -161,6 +166,8 @@ export default function LeadDetailScreen({ route }: Props) {
         }}
       />
     </ScrollView>
+    {showKnockCounter && <KnockCounter leadId={leadId} bottomOffset={20} />}
+    </View>
   );
 }
 

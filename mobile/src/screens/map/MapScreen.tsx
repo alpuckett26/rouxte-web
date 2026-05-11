@@ -6,6 +6,8 @@ import { leadsApi } from '@/api/leads';
 import { config } from '@/lib/config';
 import { STATUS_HEX, colors } from '@/lib/colors';
 import { Text } from '@/components/ui';
+import { KnockCounter } from '@/components/dashboard/KnockCounter';
+import { useProfile } from '@/hooks/useProfile';
 import type { Lead } from '@/types';
 
 Mapbox.setAccessToken(config.mapbox.token);
@@ -14,6 +16,8 @@ type Filter = 'all' | 'fiber';
 
 export default function MapScreen() {
   const [filter, setFilter] = useState<Filter>('all');
+  const { profile } = useProfile();
+  const showKnockCounter = profile?.role === 'sales_rep' || profile?.role === 'team_lead';
 
   const q = useQuery({
     queryKey: ['leads-map', filter],
@@ -106,6 +110,9 @@ export default function MapScreen() {
           </Text>
         </View>
       )}
+
+      {/* Knock counter — only for reps/team_leads, on the map this is the most useful */}
+      {showKnockCounter && <KnockCounter bottomOffset={16} position="bottom-right" />}
 
       {/* Bottom-left status legend */}
       <View style={styles.legend}>

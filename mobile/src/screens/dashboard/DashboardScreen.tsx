@@ -10,6 +10,8 @@ import { useProfile, isManager, isFullManager } from '@/hooks/useProfile';
 import { Screen, Text, Card, Badge, Skeleton, SkeletonGrid } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import { LOG_EVENT_LABELS } from '@/lib/logs';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { KnockCounter } from '@/components/dashboard/KnockCounter';
 import type { MainTabParamList, LogEventType, UserRole } from '@/types';
 
 type Nav = BottomTabNavigationProp<MainTabParamList>;
@@ -45,20 +47,21 @@ export default function DashboardScreen() {
   const team = dashQ.data?.team_stats ?? [];
   const incidents = dashQ.data?.pending_incidents ?? 0;
 
+  const showKnockCounter = role === 'sales_rep' || role === 'team_lead';
+
   return (
+    <View style={{ flex: 1 }}>
     <Screen
       refreshing={dashQ.isFetching && !dashQ.isLoading}
       onRefresh={() => { dashQ.refetch(); salesQ.refetch(); aiUsage.refetch(); }}
     >
       {/* Heading */}
       <View style={styles.headerRow}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text variant="heading" weight="semibold">{heading.title}</Text>
           <Text variant="caption" tone="dim">{heading.sub}</Text>
         </View>
-        {profile?.full_name && (
-          <Text variant="caption" tone="dim">Hi, {profile.full_name.split(' ')[0]}</Text>
-        )}
+        <NotificationBell onPress={() => nav.navigate('More' as never, { screen: 'Notifications' } as never)} />
       </View>
 
       {/* Incident banner */}
@@ -168,6 +171,8 @@ export default function DashboardScreen() {
         </>
       )}
     </Screen>
+    {showKnockCounter && <KnockCounter bottomOffset={84} />}
+    </View>
   );
 }
 

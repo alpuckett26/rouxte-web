@@ -5,19 +5,25 @@ import { quotesApi } from '@/api/quotes';
 import { Text, Card } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { QuotesStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<QuotesStackParamList, 'QuotesList'>;
 
 export default function QuotesScreen({ navigation }: Props) {
+  const rootNav = useNavigation();
   const q = useQuery({ queryKey: ['quotes'], queryFn: quotesApi.list });
   const quotes = q.data?.quotes ?? [];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Text variant="title" weight="bold">Quotes</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text variant="title" weight="bold">Quotes</Text>
+          <NotificationBell onPress={() => rootNav.navigate('More' as never, { screen: 'Notifications' } as never)} />
+        </View>
         <View style={styles.actions}>
           <Pressable
             style={[styles.newBtn, { backgroundColor: colors.brand }]}

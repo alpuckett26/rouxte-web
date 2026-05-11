@@ -8,6 +8,8 @@ import { Text, Button, Card, Badge, Skeleton, Modal, Select, type SelectOption }
 import { colors } from '@/lib/colors';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_ORDER } from '@/lib/leads';
 import { useProfile, canBulkAssign } from '@/hooks/useProfile';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { LeadsStackParamList, LeadStatus, Lead } from '@/types';
 
@@ -142,6 +144,7 @@ function Header({
   total: number; isManager: boolean; selectMode: boolean; selectedCount: number;
   onNewLead: () => void; onCancelSelect: () => void; onAssign: () => void;
 }) {
+  const nav = useNavigation();
   if (selectMode && isManager) {
     return (
       <View style={[styles.header, { backgroundColor: colors.brand + '22' }]}>
@@ -158,11 +161,14 @@ function Header({
   }
   return (
     <View style={styles.header}>
-      <View>
+      <View style={{ flex: 1 }}>
         <Text variant="heading" weight="semibold">Leads</Text>
         <Text variant="caption" tone="dim">{total > 0 ? `${total.toLocaleString()} total` : 'Your pipeline'}</Text>
       </View>
-      <Button title="+ Add" onPress={onNewLead} variant="primary" fullWidth={false} />
+      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <NotificationBell onPress={() => nav.navigate('More' as never, { screen: 'Notifications' } as never)} />
+        <Button title="+ Add" onPress={onNewLead} variant="primary" fullWidth={false} />
+      </View>
     </View>
   );
 }
