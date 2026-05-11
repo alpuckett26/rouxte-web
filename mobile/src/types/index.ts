@@ -52,6 +52,8 @@ export type MoreStackParamList = {
   TrainingQuiz: { moduleId: string };
   Coach: undefined;
   Leaderboard: undefined;
+  Goals: undefined;
+  SmartPitch: undefined;
   Notifications: undefined;
   Resources: undefined;
   Card: undefined;

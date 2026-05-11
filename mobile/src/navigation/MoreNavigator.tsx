@@ -15,6 +15,8 @@ import MeetingsScreen from '@/screens/meetings/MeetingsScreen';
 import ManagerScreen from '@/screens/manager/ManagerScreen';
 import PayrollScreen from '@/screens/payroll/PayrollScreen';
 import LeaderboardScreen from '@/screens/leaderboard/LeaderboardScreen';
+import GoalsScreen from '@/screens/goals/GoalsScreen';
+import SmartPitchScreen from '@/screens/smartpitch/SmartPitchScreen';
 import type { MoreStackParamList } from '@/types';
 
 const Stack = createNativeStackNavigator<MoreStackParamList>();
@@ -35,6 +37,8 @@ export default function MoreNavigator() {
       <Stack.Screen name="TrainingQuiz"     component={TrainingQuizScreen}     options={{ title: 'Quiz' }} />
       <Stack.Screen name="Coach"            component={CoachChatScreen}        options={{ title: 'AI Coach' }} />
       <Stack.Screen name="Leaderboard"      component={LeaderboardScreen}      options={{ title: 'Leaderboard' }} />
+      <Stack.Screen name="Goals"            component={GoalsScreen}            options={{ title: 'Goals' }} />
+      <Stack.Screen name="SmartPitch"       component={SmartPitchScreen}       options={{ title: 'SmartPitch' }} />
       <Stack.Screen name="Notifications"    component={NotificationsScreen}    options={{ title: 'Notifications' }} />
       <Stack.Screen name="Resources"        component={ResourcesScreen}        options={{ title: 'Resources' }} />
       <Stack.Screen name="Card"             component={CardScreen}             options={{ title: 'Digital Card' }} />

@@ -38,6 +38,8 @@ export default function MoreScreen({ navigation }: Props) {
       <Row label="Leaderboard" description="Org-wide ranking" onPress={() => navigation.navigate('Leaderboard')} />
 
       <Text variant="caption" tone="dim" style={styles.section}>YOU</Text>
+      <Row label="Goals" description="Your sales goal progress" onPress={() => navigation.navigate('Goals')} />
+      <Row label="SmartPitch" description="Your shareable funnel" onPress={() => navigation.navigate('SmartPitch')} />
       <Row label="Notifications"     onPress={() => navigation.navigate('Notifications')} />
       <Row label="Digital card"      description="Shareable contact card" onPress={() => navigation.navigate('Card')} />
       <Row label="Resource library"  onPress={() => navigation.navigate('Resources')} />
