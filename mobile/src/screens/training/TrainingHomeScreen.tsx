@@ -1,49 +1,81 @@
 import React from 'react';
+import { View, StyleSheet, Linking, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { trainingApi } from '@/api/training';
-import { Screen, Text, Card } from '@/components/ui';
-import { colors } from '@/lib/colors';
-import { View } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MoreStackParamList } from '@/types';
+import { trainingApi, type TrainingFile } from '@/api/training';
+import { Screen, Text, Card, Skeleton } from '@/components/ui';
 
-type Props = NativeStackScreenProps<MoreStackParamList, 'Training'>;
+export default function TrainingHomeScreen() {
+  const q = useQuery({ queryKey: ['training-sections'], queryFn: trainingApi.sections });
 
-export default function TrainingHomeScreen({ navigation }: Props) {
-  const q = useQuery({ queryKey: ['training'], queryFn: trainingApi.list });
+  if (q.isLoading) {
+    return (
+      <Screen>
+        <Text variant="title" weight="bold">Training</Text>
+        <View style={{ marginTop: 12 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} height={56} borderRadius={10} style={{ marginBottom: 6 }} />
+          ))}
+        </View>
+      </Screen>
+    );
+  }
 
-  const progressByModule = new Map((q.data?.progress ?? []).map((p) => [p.module_id, p]));
+  const sections = q.data?.data ?? [];
+  const empty = sections.length === 0 || sections.every((s) => s.files.length === 0);
 
   return (
     <Screen
-      loading={q.isLoading}
       refreshing={q.isFetching && !q.isLoading}
       onRefresh={() => q.refetch()}
     >
-      <Text variant="title" weight="bold" style={{ marginBottom: 12 }}>Training</Text>
-      {(q.data?.modules ?? []).map((m) => {
-        const p = progressByModule.get(m.id);
-        const locked = p?.status === 'locked';
-        const completed = p?.status === 'completed';
-        return (
-          <Card
-            key={m.id}
-            onPress={() => !locked && navigation.navigate('TrainingModule', { moduleId: m.id })}
-            style={{
-              marginBottom: 8,
-              opacity: locked ? 0.5 : 1,
-              borderColor: completed ? colors.success : colors.border,
-            }}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text weight="semibold" style={{ flex: 1 }}>{m.title}</Text>
-              {completed && <Text tone="success" variant="caption">✓ Complete</Text>}
-              {locked && <Text tone="mute" variant="caption">Locked</Text>}
-            </View>
-            {m.description && <Text tone="dim" variant="caption">{m.description}</Text>}
-          </Card>
-        );
-      })}
+      <Text variant="title" weight="bold">Training</Text>
+      <Text variant="caption" tone="dim">Pitch decks, rebuttal guides, contracts</Text>
+
+      {empty ? (
+        <Card style={{ marginTop: 16, alignItems: 'center' }}>
+          <Text tone="dim">No training docs uploaded yet.</Text>
+          <Text variant="caption" tone="mute" style={{ marginTop: 4, textAlign: 'center' }}>
+            Managers upload docs to the training bucket on the web.
+          </Text>
+        </Card>
+      ) : (
+        sections.map((section) => (
+          <View key={section.folder} style={{ marginTop: 16 }}>
+            <Text variant="caption" tone="dim" style={styles.section}>{section.label.toUpperCase()}</Text>
+            {section.files.length === 0 ? (
+              <Card style={{ alignItems: 'center' }}>
+                <Text tone="mute" variant="caption">No files in this folder.</Text>
+              </Card>
+            ) : (
+              section.files.map((file) => <FileRow key={file.path} file={file} />)
+            )}
+          </View>
+        ))
+      )}
     </Screen>
   );
 }
+
+function FileRow({ file }: { file: TrainingFile }) {
+  const friendly = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+  return (
+    <Pressable
+      onPress={() => file.url && Linking.openURL(file.url)}
+      disabled={!file.url}
+      style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+    >
+      <Card style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text weight="medium">{friendly}</Text>
+          <Text variant="caption" tone="mute">{file.name}</Text>
+        </View>
+        <Text tone="brand">›</Text>
+      </Card>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  section: { marginBottom: 8, letterSpacing: 0.6 },
+  row:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+});
