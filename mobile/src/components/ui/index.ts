@@ -4,3 +4,7 @@ export { Button } from './Button';
 export { Input } from './Input';
 export { Card } from './Card';
 export { StatusPill } from './StatusPill';
+export { Badge, type BadgeColor } from './Badge';
+export { Skeleton, SkeletonGrid } from './Skeleton';
+export { Modal } from './Modal';
+export { Select, type SelectOption } from './Select';

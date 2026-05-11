@@ -72,8 +72,8 @@ export default function CoachChatScreen() {
             <Text variant="caption" tone={mode === 'roleplay' ? 'default' : 'dim'}>Roleplay</Text>
           </Pressable>
         </View>
-        {usageQ.data && !usageQ.data.exempt && (
-          <Text variant="caption" tone="mute">{usageQ.data.used_today}/{usageQ.data.daily_limit} today</Text>
+        {usageQ.data && (
+          <Text variant="caption" tone="mute">{usageQ.data.prompts_used}/3 today</Text>
         )}
       </View>
 

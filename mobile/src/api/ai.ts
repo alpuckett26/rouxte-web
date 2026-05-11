@@ -3,9 +3,8 @@ import { getAccessToken } from '@/lib/supabase';
 import { api } from './client';
 
 export interface AiUsage {
-  used_today: number;
-  daily_limit: number;
-  exempt: boolean;
+  prompts_used: number;
+  total_prompts_used: number;
 }
 
 export const aiApi = {
