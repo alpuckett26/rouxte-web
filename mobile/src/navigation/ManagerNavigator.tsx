@@ -6,6 +6,10 @@ import QueueScreen from '@/screens/manager/QueueScreen';
 import PeopleScreen from '@/screens/manager/PeopleScreen';
 import TeamScreen from '@/screens/manager/TeamScreen';
 import ComplianceScreen from '@/screens/manager/ComplianceScreen';
+import CompensationScreen from '@/screens/manager/CompensationScreen';
+import CoachScreen from '@/screens/manager/CoachScreen';
+import GoalsManagerScreen from '@/screens/manager/GoalsManagerScreen';
+import OnboardingMonitorScreen from '@/screens/manager/OnboardingMonitorScreen';
 
 export type ManagerStackParamList = {
   ManagerHome: undefined;
@@ -13,6 +17,10 @@ export type ManagerStackParamList = {
   People: undefined;
   Team: undefined;
   Compliance: undefined;
+  Compensation: undefined;
+  Coach: undefined;
+  Goals: undefined;
+  OnboardingMonitor: undefined;
 };
 
 const Stack = createNativeStackNavigator<ManagerStackParamList>();
@@ -27,11 +35,15 @@ export default function ManagerNavigator() {
         headerTitleStyle: { fontWeight: '700' },
       }}
     >
-      <Stack.Screen name="ManagerHome" component={ManagerScreen}    options={{ title: 'Manager' }} />
-      <Stack.Screen name="Queue"       component={QueueScreen}      options={{ title: 'Sales Queue' }} />
-      <Stack.Screen name="People"      component={PeopleScreen}     options={{ title: 'People' }} />
-      <Stack.Screen name="Team"        component={TeamScreen}       options={{ title: 'My Team' }} />
-      <Stack.Screen name="Compliance"  component={ComplianceScreen} options={{ title: 'Compliance' }} />
+      <Stack.Screen name="ManagerHome"       component={ManagerScreen}            options={{ title: 'Manager' }} />
+      <Stack.Screen name="Queue"             component={QueueScreen}              options={{ title: 'Sales Queue' }} />
+      <Stack.Screen name="People"            component={PeopleScreen}             options={{ title: 'People' }} />
+      <Stack.Screen name="Team"              component={TeamScreen}               options={{ title: 'My Team' }} />
+      <Stack.Screen name="Compliance"        component={ComplianceScreen}         options={{ title: 'Compliance' }} />
+      <Stack.Screen name="Compensation"      component={CompensationScreen}       options={{ title: 'Compensation' }} />
+      <Stack.Screen name="Coach"             component={CoachScreen}              options={{ title: 'Coach Knowledge' }} />
+      <Stack.Screen name="Goals"             component={GoalsManagerScreen}       options={{ title: 'Goals' }} />
+      <Stack.Screen name="OnboardingMonitor" component={OnboardingMonitorScreen}  options={{ title: 'Onboarding Monitor' }} />
     </Stack.Navigator>
   );
 }

@@ -53,24 +53,29 @@ export default function ManagerScreen() {
         />
       </View>
 
-      <Text variant="caption" tone="dim" style={styles.section}>QUICK NAV</Text>
+      <Text variant="caption" tone="dim" style={styles.section}>OPERATIONS</Text>
       <Card>
-        <NavRow label="Sales Queue"   description={`${pendingCount} pending`} onPress={() => nav.navigate('Queue')} />
-        <NavRow label="People"        description={`${memberCount} members`}  onPress={() => nav.navigate('People')} />
-        <NavRow label="My Team"       description="Tier + per-member stats"   onPress={() => nav.navigate('Team')} />
-        <NavRow label="Compliance"    description={`${incidents} pending`}    onPress={() => nav.navigate('Compliance')} />
+        <NavRow label="Sales Queue"  description={`${pendingCount} pending`} onPress={() => nav.navigate('Queue')} />
+        <NavRow label="People"       description={`${memberCount} members`}  onPress={() => nav.navigate('People')} />
+        <NavRow label="My Team"      description="Tier + per-member stats"   onPress={() => nav.navigate('Team')} />
+        <NavRow label="Compliance"   description={`${incidents} pending`}    onPress={() => nav.navigate('Compliance')} />
+        <NavRow label="Onboarding"   description="Track rep readiness"        onPress={() => nav.navigate('OnboardingMonitor')} />
+      </Card>
+
+      <Text variant="caption" tone="dim" style={styles.section}>ADMIN</Text>
+      <Card>
+        <NavRow label="Compensation" description="Commission tiers"           onPress={() => nav.navigate('Compensation')} />
+        <NavRow label="Goals"        description="Sales targets per rep/team" onPress={() => nav.navigate('Goals')} />
+        <NavRow label="Coach Knowledge" description="Q&A + competitor intel"  onPress={() => nav.navigate('Coach')} />
       </Card>
 
       <Text variant="caption" tone="dim" style={styles.section}>STILL ON WEB</Text>
       <Card>
-        <ExternalRow label="Team management"        url={`${config.api.baseUrl}/manager/teams`} />
-        <ExternalRow label="Compensation rules"     url={`${config.api.baseUrl}/manager/compensation`} />
-        <ExternalRow label="Goals + bonus board"    url={`${config.api.baseUrl}/manager/goals`} />
-        <ExternalRow label="Coach Q&A + competitors"url={`${config.api.baseUrl}/manager/coach`} />
-        <ExternalRow label="Resource library"       url={`${config.api.baseUrl}/manager/resources`} />
-        <ExternalRow label="SmartPitch funnels"     url={`${config.api.baseUrl}/manager/smartpitch`} />
-        <ExternalRow label="Onboarding monitor"     url={`${config.api.baseUrl}/manager/onboarding`} />
-        <ExternalRow label="Payroll periods"        url={`${config.api.baseUrl}/manager/payroll`} />
+        <ExternalRow label="Team management"     url={`${config.api.baseUrl}/manager/teams`} />
+        <ExternalRow label="Resource uploads"    url={`${config.api.baseUrl}/manager/resources`} />
+        <ExternalRow label="SmartPitch funnels"  url={`${config.api.baseUrl}/manager/smartpitch`} />
+        <ExternalRow label="Payroll periods"     url={`${config.api.baseUrl}/manager/payroll`} />
+        <ExternalRow label="BDC import / wizard" url={`${config.api.baseUrl}/manager/import-bdc`} />
       </Card>
 
       <Text tone="mute" variant="caption" style={{ marginTop: 16, textAlign: 'center' }}>
