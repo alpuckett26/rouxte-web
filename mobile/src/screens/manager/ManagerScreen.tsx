@@ -64,18 +64,20 @@ export default function ManagerScreen() {
 
       <Text variant="caption" tone="dim" style={styles.section}>ADMIN</Text>
       <Card>
-        <NavRow label="Compensation" description="Commission tiers"           onPress={() => nav.navigate('Compensation')} />
-        <NavRow label="Goals"        description="Sales targets per rep/team" onPress={() => nav.navigate('Goals')} />
-        <NavRow label="Coach Knowledge" description="Q&A + competitor intel"  onPress={() => nav.navigate('Coach')} />
+        <NavRow label="Teams"           description="Create + view teams"        onPress={() => nav.navigate('Teams')} />
+        <NavRow label="Compensation"    description="Commission tiers"           onPress={() => nav.navigate('Compensation')} />
+        <NavRow label="Goals"           description="Sales targets per rep/team" onPress={() => nav.navigate('Goals')} />
+        <NavRow label="Coach Knowledge" description="Q&A + competitor intel"     onPress={() => nav.navigate('Coach')} />
+        <NavRow label="SmartPitch (org)" description="All rep funnels"           onPress={() => nav.navigate('SmartPitch')} />
+        <NavRow label="Payroll Periods" description="Create + generate stubs"    onPress={() => nav.navigate('PayrollPeriods')} />
       </Card>
 
       <Text variant="caption" tone="dim" style={styles.section}>STILL ON WEB</Text>
       <Card>
-        <ExternalRow label="Team management"     url={`${config.api.baseUrl}/manager/teams`} />
         <ExternalRow label="Resource uploads"    url={`${config.api.baseUrl}/manager/resources`} />
-        <ExternalRow label="SmartPitch funnels"  url={`${config.api.baseUrl}/manager/smartpitch`} />
-        <ExternalRow label="Payroll periods"     url={`${config.api.baseUrl}/manager/payroll`} />
         <ExternalRow label="BDC import / wizard" url={`${config.api.baseUrl}/manager/import-bdc`} />
+        <ExternalRow label="Spotio/LeadBeam migration" url={`${config.api.baseUrl}/manager/migrate`} />
+        <ExternalRow label="Store badge designer" url={`${config.api.baseUrl}/store/badge`} />
       </Card>
 
       <Text tone="mute" variant="caption" style={{ marginTop: 16, textAlign: 'center' }}>

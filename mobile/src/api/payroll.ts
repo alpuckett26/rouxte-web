@@ -20,7 +20,22 @@ export interface PayStub {
   manager_notes: string | null;
 }
 
+export interface PayPeriod {
+  id: string;
+  org_id: string;
+  period_start: string;
+  period_end: string;
+  status: 'open' | 'closed' | 'released';
+  created_by: string;
+  created_at: string;
+}
+
 export const payrollApi = {
-  stubs:   () => api.get<{ data: PayStub[] }>('/api/payroll/stubs'),
-  periods: () => api.get<{ data: Array<{ id: string; period_start: string; period_end: string; status: string }> }>('/api/payroll/periods'),
+  stubs:        () => api.get<{ data: PayStub[] }>('/api/payroll/stubs'),
+  periods:      () => api.get<{ data: PayPeriod[] }>('/api/payroll/periods'),
+  createPeriod: (start?: string, end?: string) =>
+    api.post<{ data: PayPeriod }>('/api/payroll/periods',
+      start && end ? { period_start: start, period_end: end } : {}),
+  generateStubs: (periodId: string) =>
+    api.post<{ generated: number }>(`/api/payroll/periods/${periodId}/generate`),
 };
