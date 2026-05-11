@@ -7,8 +7,26 @@ export interface AiUsage {
   total_prompts_used: number;
 }
 
+export type PromptType = 'objection' | 'pitch' | 'followup' | 'next_action';
+
+export interface PromptContext {
+  address?: string;
+  att_available?: boolean;
+  competitors?: string[];
+  current_status?: string;
+  objection?: string;
+  last_note?: string;
+}
+
+export interface PromptResponse {
+  response: string;
+  usage: { daily: number; daily_limit: number; total: number; total_limit: number };
+}
+
 export const aiApi = {
-  usage: () => api.get<AiUsage>('/api/ai/usage'),
+  usage:  () => api.get<AiUsage>('/api/ai/usage'),
+  prompt: (prompt_type: PromptType, context: PromptContext, lead_id?: string) =>
+    api.post<PromptResponse>('/api/ai/prompt', { prompt_type, context, lead_id }),
 };
 
 /**

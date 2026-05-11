@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Linking, Alert, Pressable } from 'react-n
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/api/leads';
 import { logsApi } from '@/api/logs';
+import { aiApi } from '@/api/ai';
 import { api } from '@/api/client';
 import { Text, Card, Button, Badge, Input, Modal, Select, type SelectOption } from '@/components/ui';
 import { colors } from '@/lib/colors';
@@ -153,7 +154,7 @@ export default function LeadDetailScreen({ route }: Props) {
       {tab === 'notes'    && <NotesTab leadId={leadId} notes={notes} />}
       {tab === 'tags'     && <TagsTab  leadId={leadId} leadTags={tags} />}
       {tab === 'log'      && <LogTab   logs={logs} />}
-      {tab === 'ai'       && <AITab    address={lead.address} />}
+      {tab === 'ai'       && <AITab    lead={lead} latestNote={notes[0]?.body} />}
 
       <LogSaleModal
         visible={logSaleOpen}
@@ -267,16 +268,108 @@ function LogTab({ logs }: { logs: Array<{ id: string; event_type: LogEventType; 
   );
 }
 
-function AITab({ address }: { address: string }) {
+function AITab({ lead, latestNote }: { lead: Lead; latestNote?: string }) {
+  const [response, setResponse] = useState<string | null>(null);
+  const [objection, setObjection] = useState('');
+  const [showObjection, setShowObjection] = useState(false);
+  const [usage, setUsage] = useState<{ daily: number; daily_limit: number } | null>(null);
+
+  const m = useMutation({
+    mutationFn: ({ type, context }: { type: 'pitch' | 'followup' | 'next_action' | 'objection'; context: Record<string, unknown> }) =>
+      aiApi.prompt(type, context, lead.id),
+    onSuccess: (data) => {
+      setResponse(data.response);
+      setUsage(data.usage);
+    },
+    onError: (e: Error) => Alert.alert('AI request failed', e.message),
+  });
+
+  const baseContext = {
+    address: lead.address,
+    att_available: lead.carrier_availability?.att,
+    competitors: lead.carrier_availability?.competitors,
+    current_status: lead.status,
+    last_note: latestNote,
+  };
+
   return (
-    <Card style={{ marginTop: 8 }}>
-      <Text variant="caption" tone="dim">AI COACH — REBUTTALS FOR THIS LEAD</Text>
-      <Text tone="dim" style={{ marginTop: 6 }}>
-        Per-lead rebuttal suggestions are coming. For now, open AI Coach from the More tab — the
-        coach has access to your org's competitor intel and Q&A library.
-      </Text>
-      <Text variant="caption" tone="mute" style={{ marginTop: 8 }}>Lead: {address}</Text>
-    </Card>
+    <View style={{ marginTop: 8 }}>
+      <Card>
+        <Text variant="caption" tone="dim">AI COACH — REX</Text>
+        <Text variant="caption" tone="mute" style={{ marginTop: 4 }}>
+          Lead-aware coaching for {lead.address}. Uses your org's training docs + competitor intel + manager-approved scripts.
+        </Text>
+
+        <View style={styles.aiBtnRow}>
+          <Button
+            title="🚪 Pitch"
+            onPress={() => m.mutate({ type: 'pitch', context: baseContext })}
+            variant="secondary"
+            fullWidth={false}
+            loading={m.isPending && m.variables?.type === 'pitch'}
+            style={{ flex: 1 }}
+          />
+          <Button
+            title="📩 Follow-up"
+            onPress={() => m.mutate({ type: 'followup', context: baseContext })}
+            variant="secondary"
+            fullWidth={false}
+            loading={m.isPending && m.variables?.type === 'followup'}
+            style={{ flex: 1 }}
+          />
+        </View>
+        <View style={styles.aiBtnRow}>
+          <Button
+            title="🧠 Next action"
+            onPress={() => m.mutate({ type: 'next_action', context: baseContext })}
+            variant="secondary"
+            fullWidth={false}
+            loading={m.isPending && m.variables?.type === 'next_action'}
+            style={{ flex: 1 }}
+          />
+          <Button
+            title="🛡️ Objection"
+            onPress={() => setShowObjection(true)}
+            variant="secondary"
+            fullWidth={false}
+            style={{ flex: 1 }}
+          />
+        </View>
+
+        {usage && (
+          <Text variant="caption" tone="mute" style={{ marginTop: 8 }}>
+            {usage.daily}/{usage.daily_limit} prompts used today
+          </Text>
+        )}
+      </Card>
+
+      {response && (
+        <Card style={{ marginTop: 8, borderColor: colors.brand }}>
+          <Text variant="caption" tone="brand" weight="semibold">REX</Text>
+          <Text style={{ marginTop: 6 }}>{response}</Text>
+        </Card>
+      )}
+
+      <Modal visible={showObjection} onClose={() => { setShowObjection(false); setObjection(''); }} title="Handle objection">
+        <Input
+          label="What did the homeowner say?"
+          value={objection}
+          onChangeText={setObjection}
+          placeholder='e.g. "We already have Spectrum"'
+          multiline
+        />
+        <Button
+          title="Get rebuttal"
+          onPress={() => {
+            if (!objection.trim()) return;
+            m.mutate({ type: 'objection', context: { ...baseContext, objection: objection.trim() } });
+            setShowObjection(false);
+            setObjection('');
+          }}
+          disabled={!objection.trim()}
+        />
+      </Modal>
+    </View>
   );
 }
 
@@ -349,4 +442,5 @@ const styles = StyleSheet.create({
   tabBtn:        { paddingVertical: 4, paddingHorizontal: 2, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabBtnActive:  { borderBottomColor: colors.brand },
   tagWrap:       { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  aiBtnRow:      { flexDirection: 'row', gap: 8, marginTop: 10 },
 });
