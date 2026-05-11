@@ -58,6 +58,7 @@ export default function ManagerScreen() {
         <NavRow label="Sales Queue"   description={`${pendingCount} pending`} onPress={() => nav.navigate('Queue')} />
         <NavRow label="People"        description={`${memberCount} members`}  onPress={() => nav.navigate('People')} />
         <NavRow label="My Team"       description="Tier + per-member stats"   onPress={() => nav.navigate('Team')} />
+        <NavRow label="Compliance"    description={`${incidents} pending`}    onPress={() => nav.navigate('Compliance')} />
       </Card>
 
       <Text variant="caption" tone="dim" style={styles.section}>STILL ON WEB</Text>
@@ -65,7 +66,6 @@ export default function ManagerScreen() {
         <ExternalRow label="Team management"        url={`${config.api.baseUrl}/manager/teams`} />
         <ExternalRow label="Compensation rules"     url={`${config.api.baseUrl}/manager/compensation`} />
         <ExternalRow label="Goals + bonus board"    url={`${config.api.baseUrl}/manager/goals`} />
-        <ExternalRow label="Compliance log"         url={`${config.api.baseUrl}/manager/compliance`} />
         <ExternalRow label="Coach Q&A + competitors"url={`${config.api.baseUrl}/manager/coach`} />
         <ExternalRow label="Resource library"       url={`${config.api.baseUrl}/manager/resources`} />
         <ExternalRow label="SmartPitch funnels"     url={`${config.api.baseUrl}/manager/smartpitch`} />
