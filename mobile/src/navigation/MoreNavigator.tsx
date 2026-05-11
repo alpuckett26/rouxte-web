@@ -12,7 +12,7 @@ import ResourcesScreen from '@/screens/resources/ResourcesScreen';
 import CardScreen from '@/screens/card/CardScreen';
 import StoreScreen from '@/screens/store/StoreScreen';
 import MeetingsScreen from '@/screens/meetings/MeetingsScreen';
-import ManagerScreen from '@/screens/manager/ManagerScreen';
+import ManagerNavigator from './ManagerNavigator';
 import PayrollScreen from '@/screens/payroll/PayrollScreen';
 import LeaderboardScreen from '@/screens/leaderboard/LeaderboardScreen';
 import GoalsScreen from '@/screens/goals/GoalsScreen';
@@ -44,7 +44,7 @@ export default function MoreNavigator() {
       <Stack.Screen name="Card"             component={CardScreen}             options={{ title: 'Digital Card' }} />
       <Stack.Screen name="Store"            component={StoreScreen}            options={{ title: 'Store' }} />
       <Stack.Screen name="Meetings"         component={MeetingsScreen}         options={{ title: 'Meetings' }} />
-      <Stack.Screen name="Manager"          component={ManagerScreen}          options={{ title: 'Manager' }} />
+      <Stack.Screen name="Manager"          component={ManagerNavigator}       options={{ headerShown: false }} />
       <Stack.Screen name="Payroll"          component={PayrollScreen}          options={{ title: 'Payroll' }} />
       <Stack.Screen name="Settings"         component={SettingsScreen}         options={{ title: 'Settings' }} />
     </Stack.Navigator>
