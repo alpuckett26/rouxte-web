@@ -9,7 +9,6 @@ export * from '../../../lib/types';
 // Mobile-only navigation param lists. Keep these here, not in shared types.
 export type RootStackParamList = {
   Auth: undefined;
-  Onboarding: undefined;
   Main: undefined;
 };
 

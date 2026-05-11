@@ -35,9 +35,9 @@ export default function NewFiberQuoteScreen({ navigation }: Props) {
       autopay_paperless: autopay,
       promo_note: promo || null,
     }),
-    onSuccess: (q) => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['quotes'] });
-      navigation.replace('QuoteDetail', { quoteId: q.id });
+      navigation.replace('QuoteDetail', { quoteId: res.quote.id });
     },
     onError: (e: Error) => Alert.alert('Could not create quote', e.message),
   });

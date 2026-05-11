@@ -49,7 +49,10 @@ export default function NewWirelessQuoteScreen({ navigation }: Props) {
       customer_name: customer || null,
       customer_email: email || null,
       total_lines: lines.length,
-      quote_lines: lines.map((l, i) => ({
+      monthly_total: lines.reduce((sum, l) =>
+        sum + l.rate_plan + (l.next_up ? 8 : 0) + l.insurance + Math.max(0, l.device - l.device_promo), 0,
+      ),
+      lines: lines.map((l, i) => ({
         line_number: i + 1,
         plan_type: l.plan_type,
         rate_plan: l.rate_plan,
@@ -61,11 +64,11 @@ export default function NewWirelessQuoteScreen({ navigation }: Props) {
         device: l.device,
         device_promo: l.device_promo,
         line_total: l.rate_plan + (l.next_up ? 8 : 0) + l.insurance + Math.max(0, l.device - l.device_promo),
-      })) as never,
+      })),
     }),
-    onSuccess: (q) => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['quotes'] });
-      navigation.replace('QuoteDetail', { quoteId: q.id });
+      navigation.replace('QuoteDetail', { quoteId: res.quote.id });
     },
     onError: (e: Error) => Alert.alert('Could not create quote', e.message),
   });

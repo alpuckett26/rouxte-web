@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Stub drawable for React Native's TextInput underline.
+  Required by RN 0.85 styles.xml; a known resource-linking gap where this
+  drawable isn't auto-imported from the react-native AAR. A blank selector
+  is enough to satisfy the linker — TextInput renders fine; only the
+  default underline tint is absent (we style TextInputs in src/components/ui).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/transparent" />
+</selector>

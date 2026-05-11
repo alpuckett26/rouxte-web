@@ -21,7 +21,7 @@ export default function QuoteDetailScreen({ route }: Props) {
     );
   }
 
-  const quote = q.data;
+  const quote = q.data.quote;
   const link = `${config.api.baseUrl}/quote/${quoteId}`;
 
   async function onShare() {

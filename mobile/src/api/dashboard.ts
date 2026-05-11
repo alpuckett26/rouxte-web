@@ -1,20 +1,21 @@
 import { api } from './client';
 
+export interface RepStats {
+  user_id: string;
+  full_name: string;
+  doors_knocked: number;
+  contacts: number;
+  appointments: number;
+  sales: number;
+  conversion_pct: number;
+}
+
+export type TeamMemberStats = RepStats;
+
 export interface DashboardResponse {
-  today: {
-    knocks: number;
-    contacts: number;
-    appointments: number;
-    sales: number;
-  };
-  recent_activity: Array<{
-    id: string;
-    event_type: string;
-    created_at: string;
-    lead_id: string | null;
-    notes: string | null;
-  }>;
-  knock_history: Array<{ date: string; count: number }>;
+  rep_stats: RepStats;
+  team_stats: TeamMemberStats[];
+  pending_incidents: number;
 }
 
 export const dashboardApi = {
