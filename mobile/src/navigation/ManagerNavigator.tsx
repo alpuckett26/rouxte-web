@@ -10,6 +10,9 @@ import CompensationScreen from '@/screens/manager/CompensationScreen';
 import CoachScreen from '@/screens/manager/CoachScreen';
 import GoalsManagerScreen from '@/screens/manager/GoalsManagerScreen';
 import OnboardingMonitorScreen from '@/screens/manager/OnboardingMonitorScreen';
+import TeamsScreen from '@/screens/manager/TeamsScreen';
+import ManagerSmartPitchScreen from '@/screens/manager/ManagerSmartPitchScreen';
+import PayrollPeriodsScreen from '@/screens/manager/PayrollPeriodsScreen';
 
 export type ManagerStackParamList = {
   ManagerHome: undefined;
@@ -21,6 +24,9 @@ export type ManagerStackParamList = {
   Coach: undefined;
   Goals: undefined;
   OnboardingMonitor: undefined;
+  Teams: undefined;
+  SmartPitch: undefined;
+  PayrollPeriods: undefined;
 };
 
 const Stack = createNativeStackNavigator<ManagerStackParamList>();
@@ -44,6 +50,9 @@ export default function ManagerNavigator() {
       <Stack.Screen name="Coach"             component={CoachScreen}              options={{ title: 'Coach Knowledge' }} />
       <Stack.Screen name="Goals"             component={GoalsManagerScreen}       options={{ title: 'Goals' }} />
       <Stack.Screen name="OnboardingMonitor" component={OnboardingMonitorScreen}  options={{ title: 'Onboarding Monitor' }} />
+      <Stack.Screen name="Teams"             component={TeamsScreen}              options={{ title: 'Teams' }} />
+      <Stack.Screen name="SmartPitch"        component={ManagerSmartPitchScreen}  options={{ title: 'SmartPitch (Org)' }} />
+      <Stack.Screen name="PayrollPeriods"    component={PayrollPeriodsScreen}     options={{ title: 'Payroll Periods' }} />
     </Stack.Navigator>
   );
 }

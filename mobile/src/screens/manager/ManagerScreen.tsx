@@ -74,9 +74,8 @@ export default function ManagerScreen() {
 
       <Text variant="caption" tone="dim" style={styles.section}>STILL ON WEB</Text>
       <Card>
-        <ExternalRow label="Resource uploads"    url={`${config.api.baseUrl}/manager/resources`} />
-        <ExternalRow label="BDC import / wizard" url={`${config.api.baseUrl}/manager/import-bdc`} />
-        <ExternalRow label="Spotio/LeadBeam migration" url={`${config.api.baseUrl}/manager/migrate`} />
+        <ExternalRow label="Resource uploads"     url={`${config.api.baseUrl}/manager/resources`} />
+        <ExternalRow label="BDC import / wizard"  url={`${config.api.baseUrl}/manager/import-bdc`} />
         <ExternalRow label="Store badge designer" url={`${config.api.baseUrl}/store/badge`} />
       </Card>
 
