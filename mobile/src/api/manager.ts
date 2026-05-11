@@ -35,6 +35,20 @@ export const managerApi = {
   signoff:     (logId: string, action: 'sale_verified' | 'sale_rejected', note?: string) =>
     api.post<{ ok: true }>(`/api/manager/sales-queue/${logId}`, { action, note }),
   orgMembers:  () => api.get<{ data: OrgMember[] }>('/api/manager/org-members'),
-  myTeam:      () => api.get<{ data: OrgMember[] }>('/api/manager/my-team'),
+  myTeam:      () => api.get<{ data: MyTeamResponse | null; message?: string }>('/api/manager/my-team'),
   teams:       () => api.get<{ data: Array<{ id: string; name: string; member_count: number }> }>('/api/manager/teams'),
 };
+
+export interface TeamMemberStats {
+  user_id: string;
+  full_name: string;
+  role: OrgMember['role'];
+  created_at: string;
+  leads_count: number;
+  sales_this_month: number;
+}
+
+export interface MyTeamResponse {
+  team: { id: string; name: string; tier: number };
+  members: TeamMemberStats[];
+}

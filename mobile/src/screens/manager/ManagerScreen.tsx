@@ -57,6 +57,7 @@ export default function ManagerScreen() {
       <Card>
         <NavRow label="Sales Queue"   description={`${pendingCount} pending`} onPress={() => nav.navigate('Queue')} />
         <NavRow label="People"        description={`${memberCount} members`}  onPress={() => nav.navigate('People')} />
+        <NavRow label="My Team"       description="Tier + per-member stats"   onPress={() => nav.navigate('Team')} />
       </Card>
 
       <Text variant="caption" tone="dim" style={styles.section}>STILL ON WEB</Text>

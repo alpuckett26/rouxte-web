@@ -4,11 +4,13 @@ import { colors } from '@/lib/colors';
 import ManagerScreen from '@/screens/manager/ManagerScreen';
 import QueueScreen from '@/screens/manager/QueueScreen';
 import PeopleScreen from '@/screens/manager/PeopleScreen';
+import TeamScreen from '@/screens/manager/TeamScreen';
 
 export type ManagerStackParamList = {
   ManagerHome: undefined;
   Queue: undefined;
   People: undefined;
+  Team: undefined;
 };
 
 const Stack = createNativeStackNavigator<ManagerStackParamList>();
@@ -26,6 +28,7 @@ export default function ManagerNavigator() {
       <Stack.Screen name="ManagerHome" component={ManagerScreen} options={{ title: 'Manager' }} />
       <Stack.Screen name="Queue"       component={QueueScreen}   options={{ title: 'Sales Queue' }} />
       <Stack.Screen name="People"      component={PeopleScreen}  options={{ title: 'People' }} />
+      <Stack.Screen name="Team"        component={TeamScreen}    options={{ title: 'My Team' }} />
     </Stack.Navigator>
   );
 }
