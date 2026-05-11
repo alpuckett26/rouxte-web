@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+﻿import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_DOC_TYPES, DOCUMENT_FORM_DEFS } from "@/lib/onboarding/documentForms";
 

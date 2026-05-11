@@ -1,0 +1,98 @@
+# Rouxte Mobile — Fastlane lanes
+#
+# Required ENV vars (CI secrets):
+#   MATCH_PASSWORD                - password protecting the match certs repo
+#   MATCH_GIT_URL                 - git URL of the match certs repo (private)
+#   APP_STORE_CONNECT_API_KEY_ID
+#   APP_STORE_CONNECT_API_ISSUER
+#   APP_STORE_CONNECT_API_KEY     - base64 of the .p8 key
+#   KEYSTORE_PASSWORD             - Android keystore password
+#   KEY_ALIAS                     - Android signing key alias
+#   KEY_PASSWORD                  - Android key password
+#   PLAY_SERVICE_ACCOUNT_JSON     - JSON string for the Play Console service account
+#   SENTRY_AUTH_TOKEN             - source map upload
+#
+# Usage (local):
+#   bundle exec fastlane ios beta
+#   bundle exec fastlane android beta
+#   bundle exec fastlane match_certs
+
+default_platform(:ios)
+
+APP_IDENTIFIER = "com.rouxte.app"
+
+platform :ios do
+  desc "Sync iOS certificates and provisioning profiles"
+  lane :match_certs do
+    setup_ci if ENV["CI"]
+    match(
+      type: "appstore",
+      app_identifier: APP_IDENTIFIER,
+      readonly: ENV["CI"] == "true",
+    )
+  end
+
+  desc "Build + upload to TestFlight"
+  lane :beta do
+    setup_ci if ENV["CI"]
+
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY"],
+      is_key_content_base64: true,
+    )
+
+    match(type: "appstore", app_identifier: APP_IDENTIFIER, readonly: true)
+
+    increment_build_number(
+      build_number: latest_testflight_build_number(app_identifier: APP_IDENTIFIER) + 1,
+      xcodeproj: "ios/RouxteApp.xcodeproj",
+    )
+
+    build_app(
+      workspace: "ios/RouxteApp.xcworkspace",
+      scheme: "RouxteApp",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build/ios",
+      include_symbols: true,
+    )
+
+    upload_to_testflight(
+      app_identifier: APP_IDENTIFIER,
+      skip_waiting_for_build_processing: true,
+      changelog: "Automated build from #{ENV['GITHUB_SHA'] || 'local'}",
+    )
+  end
+end
+
+platform :android do
+  desc "Build + upload AAB to Play Internal Track"
+  lane :beta do
+    keystore_path = File.expand_path("../android/app/release.keystore", __dir__)
+
+    gradle(
+      task: "clean bundleRelease",
+      project_dir: "android",
+      properties: {
+        "android.injected.signing.store.file"     => keystore_path,
+        "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias"      => ENV["KEY_ALIAS"],
+        "android.injected.signing.key.password"   => ENV["KEY_PASSWORD"],
+      },
+    )
+
+    upload_to_play_store(
+      package_name: APP_IDENTIFIER,
+      track: "internal",
+      release_status: "draft",
+      json_key_data: ENV["PLAY_SERVICE_ACCOUNT_JSON"],
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+end

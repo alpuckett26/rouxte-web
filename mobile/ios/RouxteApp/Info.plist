@@ -33,6 +33,22 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Rouxte uses your location to show your position on the map and to record where you knock or set appointments.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Rouxte uses the camera so you can attach photos to leads (e.g., a no-solicit sign) and customize your store badge.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Rouxte uses your photo library so you can attach photos to leads and upload to the resource library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Rouxte uses the microphone for AI Coach voice mode and in-app meetings.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Rouxte uses contacts so you can quickly fill in customer info on SmartPitch.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Rouxte uses Face ID to keep your account secure.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -44,6 +60,8 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
 </plist>

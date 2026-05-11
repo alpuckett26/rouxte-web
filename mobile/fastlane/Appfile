@@ -1,0 +1,4 @@
+app_identifier "com.rouxte.app"
+
+# Set via ENV: FASTLANE_USER (Apple ID), FASTLANE_PASSWORD
+# Prefer the App Store Connect API key — configured in Fastfile.

@@ -1,0 +1,104 @@
+name: Mobile beta
+
+on:
+  push:
+    tags:
+      - 'mobile-v*'
+  workflow_dispatch:
+
+jobs:
+  ios:
+    name: iOS TestFlight
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'mobile/package-lock.json'
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Configure Mapbox SDK download token
+        run: |
+          echo "machine api.mapbox.com" >> ~/.netrc
+          echo "  login mapbox" >> ~/.netrc
+          echo "  password ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}" >> ~/.netrc
+          chmod 600 ~/.netrc
+
+      - name: Install CocoaPods
+        run: cd ios && pod install --repo-update
+
+      - name: Build + upload TestFlight
+        env:
+          MATCH_PASSWORD:               ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL:                ${{ secrets.MATCH_GIT_URL }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER }}
+          APP_STORE_CONNECT_API_KEY:    ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          SENTRY_AUTH_TOKEN:            ${{ secrets.SENTRY_AUTH_TOKEN }}
+          CI: 'true'
+        run: bundle exec fastlane ios beta
+
+  android:
+    name: Android Play Internal
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'mobile/package-lock.json'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Decrypt keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+
+      - name: Configure Mapbox SDK download token
+        env:
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+        run: |
+          mkdir -p ~/.gradle
+          echo "MAPBOX_DOWNLOADS_TOKEN=$MAPBOX_DOWNLOADS_TOKEN" >> ~/.gradle/gradle.properties
+
+      - name: Build + upload Play Internal
+        env:
+          KEYSTORE_PASSWORD:          ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS:                  ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD:               ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON:  ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          SENTRY_AUTH_TOKEN:          ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: bundle exec fastlane android beta

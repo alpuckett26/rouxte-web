@@ -1,18 +1,22 @@
 import React from 'react';
+import { Text as RNText } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { MainTabParamList } from '../types';
+import { colors } from '@/lib/colors';
 import LeadsNavigator from './LeadsNavigator';
 import QuotesNavigator from './QuotesNavigator';
-import DashboardScreen from '../screens/dashboard/DashboardScreen';
-import ActivityScreen from '../screens/activity/ActivityScreen';
+import MoreNavigator from './MoreNavigator';
+import DashboardScreen from '@/screens/dashboard/DashboardScreen';
+import MapScreen from '@/screens/map/MapScreen';
+import type { MainTabParamList } from '@/types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const TAB_ICONS: Record<string, string> = {
+const TAB_ICONS: Record<keyof MainTabParamList, string> = {
   Dashboard: '⊞',
-  Leads: '◎',
-  Quotes: '◈',
-  Activity: '◷',
+  Leads:     '◎',
+  Map:       '◉',
+  Quotes:    '◈',
+  More:      '☰',
 };
 
 export default function MainNavigator() {
@@ -20,31 +24,27 @@ export default function MainNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#1BAEE1',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor:   colors.brand,
+        tabBarInactiveTintColor: colors.textMute,
         tabBarStyle: {
-          backgroundColor: '#0a0f1e',
-          borderTopColor: '#1e293b',
-          borderTopWidth: 1,
-          paddingBottom: 4,
-          height: 60,
+          backgroundColor: colors.bg,
+          borderTopColor:  colors.border,
+          borderTopWidth:  1,
+          paddingBottom:   4,
+          height:          60,
         },
         tabBarLabelStyle: { fontSize: 11, marginBottom: 4 },
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color }) => {
           const icon = TAB_ICONS[route.name] ?? '●';
-          return <TabIcon icon={icon} color={color} size={size} />;
+          return <RNText style={{ fontSize: 20, color }}>{icon}</RNText>;
         },
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Leads" component={LeadsNavigator} />
-      <Tab.Screen name="Quotes" component={QuotesNavigator} />
-      <Tab.Screen name="Activity" component={ActivityScreen} />
+      <Tab.Screen name="Leads"     component={LeadsNavigator} />
+      <Tab.Screen name="Map"       component={MapScreen} />
+      <Tab.Screen name="Quotes"    component={QuotesNavigator} />
+      <Tab.Screen name="More"      component={MoreNavigator} />
     </Tab.Navigator>
   );
-}
-
-function TabIcon({ icon, color }: { icon: string; color: string; size: number }) {
-  const { Text } = require('react-native');
-  return <Text style={{ fontSize: 20, color }}>{icon}</Text>;
 }

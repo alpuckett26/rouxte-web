@@ -1,45 +1,35 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { UserProfile } from '../types';
+import { supabase } from '@/lib/supabase';
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
 
   useEffect(() => {
+    let mounted = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) loadProfile(session.user.id);
-      else setLoading(false);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) loadProfile(session.user.id);
-      else {
-        setProfile(null);
-        setLoading(false);
-      }
+      setLoading(false);
+      if (!session) qc.clear();
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  async function loadProfile(userId: string) {
-    setLoading(true);
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('user_id, org_id, full_name, role, phone')
-      .eq('user_id', userId)
-      .maybeSingle();
-    setProfile(data ?? null);
-    setLoading(false);
-  }
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [qc]);
 
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -50,5 +40,5 @@ export function useAuth() {
     await supabase.auth.signOut();
   }
 
-  return { session, user, profile, loading, signIn, signOut };
+  return { session, user, loading, signIn, signOut };
 }
