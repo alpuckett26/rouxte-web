@@ -40,7 +40,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Rouxte uses your photo library so you can attach photos to leads and upload to the resource library.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Rouxte uses the microphone for AI Coach voice mode and in-app meetings.</string>
+	<string>Rouxte uses the microphone for AI Coach voice mode, in-app meetings, and dictating notes.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Rouxte uses speech recognition so you can dictate notes, log summaries, and quote notes hands-free.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Rouxte uses contacts so you can quickly fill in customer info on SmartPitch.</string>
 	<key>NSFaceIDUsageDescription</key>

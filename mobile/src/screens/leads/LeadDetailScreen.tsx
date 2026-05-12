@@ -5,7 +5,7 @@ import { leadsApi } from '@/api/leads';
 import { logsApi } from '@/api/logs';
 import { aiApi } from '@/api/ai';
 import { api } from '@/api/client';
-import { Text, Card, Button, Badge, Input, Modal, Select, type SelectOption } from '@/components/ui';
+import { Text, Card, Button, Badge, Input, VoiceInput, Modal, Select, type SelectOption } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_ORDER } from '@/lib/leads';
 import { LOG_EVENT_LABELS } from '@/lib/logs';
@@ -196,7 +196,7 @@ function NotesTab({ leadId, notes }: { leadId: string; notes: Array<{ id: string
   });
   return (
     <View style={{ marginTop: 8 }}>
-      <Input value={body} onChangeText={setBody} placeholder="Add a note…" multiline />
+      <VoiceInput value={body} onChangeText={setBody} placeholder="Add a note…" multiline />
       <Button title="Add note" onPress={() => m.mutate()} disabled={!body.trim()} loading={m.isPending} />
       <View style={{ marginTop: 12 }}>
         {notes.length === 0 ? (

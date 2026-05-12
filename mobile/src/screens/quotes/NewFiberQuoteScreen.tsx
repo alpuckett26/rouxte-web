@@ -3,7 +3,7 @@ import { View, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { quotesApi } from '@/api/quotes';
 import { leadsApi } from '@/api/leads';
-import { Screen, Text, Input, Button, Card, Badge } from '@/components/ui';
+import { Screen, Text, Input, VoiceInput, Button, Card, Badge } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import {
   FIBER_PLANS,
@@ -293,7 +293,7 @@ function Step2({
         <Text variant="caption" tone="mute" style={{ marginTop: 2, marginBottom: 8 }}>
           Shown on the customer's quote — e.g. "$100 gift card for new subscribers"
         </Text>
-        <Input
+        <VoiceInput
           value={promoNote}
           onChangeText={setPromoNote}
           placeholder="Leave blank if no active promo"
