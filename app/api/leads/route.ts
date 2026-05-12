@@ -17,9 +17,13 @@ export async function GET(request: NextRequest) {
   const page       = parseInt(searchParams.get("page") ?? "1");
   const pageSize   = Math.min(parseInt(searchParams.get("page_size") ?? "50"), 2000);
 
+  // `planned` count: Postgres estimates from the query plan instead of a
+  // full row count. Orders of magnitude faster on large leads tables —
+  // the badge value is approximate, which is fine for UX (we never use
+  // the count for math/pagination correctness).
   let query = supabase
     .from("leads")
-    .select("*", { count: "exact" })
+    .select("*", { count: "planned" })
     .order("updated_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
 

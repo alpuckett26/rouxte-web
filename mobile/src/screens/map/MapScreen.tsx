@@ -60,10 +60,11 @@ export default function MapScreen() {
   const leadsQ = useQuery({
     queryKey: ['leads-map', leadFilter],
     queryFn:  () => leadsApi.list({
-      page_size: 2000,
+      page_size: 500,
       ...(leadFilter === 'fiber' && { carrier: 'att' }),
     }),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000, // 5 min — map data doesn't change minute-to-minute
+    retry: 1,
   });
 
   const fccBlocksQ = useQuery({
