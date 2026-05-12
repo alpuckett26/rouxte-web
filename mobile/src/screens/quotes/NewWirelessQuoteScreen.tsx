@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { quotesApi } from '@/api/quotes';
+import { leadsApi } from '@/api/leads';
 import { Screen, Text, Input, Button, Card, Badge, Modal, Select, type SelectOption } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import {
@@ -81,11 +82,24 @@ function buildLines(
   });
 }
 
-export default function NewWirelessQuoteScreen({ navigation }: Props) {
+export default function NewWirelessQuoteScreen({ route, navigation }: Props) {
   const qc = useQueryClient();
+  const leadId = route.params?.leadId;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+
+  // Pre-fill from a lead when navigated from the map's Start Quote shortcut
+  const leadQ = useQuery({
+    queryKey: ['lead', leadId],
+    queryFn:  () => leadsApi.get(leadId!),
+    enabled:  !!leadId,
+  });
+  useEffect(() => {
+    const lead = leadQ.data?.data;
+    if (!lead) return;
+    if (lead.customer_name && !customerName) setCustomerName(lead.customer_name);
+  }, [leadQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [premiumCount, setPremiumCount] = useState(1);
   const [extraCount, setExtraCount] = useState(0);

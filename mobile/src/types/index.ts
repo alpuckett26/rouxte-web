@@ -40,8 +40,8 @@ export type LeadsStackParamList = {
 
 export type QuotesStackParamList = {
   QuotesList: undefined;
-  NewFiberQuote: { customerId?: string };
-  NewWirelessQuote: { customerId?: string };
+  NewFiberQuote: { customerId?: string; leadId?: string };
+  NewWirelessQuote: { customerId?: string; leadId?: string };
   QuoteDetail: { quoteId: string };
 };
 

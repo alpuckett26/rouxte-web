@@ -12,8 +12,10 @@ import { Text, Card, Button, Badge, Modal, Input } from '@/components/ui';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/lib/leads';
 import { LOG_EVENT_LABELS } from '@/lib/logs';
 import { KnockCounter } from '@/components/dashboard/KnockCounter';
-import { useKnockCounter } from '@/hooks/useKnockCounter';
 import { useProfile } from '@/hooks/useProfile';
+import { useTodayStats } from '@/hooks/useTodayStats';
+import { KnockHoursBanner } from '@/components/map/KnockHoursBanner';
+import { StatsBar } from '@/components/map/StatsBar';
 import { useNavigation } from '@react-navigation/native';
 import type { Lead, LeadStatus, LogEventType } from '@/types';
 
@@ -113,6 +115,8 @@ export default function MapScreen() {
     staleTime: 60 * 60 * 1000,
   });
 
+  const todayStats = useTodayStats(5);
+
   const geolocatedLeads = useMemo(
     () => (leadsQ.data?.data ?? []).filter(
       (l): l is Lead & { lat: number; lng: number } => l.lat !== null && l.lng !== null,
@@ -121,6 +125,46 @@ export default function MapScreen() {
   );
 
   const totalLeads = leadsQ.data?.data?.length ?? 0;
+
+  // DNK leads — rendered with a red ring under the status dot so reps see them
+  // before they read the legend. Also catches no_solicit_observed signal from
+  // today's logs (treat sign-observed-today as effectively DNK for the day).
+  const noSolicitTodayLeadIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of todayStats.recent) {
+      if (l.event_type === 'no_solicit_observed' && l.lead_id) set.add(l.lead_id);
+    }
+    return set;
+  }, [todayStats.recent]);
+
+  const dnkFeatures = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: geolocatedLeads
+      .filter((l) => l.is_do_not_knock || noSolicitTodayLeadIds.has(l.id))
+      .map((l) => ({
+        type: 'Feature' as const,
+        id: `dnk-${l.id}`,
+        properties: { id: l.id },
+        geometry: { type: 'Point' as const, coordinates: [l.lng, l.lat] as [number, number] },
+      })),
+  }), [geolocatedLeads, noSolicitTodayLeadIds]);
+
+  // Recent activity dots — last few logs, rendered at the lead's coords.
+  const recentActivityFeatures = useMemo(() => {
+    const byId = new Map(geolocatedLeads.map((l) => [l.id, l]));
+    const features = todayStats.recent
+      .filter((log) => log.lead_id && byId.has(log.lead_id))
+      .map((log) => {
+        const lead = byId.get(log.lead_id!)!;
+        return {
+          type: 'Feature' as const,
+          id: `act-${log.id}`,
+          properties: { event: log.event_type },
+          geometry: { type: 'Point' as const, coordinates: [lead.lng, lead.lat] as [number, number] },
+        };
+      });
+    return { type: 'FeatureCollection' as const, features };
+  }, [todayStats.recent, geolocatedLeads]);
 
   const features = useMemo(() => ({
     type: 'FeatureCollection' as const,
@@ -302,6 +346,48 @@ export default function MapScreen() {
             </Mapbox.ShapeSource>
           )}
 
+          {/* DNK + no-solicit halo (red ring under the lead dot) — only in Field Mode */}
+          {fieldMode && dnkFeatures.features.length > 0 && (
+            <Mapbox.ShapeSource id="dnk-halo" shape={dnkFeatures as GeoJSON.FeatureCollection}>
+              <Mapbox.CircleLayer
+                id="dnk-halo-layer"
+                style={{
+                  circleColor: 'rgba(239,68,68,0)',
+                  circleRadius: 11,
+                  circleStrokeColor: '#ef4444',
+                  circleStrokeWidth: 2.5,
+                  circleStrokeOpacity: 0.85,
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
+
+          {/* Recent activity rings (today's last 5 events at the lead coord) */}
+          {fieldMode && recentActivityFeatures.features.length > 0 && (
+            <Mapbox.ShapeSource id="recent-activity" shape={recentActivityFeatures as GeoJSON.FeatureCollection}>
+              <Mapbox.CircleLayer
+                id="recent-activity-outer"
+                style={{
+                  circleColor: 'rgba(27,174,225,0)',
+                  circleRadius: 16,
+                  circleStrokeColor: '#1BAEE1',
+                  circleStrokeWidth: 1.5,
+                  circleStrokeOpacity: 0.45,
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="recent-activity-inner"
+                style={{
+                  circleColor: 'rgba(27,174,225,0)',
+                  circleRadius: 10,
+                  circleStrokeColor: '#1BAEE1',
+                  circleStrokeWidth: 1.5,
+                  circleStrokeOpacity: 0.75,
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
+
           {/* Leads (status-colored, always on top) — only in Field Mode */}
           {fieldMode && (
             <Mapbox.ShapeSource id="leads-source" shape={features as GeoJSON.FeatureCollection} onPress={onLeadCirclePress}>
@@ -388,6 +474,18 @@ export default function MapScreen() {
         {zoom < 10 && showAddressDots && (
           <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom in to see AT&T coverage</Text></View>
         )}
+
+        {fieldMode && (
+          <View style={{ marginTop: 6, alignItems: 'center', gap: 4 }}>
+            <StatsBar
+              knocks={todayStats.knocks}
+              appts={todayStats.appts}
+              sales={todayStats.sales}
+              dnks={todayStats.dnks}
+            />
+            <KnockHoursBanner />
+          </View>
+        )}
       </View>
 
       {fieldMode && noGeolocated && totalLeads > 0 && (
@@ -434,6 +532,18 @@ export default function MapScreen() {
           if (!selectedLead) return;
           setQuickLogLead(selectedLead);
           setSelectedLead(null);
+        }}
+        onStartFiberQuote={() => {
+          if (!selectedLead) return;
+          const leadId = selectedLead.id;
+          setSelectedLead(null);
+          nav.navigate('Quotes' as never, { screen: 'NewFiberQuote', params: { leadId } } as never);
+        }}
+        onStartWirelessQuote={() => {
+          if (!selectedLead) return;
+          const leadId = selectedLead.id;
+          setSelectedLead(null);
+          nav.navigate('Quotes' as never, { screen: 'NewWirelessQuote', params: { leadId } } as never);
         }}
       />
 
@@ -482,8 +592,13 @@ function FilterChip({ label, active, onPress, size = 'normal' }: {
   );
 }
 
-function LeadSheet({ lead, onClose, onOpen, onQuickLog }: {
-  lead: Lead | null; onClose: () => void; onOpen: () => void; onQuickLog: () => void;
+function LeadSheet({ lead, onClose, onOpen, onQuickLog, onStartFiberQuote, onStartWirelessQuote }: {
+  lead: Lead | null;
+  onClose: () => void;
+  onOpen: () => void;
+  onQuickLog: () => void;
+  onStartFiberQuote: () => void;
+  onStartWirelessQuote: () => void;
 }) {
   if (!lead) return null;
   return (
@@ -499,6 +614,10 @@ function LeadSheet({ lead, onClose, onOpen, onQuickLog }: {
 
       <View style={{ gap: 8 }}>
         <Button title="Open lead" onPress={onOpen} variant="primary" />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Button title="Start Fiber Quote"    onPress={onStartFiberQuote}    variant="secondary" fullWidth={false} style={{ flex: 1 }} />
+          <Button title="Start Wireless Quote" onPress={onStartWirelessQuote} variant="secondary" fullWidth={false} style={{ flex: 1 }} />
+        </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Button title="Quick log" onPress={onQuickLog} variant="secondary" fullWidth={false} style={{ flex: 1 }} />
           {lead.phone && (

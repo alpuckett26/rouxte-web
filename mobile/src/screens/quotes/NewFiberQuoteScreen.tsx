@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { quotesApi } from '@/api/quotes';
+import { leadsApi } from '@/api/leads';
 import { Screen, Text, Input, Button, Card, Badge } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import {
@@ -18,8 +19,9 @@ type Props = NativeStackScreenProps<QuotesStackParamList, 'NewFiberQuote'>;
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-export default function NewFiberQuoteScreen({ navigation }: Props) {
+export default function NewFiberQuoteScreen({ route, navigation }: Props) {
   const qc = useQueryClient();
+  const leadId = route.params?.leadId;
 
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedPlanId, setSelectedPlanId] = useState<FiberPlanId | null>(null);
@@ -28,6 +30,18 @@ export default function NewFiberQuoteScreen({ navigation }: Props) {
   const [autopay, setAutopay] = useState(true);
   const [wirelessBundle, setWirelessBundle] = useState(false);
   const [promoNote, setPromoNote] = useState('');
+
+  // Pre-fill from a lead when navigated from the map's Start Quote shortcut
+  const leadQ = useQuery({
+    queryKey: ['lead', leadId],
+    queryFn:  () => leadsApi.get(leadId!),
+    enabled:  !!leadId,
+  });
+  useEffect(() => {
+    const lead = leadQ.data?.data;
+    if (!lead) return;
+    if (lead.customer_name && !customerName) setCustomerName(lead.customer_name);
+  }, [leadQ.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const plan = selectedPlanId ? FIBER_PLANS.find((p) => p.id === selectedPlanId) ?? null : null;
   const isAccess = selectedPlanId === 'access';
