@@ -6,9 +6,8 @@ import { colors } from '@/lib/colors';
 import { useAuth } from '@/hooks/useAuth';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import type { RootStackParamList } from '@/types';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator();
 
 function LoadingView() {
   return (
@@ -18,42 +17,49 @@ function LoadingView() {
   );
 }
 
+const navTheme = {
+  dark: true,
+  colors: {
+    primary: colors.brand,
+    background: colors.bg,
+    card: colors.bg,
+    text: colors.text,
+    border: colors.border,
+    notification: colors.brand,
+  },
+  fonts: {
+    regular: { fontFamily: 'System', fontWeight: '400' as const },
+    medium:  { fontFamily: 'System', fontWeight: '500' as const },
+    bold:    { fontFamily: 'System', fontWeight: '700' as const },
+    heavy:   { fontFamily: 'System', fontWeight: '900' as const },
+  },
+};
+
 /**
- * Root navigator. Web onboarding (the /onboarding/check flow) doesn't have a
- * simple JSON status endpoint — mobile assumes users complete onboarding on
- * the web. If a user logs in to mobile without finishing it, /api/me returns
- * a profile with null org_id and the Settings screen shows a warning.
+ * Root navigator. Conditionally renders the entire stack contents based
+ * on session — this is the React Navigation-recommended pattern for auth
+ * gating because changing screens within one Stack.Navigator doesn't
+ * reliably unmount the old screens (internal navigator state persists
+ * across `key` changes).
+ *
+ * Onboarding gate is intentionally not here — mobile assumes users
+ * complete onboarding on the web. If a user logs in without finishing
+ * it, /api/me returns a profile with null org_id and Settings shows
+ * a warning.
  */
 export default function RootNavigator() {
   const { session, loading } = useAuth();
 
   if (loading) return <LoadingView />;
 
-  const screen: keyof RootStackParamList = session ? 'Main' : 'Auth';
-
   return (
-    <NavigationContainer
-      theme={{
-        dark: true,
-        colors: {
-          primary: colors.brand,
-          background: colors.bg,
-          card: colors.bg,
-          text: colors.text,
-          border: colors.border,
-          notification: colors.brand,
-        },
-        fonts: {
-          regular: { fontFamily: 'System', fontWeight: '400' },
-          medium:  { fontFamily: 'System', fontWeight: '500' },
-          bold:    { fontFamily: 'System', fontWeight: '700' },
-          heavy:   { fontFamily: 'System', fontWeight: '900' },
-        },
-      }}
-    >
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={screen} key={screen}>
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-        <Stack.Screen name="Main" component={MainNavigator} />
+    <NavigationContainer theme={navTheme}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {session ? (
+          <Stack.Screen name="Main" component={MainNavigator} />
+        ) : (
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
