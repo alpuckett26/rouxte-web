@@ -21,7 +21,8 @@ export function useAuth() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (__DEV__) console.log('[auth] state change:', event, 'session:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -54,8 +55,25 @@ export function useAuth() {
     return null;
   }
 
+  /**
+   * Defensive sign-out — always clears local state, even if the network
+   * call to invalidate the refresh token on Supabase's auth server fails.
+   *
+   * Using scope='local' so we don't depend on a network round-trip to
+   * sign out on this device. The Supabase token entry in Keychain is
+   * removed by supabase-js as part of this call.
+   */
   async function signOut() {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      if (__DEV__) console.warn('[signout] supabase signOut threw:', e);
+    }
+    // Belt-and-suspenders: force local state clear even if the listener
+    // didn't fire (seen in some Supabase JS versions on RN).
+    setSession(null);
+    setUser(null);
+    qc.clear();
   }
 
   return { session, user, loading, signIn, signInWithOAuth, signOut };
