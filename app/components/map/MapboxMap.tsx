@@ -1012,7 +1012,7 @@ export default function MapboxMap({
         try {
           const res = await fetch(`/api/fcc/check?lat=${lat}&lng=${lng}`);
           const d = await res.json();
-          return d.available ?? null;
+          return d.att_available ?? null;
         } catch {
           return null;
         }

@@ -76,12 +76,18 @@ export default function MapScreen() {
     staleTime: 60 * 60 * 1000,
   });
 
+  // Quantize zoom so we don't refetch on every tiny zoom change.
+  // The endpoint switches modes at zoom 14: <14 hex, >=14 points.
+  const coverageZoom = zoom < 14 ? Math.floor(zoom) : 14;
   const fccCoverageQ = useQuery({
-    queryKey: ['fcc-coverage', bbox],
-    queryFn:  () => (bbox ? fccApi.coverage(bbox) : Promise.resolve(emptyFc())),
-    enabled:  !!bbox && zoom >= 12 && showAddressDots,
+    queryKey: ['fcc-coverage', bbox, coverageZoom],
+    queryFn:  () => (bbox ? fccApi.coverage(bbox, coverageZoom) : Promise.resolve(emptyFc())),
+    enabled:  !!bbox && zoom >= 10 && showAddressDots,
     staleTime: 60 * 60 * 1000,
   });
+
+  const coverageGeometryType = fccCoverageQ.data?.features?.[0]?.geometry?.type;
+  const isHex = coverageGeometryType === 'Polygon';
 
   const heatmapQ = useQuery({
     queryKey: ['fiber-heatmap', bbox],
@@ -247,15 +253,33 @@ export default function MapScreen() {
             </Mapbox.ShapeSource>
           )}
 
-          {/* AT&T fiber address dots (blue) */}
-          {showAddressDots && fccCoverageQ.data && (
-            <Mapbox.ShapeSource id="att-dots" shape={fccCoverageQ.data as GeoJSON.FeatureCollection}>
+          {/* AT&T fiber coverage — hex polygons at low zoom, address points at high zoom */}
+          {showAddressDots && fccCoverageQ.data && isHex && (
+            <Mapbox.ShapeSource id="att-coverage" shape={fccCoverageQ.data as GeoJSON.FeatureCollection}>
+              <Mapbox.FillLayer
+                id="att-coverage-fill"
+                style={{
+                  fillColor: [
+                    'interpolate', ['linear'], ['get', 'count'],
+                    1,    'rgba(59,130,246,0.18)',
+                    25,   'rgba(59,130,246,0.30)',
+                    100,  'rgba(59,130,246,0.45)',
+                    400,  'rgba(59,130,246,0.62)',
+                    1500, 'rgba(59,130,246,0.78)',
+                  ] as never,
+                  fillOutlineColor: 'rgba(59,130,246,0.45)',
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
+          {showAddressDots && fccCoverageQ.data && !isHex && (
+            <Mapbox.ShapeSource id="att-coverage" shape={fccCoverageQ.data as GeoJSON.FeatureCollection}>
               <Mapbox.CircleLayer
-                id="att-dots-layer"
+                id="att-coverage-points"
                 style={{
                   circleColor: '#3b82f6',
-                  circleRadius: ['interpolate', ['linear'], ['zoom'], 13, 1.5, 15, 3, 17, 5] as never,
-                  circleOpacity: 0.7,
+                  circleRadius: ['interpolate', ['linear'], ['zoom'], 14, 1.5, 16, 3, 18, 5] as never,
+                  circleOpacity: 0.75,
                 }}
               />
             </Mapbox.ShapeSource>
@@ -291,7 +315,7 @@ export default function MapScreen() {
             size="small"
           />
           <FilterChip
-            label={showAddressDots ? '✓ AT&T dots' : 'AT&T dots'}
+            label={showAddressDots ? '✓ AT&T fiber' : 'AT&T fiber'}
             active={showAddressDots}
             onPress={() => setShowAddressDots((v) => !v)}
             size="small"
@@ -314,15 +338,22 @@ export default function MapScreen() {
           <Text variant="caption" tone="dim" style={styles.countLabel}>
             {geolocatedLeads.length} on map
             {totalLeads > geolocatedLeads.length && ` · ${totalLeads - geolocatedLeads.length} no coords`}
-            {showAddressDots && fccCoverageQ.data && ` · ${(fccCoverageQ.data.features ?? []).length} AT&T addrs`}
+            {showAddressDots && fccCoverageQ.data && (() => {
+              const feats = fccCoverageQ.data.features ?? [];
+              if (isHex) {
+                const total = feats.reduce((s: number, f: GeoJSON.Feature) => s + Number((f.properties as { count?: number } | null)?.count ?? 0), 0);
+                return ` · ${total.toLocaleString()} AT&T addrs (hex)`;
+              }
+              return ` · ${feats.length.toLocaleString()} AT&T addrs`;
+            })()}
           </Text>
         )}
 
         {zoom < 11 && (showFiberLayer || showHeatmap) && (
           <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom in to see overlays</Text></View>
         )}
-        {zoom < 12 && showAddressDots && (
-          <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom to 12+ for AT&T address dots</Text></View>
+        {zoom < 10 && showAddressDots && (
+          <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom in to see AT&T coverage</Text></View>
         )}
       </View>
 

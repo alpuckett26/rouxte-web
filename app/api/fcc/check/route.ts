@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   // 1. Try PostGIS fcc_att_available (exact address-level check)
   const { data: fccData, error: fccError } = await admin.rpc("fcc_att_available", { p_lat: lat, p_lng: lng });
   if (!fccError && fccData === true) {
-    return NextResponse.json({ available: true, source: "fcc_bdc" });
+    return NextResponse.json({ att_available: true, source: "fcc_bdc" });
   }
 
   // Skip BDC fallback if the fcc function errored (function missing → table not set up)
@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
     .limit(1);
 
   if ((bdcLeads ?? []).length > 0) {
-    return NextResponse.json({ available: true, source: "bdc_leads" });
+    return NextResponse.json({ att_available: true, source: "bdc_leads" });
   }
 
   // Neither source found coverage
   if (fccError && (fccError.message.includes("fcc_att_available") || fccError.message.includes("does not exist"))) {
-    return NextResponse.json({ available: false, source: "fcc_unavailable" });
+    return NextResponse.json({ att_available: false, source: "fcc_unavailable" });
   }
 
-  return NextResponse.json({ available: false, source: "fcc_bdc" });
+  return NextResponse.json({ att_available: false, source: "fcc_bdc" });
 }
