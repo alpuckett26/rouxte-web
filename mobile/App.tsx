@@ -19,18 +19,59 @@ if (config.sentry.dsn) {
 }
 
 /**
- * Catch OAuth callbacks (rouxteapp://auth-callback?code=...) and exchange
- * the code for a Supabase session. Runs both on cold start and while the
- * app is already running.
+ * Catch OAuth callbacks (rouxteapp://auth-callback?code=... for PKCE, or
+ * rouxteapp://auth-callback#access_token=...&refresh_token=... for implicit)
+ * and convert them into a Supabase session. Handles both cold start
+ * (Linking.getInitialURL) and warm app (Linking listener).
  */
 function useOAuthDeepLink() {
   useEffect(() => {
     async function handleUrl(url: string) {
       if (!url.startsWith('rouxteapp://auth-callback')) return;
+      if (__DEV__) console.log('[oauth] callback URL:', url);
+
+      // Parse params from either ?query or #fragment.
+      const queryIdx = url.indexOf('?');
+      const hashIdx  = url.indexOf('#');
+      const paramSegment =
+        queryIdx >= 0 ? url.slice(queryIdx + 1)
+        : hashIdx >= 0 ? url.slice(hashIdx + 1)
+        : '';
+
+      const params = new URLSearchParams(paramSegment);
+      const code         = params.get('code');
+      const accessToken  = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const errParam     = params.get('error') ?? params.get('error_description');
+
+      if (errParam) {
+        if (__DEV__) console.warn('[oauth] supabase returned error:', errParam);
+        return;
+      }
+
       try {
-        await supabase.auth.exchangeCodeForSession(url);
+        if (code) {
+          // PKCE — exchange the code for a session (uses verifier from storage).
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (__DEV__) console.log(
+            '[oauth] exchangeCodeForSession:',
+            error ? `ERROR ${error.message}` : `OK user=${data.session?.user.email}`,
+          );
+        } else if (accessToken && refreshToken) {
+          // Implicit flow — tokens are already in the URL.
+          const { data, error } = await supabase.auth.setSession({
+            access_token:  accessToken,
+            refresh_token: refreshToken,
+          });
+          if (__DEV__) console.log(
+            '[oauth] setSession:',
+            error ? `ERROR ${error.message}` : `OK user=${data.session?.user.email}`,
+          );
+        } else if (__DEV__) {
+          console.warn('[oauth] callback had no code or tokens:', paramSegment);
+        }
       } catch (e) {
-        if (__DEV__) console.warn('[oauth] exchange failed:', e);
+        if (__DEV__) console.warn('[oauth] exchange threw:', e);
       }
     }
 
