@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Linking } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+
+const AUTH_REDIRECT_URL = 'rouxteapp://auth-callback';
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
@@ -36,9 +39,24 @@ export function useAuth() {
     return error;
   }
 
+  async function signInWithOAuth(provider: 'google' | 'github') {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: AUTH_REDIRECT_URL,
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error) return error;
+    if (data?.url) {
+      await Linking.openURL(data.url);
+    }
+    return null;
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
 
-  return { session, user, loading, signIn, signOut };
+  return { session, user, loading, signIn, signInWithOAuth, signOut };
 }

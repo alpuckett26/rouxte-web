@@ -1,12 +1,13 @@
 import 'react-native-gesture-handler';
-import React from 'react';
-import { StatusBar } from 'react-native';
+import React, { useEffect } from 'react';
+import { StatusBar, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Sentry from '@sentry/react-native';
 import { config } from '@/lib/config';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { IdleTimeout } from '@/components/IdleTimeout';
+import { supabase } from '@/lib/supabase';
 import RootNavigator from '@/navigation';
 
 if (config.sentry.dsn) {
@@ -17,7 +18,30 @@ if (config.sentry.dsn) {
   });
 }
 
+/**
+ * Catch OAuth callbacks (rouxteapp://auth-callback?code=...) and exchange
+ * the code for a Supabase session. Runs both on cold start and while the
+ * app is already running.
+ */
+function useOAuthDeepLink() {
+  useEffect(() => {
+    async function handleUrl(url: string) {
+      if (!url.startsWith('rouxteapp://auth-callback')) return;
+      try {
+        await supabase.auth.exchangeCodeForSession(url);
+      } catch (e) {
+        if (__DEV__) console.warn('[oauth] exchange failed:', e);
+      }
+    }
+
+    Linking.getInitialURL().then((url) => { if (url) handleUrl(url); });
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => sub.remove();
+  }, []);
+}
+
 function App() {
+  useOAuthDeepLink();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

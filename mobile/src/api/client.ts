@@ -18,6 +18,8 @@ interface RequestOptions {
   unauthenticated?: boolean;
 }
 
+const DEBUG = typeof __DEV__ !== 'undefined' && __DEV__;
+
 async function request<T>(
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   path: string,
@@ -37,6 +39,9 @@ async function request<T>(
   if (!opts.unauthenticated) {
     const token = await getAccessToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    if (DEBUG) console.log(`[api] → ${method} ${path}  token:${token ? 'YES' : 'NO'}`);
+  } else if (DEBUG) {
+    console.log(`[api] → ${method} ${path}  (no auth)`);
   }
 
   const isFormData = opts.body instanceof FormData;
@@ -44,22 +49,34 @@ async function request<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers,
-    body:
-      opts.body === undefined
-        ? undefined
-        : isFormData
-        ? (opts.body as FormData)
-        : JSON.stringify(opts.body),
-    signal: opts.signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method,
+      headers,
+      body:
+        opts.body === undefined
+          ? undefined
+          : isFormData
+          ? (opts.body as FormData)
+          : JSON.stringify(opts.body),
+      signal: opts.signal,
+    });
+  } catch (e) {
+    if (DEBUG) console.warn(`[api] ✗ ${method} ${path} network error:`, e);
+    throw e;
+  }
 
   const text = await res.text();
   let parsed: unknown = null;
   if (text) {
     try { parsed = JSON.parse(text); } catch { parsed = text; }
+  }
+
+  if (DEBUG) {
+    const status = res.ok ? '✓' : '✗';
+    console.log(`[api] ${status} ${method} ${path} → ${res.status}`);
+    if (!res.ok) console.log('[api]   body:', typeof parsed === 'string' ? parsed.slice(0, 200) : parsed);
   }
 
   if (!res.ok) {
@@ -80,3 +97,6 @@ export const api = {
   put:    <T = unknown>(path: string, body?: Json | FormData, opts?: Omit<RequestOptions, 'body'>) => request<T>('PUT',    path, { ...opts, body }),
   delete: <T = unknown>(path: string, opts?: RequestOptions) => request<T>('DELETE', path, opts),
 };
+
+/** Expose the configured base URL so debug UI can show what's being hit. */
+export const apiBaseUrl = config.api.baseUrl;

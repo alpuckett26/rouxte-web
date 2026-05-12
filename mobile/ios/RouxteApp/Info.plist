@@ -45,6 +45,17 @@
 	<string>Rouxte uses contacts so you can quickly fill in customer info on SmartPitch.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Rouxte uses Face ID to keep your account secure.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.rouxte.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>rouxteapp</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

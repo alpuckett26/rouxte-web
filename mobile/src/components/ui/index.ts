@@ -8,3 +8,4 @@ export { Badge, type BadgeColor } from './Badge';
 export { Skeleton, SkeletonGrid } from './Skeleton';
 export { Modal } from './Modal';
 export { Select, type SelectOption } from './Select';
+export { ErrorBanner } from './ErrorBanner';

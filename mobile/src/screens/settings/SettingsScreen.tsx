@@ -1,22 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Alert, ActivityIndicator, StyleSheet, ScrollView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { meApi } from '@/api/me';
 import { compensationApi } from '@/api/compensation';
-import { api } from '@/api/client';
-import { Screen, Text, Button, Card, Input, Badge } from '@/components/ui';
+import { api, apiBaseUrl, ApiError } from '@/api/client';
+import { getAccessToken } from '@/lib/supabase';
+import { Screen, Text, Button, Card, Input, Badge, ErrorBanner } from '@/components/ui';
 import { colors } from '@/lib/colors';
 
 export default function SettingsScreen() {
   const qc = useQueryClient();
   const { signOut, user } = useAuth();
-  const { profile, isLoading, error, refetch } = useProfile();
+  const { profile, isLoading, error: profileError, refetch } = useProfile();
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [debug, setDebug] = useState<string | null>(null);
 
-  // Phone editor — fetch + edit
-  const phoneQ = useQuery({ queryKey: ['me-phone'], queryFn: () => api.get<{ phone: string | null }>('/api/me/phone') });
+  const phoneQ = useQuery({
+    queryKey: ['me-phone'],
+    queryFn:  () => api.get<{ phone: string | null }>('/api/me/phone'),
+    retry:    false,
+  });
   const [phone, setPhone] = useState('');
   useEffect(() => {
     if (phoneQ.data?.phone !== undefined) setPhone(phoneQ.data.phone ?? '');
@@ -32,25 +38,58 @@ export default function SettingsScreen() {
     onError: (e: Error) => Alert.alert('Save failed', e.message),
   });
 
-  // Compensation — only fetch if reps/team_lead (managers don't get commission pct typically)
   const compQ = useQuery({
     queryKey: ['compensation-me'],
     queryFn:  compensationApi.me,
     enabled:  profile?.role === 'sales_rep' || profile?.role === 'team_lead',
+    retry:    false,
   });
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    setSignOutError(null);
+    try {
+      await signOut();
+      // session change is handled by useAuth listener which clears state + navigates
+    } catch (e) {
+      setSignOutError((e as Error).message);
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   function confirmSignOut() {
     Alert.alert('Sign out?', "You'll need to enter your password again.", [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          setSigningOut(true);
-          try { await signOut(); } finally { setSigningOut(false); }
-        },
-      },
+      { text: 'Sign out', style: 'destructive', onPress: handleSignOut },
     ]);
+  }
+
+  async function dumpDebug() {
+    const token = await getAccessToken();
+    let meStatus: number | string = '?';
+    let meBody: unknown = null;
+    try {
+      meBody = await api.get('/api/me');
+      meStatus = 200;
+    } catch (e) {
+      if (e instanceof ApiError) {
+        meStatus = e.status;
+        meBody = e.body;
+      } else {
+        meStatus = 'network';
+        meBody = (e as Error).message;
+      }
+    }
+    setDebug(JSON.stringify({
+      apiBaseUrl,
+      hasToken: !!token,
+      tokenPrefix: token?.slice(0, 16) ?? null,
+      authUserId: user?.id ?? null,
+      authEmail: user?.email ?? null,
+      meStatus,
+      meBody,
+    }, null, 2));
   }
 
   const displayName = profile?.full_name || profile?.email || user?.email || 'Signed in';
@@ -65,8 +104,12 @@ export default function SettingsScreen() {
     >
       <Text variant="title" weight="bold">Settings</Text>
 
+      {profileError && (
+        <ErrorBanner error={profileError} context="profile" onRetry={() => refetch()} />
+      )}
+
       {/* Identity */}
-      <Card style={{ marginTop: 18 }}>
+      <Card style={{ marginTop: 14 }}>
         <Text variant="caption" tone="dim">SIGNED IN AS</Text>
         {isLoading ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
@@ -84,14 +127,9 @@ export default function SettingsScreen() {
                 {[roleLabel, orgLabel].filter(Boolean).join(' · ')}
               </Text>
             )}
-            {!profile?.org_id && (
+            {profile && !profile.org_id && (
               <Text tone="warning" variant="caption" style={{ marginTop: 8 }}>
                 Onboarding not complete. Finish setup on the web.
-              </Text>
-            )}
-            {error && (
-              <Text tone="danger" variant="caption" style={{ marginTop: 6 }}>
-                Couldn't load profile. {(error as Error).message}
               </Text>
             )}
           </>
@@ -101,6 +139,7 @@ export default function SettingsScreen() {
       {/* Phone */}
       <Text variant="caption" tone="dim" style={styles.section}>CONTACT</Text>
       <Card>
+        {phoneQ.error && <ErrorBanner error={phoneQ.error} context="phone" onRetry={() => phoneQ.refetch()} />}
         <Input
           label="Phone"
           value={phone}
@@ -122,7 +161,9 @@ export default function SettingsScreen() {
         <>
           <Text variant="caption" tone="dim" style={styles.section}>COMPENSATION</Text>
           <Card>
-            {compQ.isLoading ? (
+            {compQ.error ? (
+              <ErrorBanner error={compQ.error} context="compensation" onRetry={() => compQ.refetch()} />
+            ) : compQ.isLoading ? (
               <Text tone="dim">Loading…</Text>
             ) : !compQ.data?.tier ? (
               <Text tone="dim">No commission tier assigned yet.</Text>
@@ -153,9 +194,24 @@ export default function SettingsScreen() {
 
       {/* Sign out */}
       <View style={{ marginTop: 24, gap: 8 }}>
-        {error && <Button title="Retry profile load" onPress={() => refetch()} variant="secondary" />}
+        {signOutError && <ErrorBanner error={new Error(signOutError)} context="sign out" />}
         <Button title="Sign out" onPress={confirmSignOut} variant="danger" loading={signingOut} />
       </View>
+
+      {/* Debug */}
+      <Text variant="caption" tone="dim" style={styles.section}>DEBUG</Text>
+      <Card>
+        <Text variant="caption" tone="mute" style={{ marginBottom: 8 }}>
+          Use when something says "no data" or 404. Dumps the API base URL,
+          your token state, and the raw /api/me response — paste back to debug.
+        </Text>
+        <Button title="Dump session + ping /api/me" onPress={dumpDebug} variant="secondary" />
+        {debug && (
+          <ScrollView style={styles.debugBox}>
+            <Text variant="mono" tone="dim" selectable>{debug}</Text>
+          </ScrollView>
+        )}
+      </Card>
 
       <Text tone="mute" variant="caption" style={{ textAlign: 'center', marginTop: 40 }}>
         Rouxte Mobile · v0.0.1
@@ -165,5 +221,14 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 14, marginBottom: 8, letterSpacing: 0.6 },
+  section:  { marginTop: 14, marginBottom: 8, letterSpacing: 0.6 },
+  debugBox: {
+    marginTop: 8,
+    maxHeight: 240,
+    padding: 8,
+    backgroundColor: colors.bgInput,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { Screen, Text, Button, Input } from '@/components/ui';
 import { colors } from '@/lib/colors';
@@ -7,13 +7,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+type OAuthProvider = 'google' | 'github';
 
 export default function LoginScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
+  const { signIn, signInWithOAuth } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
 
   async function onSubmit() {
     setError(null);
@@ -23,11 +25,51 @@ export default function LoginScreen({ navigation }: Props) {
     if (err) setError(err.message);
   }
 
+  async function onOAuth(provider: OAuthProvider) {
+    setError(null);
+    setOauthBusy(provider);
+    const err = await signInWithOAuth(provider);
+    if (err) {
+      setError(err.message);
+      setOauthBusy(null);
+    }
+    // If no error, the browser opens; user comes back via deep link.
+    // Reset busy state in 30s in case they cancel.
+    setTimeout(() => setOauthBusy(null), 30_000);
+  }
+
   return (
     <Screen>
       <View style={styles.center}>
         <Text variant="display" weight="bold" style={styles.brand}>Rouxte</Text>
         <Text variant="body" tone="dim" style={styles.sub}>Sign in to continue</Text>
+
+        {/* OAuth buttons */}
+        <Pressable
+          onPress={() => onOAuth('google')}
+          disabled={!!oauthBusy || busy}
+          style={({ pressed }) => [styles.oauthBtn, pressed && { opacity: 0.7 }, !!oauthBusy && { opacity: 0.5 }]}
+        >
+          {oauthBusy === 'google' ? <ActivityIndicator color={colors.text} /> : (
+            <Text weight="medium">Continue with Google</Text>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={() => onOAuth('github')}
+          disabled={!!oauthBusy || busy}
+          style={({ pressed }) => [styles.oauthBtn, pressed && { opacity: 0.7 }, !!oauthBusy && { opacity: 0.5 }]}
+        >
+          {oauthBusy === 'github' ? <ActivityIndicator color={colors.text} /> : (
+            <Text weight="medium">Continue with GitHub</Text>
+          )}
+        </Pressable>
+
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text variant="caption" tone="mute" style={{ marginHorizontal: 10 }}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
         <Input
           label="Email"
@@ -51,7 +93,7 @@ export default function LoginScreen({ navigation }: Props) {
           error={error}
         />
 
-        <Button title="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password} />
+        <Button title="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password || !!oauthBusy} />
 
         <Pressable onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgot}>
           <Text variant="caption" tone="brand">Forgot password?</Text>
@@ -62,8 +104,22 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  center: { paddingVertical: 60 },
-  brand:  { textAlign: 'center', color: colors.brand, marginBottom: 4 },
-  sub:    { textAlign: 'center', marginBottom: 36 },
-  forgot: { alignSelf: 'center', marginTop: 18 },
+  center:       { paddingVertical: 60 },
+  brand:        { textAlign: 'center', color: colors.brand, marginBottom: 4 },
+  sub:          { textAlign: 'center', marginBottom: 36 },
+  oauthBtn:     {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgCard,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 14,
+    marginBottom: 10,
+    minHeight: 50,
+  },
+  divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 18 },
+  dividerLine:  { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  forgot:       { alignSelf: 'center', marginTop: 18 },
 });
