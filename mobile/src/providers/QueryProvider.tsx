@@ -24,6 +24,17 @@ const persister = createAsyncStoragePersister({
   key: 'rouxte-rq-cache',
 });
 
+// Query keys whose responses are too big for Android SQLite's 2MB-per-row
+// CursorWindow limit. Persisting these caused "Row too big to fit into
+// CursorWindow" errors on launch and the entire cache being discarded.
+// Refetch on next open instead — they're cheap enough.
+const NON_PERSISTED_KEY_PREFIXES = [
+  'fcc-coverage',     // up to 50k AT&T address points OR 3k hex polygons
+  'fcc-blocks',       // FCC block polygons
+  'fiber-heatmap',    // BDC lead heatmap GeoJSON
+  'leads-map',        // map viewport's leads list
+];
+
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   return (
     <PersistQueryClientProvider
@@ -32,7 +43,11 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         persister,
         maxAge: 1000 * 60 * 60 * 24, // 24h
         dehydrateOptions: {
-          shouldDehydrateQuery: (q) => q.state.status === 'success',
+          shouldDehydrateQuery: (q) => {
+            if (q.state.status !== 'success') return false;
+            const key = String(q.queryKey?.[0] ?? '');
+            return !NON_PERSISTED_KEY_PREFIXES.includes(key);
+          },
         },
       }}
     >
