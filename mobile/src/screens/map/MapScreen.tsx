@@ -17,6 +17,11 @@ import { useTodayStats } from '@/hooks/useTodayStats';
 import { KnockHoursBanner } from '@/components/map/KnockHoursBanner';
 import { StatsBar } from '@/components/map/StatsBar';
 import { ZoomMeter } from '@/components/map/ZoomMeter';
+import { UserPuck } from '@/components/map/UserPuck';
+import { BreadcrumbLayer } from '@/components/map/BreadcrumbLayer';
+import { NextLeadChip } from '@/components/map/NextLeadChip';
+import { useBreadcrumb } from '@/hooks/useBreadcrumb';
+import { haversineMeters, bearingDegrees, compassLabel } from '@/lib/geo';
 import { useNavigation } from '@react-navigation/native';
 import type { Lead, LeadStatus, LogEventType } from '@/types';
 
@@ -76,7 +81,16 @@ export default function MapScreen() {
   const [captureCoord, setCaptureCoord] = useState<{ lat: number; lng: number } | null>(null);
 
   const mapRef = useRef<MapboxMapViewType>(null);
+  // Narrow duck-typed camera ref — the imperative methods we use.
+  // RNMapbox doesn't ergonomically expose CameraRef as a generic type.
+  const cameraRef = useRef<{
+    setCamera: (opts: { centerCoordinate?: [number, number]; zoomLevel?: number; animationDuration?: number }) => void;
+  } | null>(null);
   const bboxFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Live GPS — updated by <UserPuck onUpdate>. [lng, lat] tuple.
+  const [userCoord, setUserCoord] = useState<[number, number] | null>(null);
+  const breadcrumbShape = useBreadcrumb(fieldMode ? userCoord : null);
 
   const leadsQ = useQuery({
     queryKey: ['leads-map', leadFilter, fieldMode],
@@ -186,6 +200,52 @@ export default function MapScreen() {
     };
   }, [fieldMode, geolocatedLeads]);
 
+  // Nearest unworked lead — drives the "Next" chip.
+  // "Unworked" = lead has no door_knock log today AND isn't DNK / sold / closed.
+  const nearestUnworked = useMemo(() => {
+    if (!fieldMode || !userCoord) return null;
+    const knockedTodayIds = new Set<string>();
+    for (const l of todayStats.recent) {
+      if (l.event_type === 'door_knock' && l.lead_id) knockedTodayIds.add(l.lead_id);
+    }
+    const SKIP_STATUSES: LeadStatus[] = ['sold', 'installed', 'closed_lost'];
+    let best: { lead: Lead & { lat: number; lng: number }; dist: number } | null = null;
+    for (const l of geolocatedLeads) {
+      if (l.is_do_not_knock) continue;
+      if (SKIP_STATUSES.includes(l.status as LeadStatus)) continue;
+      if (knockedTodayIds.has(l.id)) continue;
+      const dist = haversineMeters(
+        { lng: userCoord[0], lat: userCoord[1] },
+        { lng: l.lng, lat: l.lat },
+      );
+      if (!best || dist < best.dist) best = { lead: l, dist };
+    }
+    if (!best) return null;
+    const bearing = bearingDegrees(
+      { lng: userCoord[0], lat: userCoord[1] },
+      { lng: best.lead.lng, lat: best.lead.lat },
+    );
+    return { lead: best.lead, dist: best.dist, compass: compassLabel(bearing) };
+  }, [fieldMode, userCoord, geolocatedLeads, todayStats.recent]);
+
+  const flyTo = useCallback((c: [number, number], zoom = 17) => {
+    cameraRef.current?.setCamera({
+      centerCoordinate: c,
+      zoomLevel: zoom,
+      animationDuration: 800,
+    });
+  }, []);
+
+  const centerOnMe = useCallback(() => {
+    if (userCoord) flyTo(userCoord, 17);
+  }, [userCoord, flyTo]);
+
+  const flyToNearest = useCallback(() => {
+    if (!nearestUnworked) return;
+    flyTo([nearestUnworked.lead.lng, nearestUnworked.lead.lat], 18);
+    setSelectedLead(nearestUnworked.lead);
+  }, [nearestUnworked, flyTo]);
+
   const statusColorExpression = useMemo<unknown>(() => {
     const exp: unknown[] = ['match', ['get', 'status']];
     for (const [status, hex] of Object.entries(STATUS_HEX)) exp.push(status, hex);
@@ -282,7 +342,17 @@ export default function MapScreen() {
           pitchEnabled={false}
           compassEnabled={false}
         >
-          <Mapbox.Camera zoomLevel={11} centerCoordinate={center} animationMode="flyTo" animationDuration={0} />
+          <Mapbox.Camera
+            ref={cameraRef as never}
+            defaultSettings={{ zoomLevel: 11, centerCoordinate: center }}
+            animationMode="flyTo"
+          />
+
+          {/* Live GPS puck — only when in Field Mode */}
+          {fieldMode && <UserPuck onUpdate={(c) => setUserCoord(c)} />}
+
+          {/* Breadcrumb trail (today, last 6h, throttled). Always mounted. */}
+          <BreadcrumbLayer shape={breadcrumbShape} />
 
           {/* FCC fiber coverage (green polygons) */}
           {showFiberLayer && fccBlocksQ.data && (
@@ -521,9 +591,27 @@ export default function MapScreen() {
               dnks={todayStats.dnks}
             />
             <KnockHoursBanner />
+            {nearestUnworked && (
+              <NextLeadChip
+                distanceMeters={nearestUnworked.dist}
+                compass={nearestUnworked.compass}
+                onPress={flyToNearest}
+              />
+            )}
           </View>
         )}
       </View>
+
+      {/* Center-on-me FAB — Field Mode only, sits above KnockCounter when present */}
+      {fieldMode && userCoord && (
+        <Pressable
+          onPress={centerOnMe}
+          style={[styles.centerFab, { bottom: showKnockCounter ? 80 : 20 }]}
+          hitSlop={8}
+        >
+          <Text variant="caption" weight="bold" style={{ fontSize: 20 }}>⊙</Text>
+        </Pressable>
+      )}
 
       {fieldMode && noGeolocated && totalLeads > 0 && (
         <View style={styles.emptyOverlay}>
@@ -803,4 +891,21 @@ const styles = StyleSheet.create({
   legend:       { position: 'absolute', left: 12, bottom: 12, backgroundColor: colors.bgCard + 'cc', padding: 8, borderRadius: 8, gap: 4 },
   legendRow:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot:    { width: 10, height: 10, borderRadius: 5 },
+  centerFab:    {
+    position: 'absolute',
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.bgCard,
+    borderColor: colors.brand,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
 });
