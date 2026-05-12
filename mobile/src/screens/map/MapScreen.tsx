@@ -227,7 +227,9 @@ export default function MapScreen() {
   const onMapLongPress = useCallback(async (e: { geometry?: { coordinates?: [number, number] } }) => {
     if (!e.geometry?.coordinates) return;
     const [lng, lat] = e.geometry.coordinates;
-    Vibration.vibrate(40);
+    // VIBRATE permission must be in AndroidManifest. Guard anyway so a missing
+    // permission on an older build never crashes the app.
+    try { Vibration.vibrate(40); } catch { /* no haptic available */ }
 
     const map = mapRef.current;
     if (map) {
