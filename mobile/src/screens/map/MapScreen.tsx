@@ -129,6 +129,8 @@ export default function MapScreen() {
   // DNK leads — rendered with a red ring under the status dot so reps see them
   // before they read the legend. Also catches no_solicit_observed signal from
   // today's logs (treat sign-observed-today as effectively DNK for the day).
+  // ShapeSources stay mounted with empty features when out of Field Mode —
+  // mounting/unmounting them on toggle crashes @rnmapbox/maps on Android.
   const noSolicitTodayLeadIds = useMemo(() => {
     const set = new Set<string>();
     for (const l of todayStats.recent) {
@@ -137,44 +139,51 @@ export default function MapScreen() {
     return set;
   }, [todayStats.recent]);
 
-  const dnkFeatures = useMemo(() => ({
-    type: 'FeatureCollection' as const,
-    features: geolocatedLeads
-      .filter((l) => l.is_do_not_knock || noSolicitTodayLeadIds.has(l.id))
-      .map((l) => ({
-        type: 'Feature' as const,
-        id: `dnk-${l.id}`,
-        properties: { id: l.id },
-        geometry: { type: 'Point' as const, coordinates: [l.lng, l.lat] as [number, number] },
-      })),
-  }), [geolocatedLeads, noSolicitTodayLeadIds]);
+  const dnkFeatures = useMemo<GeoJSON.FeatureCollection>(() => {
+    if (!fieldMode) return { type: 'FeatureCollection', features: [] };
+    return {
+      type: 'FeatureCollection',
+      features: geolocatedLeads
+        .filter((l) => l.is_do_not_knock || noSolicitTodayLeadIds.has(l.id))
+        .map((l) => ({
+          type: 'Feature',
+          id: `dnk-${l.id}`,
+          properties: { id: l.id },
+          geometry: { type: 'Point', coordinates: [l.lng, l.lat] },
+        })),
+    };
+  }, [fieldMode, geolocatedLeads, noSolicitTodayLeadIds]);
 
   // Recent activity dots — last few logs, rendered at the lead's coords.
-  const recentActivityFeatures = useMemo(() => {
+  const recentActivityFeatures = useMemo<GeoJSON.FeatureCollection>(() => {
+    if (!fieldMode) return { type: 'FeatureCollection', features: [] };
     const byId = new Map(geolocatedLeads.map((l) => [l.id, l]));
-    const features = todayStats.recent
+    const features: GeoJSON.Feature[] = todayStats.recent
       .filter((log) => log.lead_id && byId.has(log.lead_id))
       .map((log) => {
         const lead = byId.get(log.lead_id!)!;
         return {
-          type: 'Feature' as const,
+          type: 'Feature',
           id: `act-${log.id}`,
           properties: { event: log.event_type },
-          geometry: { type: 'Point' as const, coordinates: [lead.lng, lead.lat] as [number, number] },
+          geometry: { type: 'Point', coordinates: [lead.lng, lead.lat] },
         };
       });
-    return { type: 'FeatureCollection' as const, features };
-  }, [todayStats.recent, geolocatedLeads]);
+    return { type: 'FeatureCollection', features };
+  }, [fieldMode, todayStats.recent, geolocatedLeads]);
 
-  const features = useMemo(() => ({
-    type: 'FeatureCollection' as const,
-    features: geolocatedLeads.map((l) => ({
-      type: 'Feature' as const,
-      id: l.id,
-      properties: { id: l.id, status: l.status },
-      geometry: { type: 'Point' as const, coordinates: [l.lng, l.lat] as [number, number] },
-    })),
-  }), [geolocatedLeads]);
+  const features = useMemo<GeoJSON.FeatureCollection>(() => {
+    if (!fieldMode) return { type: 'FeatureCollection', features: [] };
+    return {
+      type: 'FeatureCollection',
+      features: geolocatedLeads.map((l) => ({
+        type: 'Feature',
+        id: l.id,
+        properties: { id: l.id, status: l.status },
+        geometry: { type: 'Point', coordinates: [l.lng, l.lat] },
+      })),
+    };
+  }, [fieldMode, geolocatedLeads]);
 
   const statusColorExpression = useMemo<unknown>(() => {
     const exp: unknown[] = ['match', ['get', 'status']];
@@ -346,62 +355,61 @@ export default function MapScreen() {
             </Mapbox.ShapeSource>
           )}
 
-          {/* DNK + no-solicit halo (red ring under the lead dot) — only in Field Mode */}
-          {fieldMode && dnkFeatures.features.length > 0 && (
-            <Mapbox.ShapeSource id="dnk-halo" shape={dnkFeatures as GeoJSON.FeatureCollection}>
-              <Mapbox.CircleLayer
-                id="dnk-halo-layer"
-                style={{
-                  circleColor: 'rgba(239,68,68,0)',
-                  circleRadius: 11,
-                  circleStrokeColor: '#ef4444',
-                  circleStrokeWidth: 2.5,
-                  circleStrokeOpacity: 0.85,
-                }}
-              />
-            </Mapbox.ShapeSource>
-          )}
+          {/* DNK + no-solicit halo — always mounted; empty features when off.
+              Conditional ShapeSource mount/unmount crashes @rnmapbox/maps on
+              Android (esp. during long-press / camera updates). */}
+          <Mapbox.ShapeSource id="dnk-halo" shape={dnkFeatures}>
+            <Mapbox.CircleLayer
+              id="dnk-halo-layer"
+              style={{
+                circleColor: '#ef4444',
+                circleOpacity: 0,
+                circleRadius: 11,
+                circleStrokeColor: '#ef4444',
+                circleStrokeWidth: 2.5,
+                circleStrokeOpacity: 0.85,
+              }}
+            />
+          </Mapbox.ShapeSource>
 
-          {/* Recent activity rings (today's last 5 events at the lead coord) */}
-          {fieldMode && recentActivityFeatures.features.length > 0 && (
-            <Mapbox.ShapeSource id="recent-activity" shape={recentActivityFeatures as GeoJSON.FeatureCollection}>
-              <Mapbox.CircleLayer
-                id="recent-activity-outer"
-                style={{
-                  circleColor: 'rgba(27,174,225,0)',
-                  circleRadius: 16,
-                  circleStrokeColor: '#1BAEE1',
-                  circleStrokeWidth: 1.5,
-                  circleStrokeOpacity: 0.45,
-                }}
-              />
-              <Mapbox.CircleLayer
-                id="recent-activity-inner"
-                style={{
-                  circleColor: 'rgba(27,174,225,0)',
-                  circleRadius: 10,
-                  circleStrokeColor: '#1BAEE1',
-                  circleStrokeWidth: 1.5,
-                  circleStrokeOpacity: 0.75,
-                }}
-              />
-            </Mapbox.ShapeSource>
-          )}
+          {/* Recent activity rings */}
+          <Mapbox.ShapeSource id="recent-activity" shape={recentActivityFeatures}>
+            <Mapbox.CircleLayer
+              id="recent-activity-outer"
+              style={{
+                circleColor: '#1BAEE1',
+                circleOpacity: 0,
+                circleRadius: 16,
+                circleStrokeColor: '#1BAEE1',
+                circleStrokeWidth: 1.5,
+                circleStrokeOpacity: 0.45,
+              }}
+            />
+            <Mapbox.CircleLayer
+              id="recent-activity-inner"
+              style={{
+                circleColor: '#1BAEE1',
+                circleOpacity: 0,
+                circleRadius: 10,
+                circleStrokeColor: '#1BAEE1',
+                circleStrokeWidth: 1.5,
+                circleStrokeOpacity: 0.75,
+              }}
+            />
+          </Mapbox.ShapeSource>
 
-          {/* Leads (status-colored, always on top) — only in Field Mode */}
-          {fieldMode && (
-            <Mapbox.ShapeSource id="leads-source" shape={features as GeoJSON.FeatureCollection} onPress={onLeadCirclePress}>
-              <Mapbox.CircleLayer
-                id="leads-circles"
-                style={{
-                  circleColor: statusColorExpression as never,
-                  circleRadius: 6,
-                  circleStrokeWidth: 1.5,
-                  circleStrokeColor: '#0a0f1e',
-                }}
-              />
-            </Mapbox.ShapeSource>
-          )}
+          {/* Leads (status-colored, always on top) — features are empty when out of Field Mode */}
+          <Mapbox.ShapeSource id="leads-source" shape={features} onPress={onLeadCirclePress}>
+            <Mapbox.CircleLayer
+              id="leads-circles"
+              style={{
+                circleColor: statusColorExpression as never,
+                circleRadius: 6,
+                circleStrokeWidth: 1.5,
+                circleStrokeColor: '#0a0f1e',
+              }}
+            />
+          </Mapbox.ShapeSource>
         </Mapbox.MapView>
       )}
 
