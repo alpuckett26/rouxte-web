@@ -16,6 +16,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useTodayStats } from '@/hooks/useTodayStats';
 import { KnockHoursBanner } from '@/components/map/KnockHoursBanner';
 import { StatsBar } from '@/components/map/StatsBar';
+import { ZoomMeter } from '@/components/map/ZoomMeter';
 import { useNavigation } from '@react-navigation/native';
 import type { Lead, LeadStatus, LogEventType } from '@/types';
 
@@ -277,6 +278,9 @@ export default function MapScreen() {
           styleURL={STYLE_URLS[styleMode]}
           onCameraChanged={onCameraChanged}
           onLongPress={onMapLongPress}
+          rotateEnabled={false}
+          pitchEnabled={false}
+          compassEnabled={false}
         >
           <Mapbox.Camera zoomLevel={11} centerCoordinate={center} animationMode="flyTo" animationDuration={0} />
 
@@ -414,6 +418,8 @@ export default function MapScreen() {
           </Mapbox.ShapeSource>
         </Mapbox.MapView>
       )}
+
+      <ZoomMeter zoom={zoom} />
 
       {/* Top filter bar */}
       <View style={styles.topBar}>
