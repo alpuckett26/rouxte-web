@@ -31,4 +31,6 @@ export const leadsApi = {
   bulkAssign: (lead_ids: string[], user_id: string | null) =>
     api.post<{ count: number }>('/api/leads/bulk-assign', { lead_ids, user_id }),
   tags:    () => api.get<{ data: Tag[] }>('/api/tags'),
+  fiberHeatmap: (bbox: { north: number; south: number; east: number; west: number }) =>
+    api.get<GeoJSON.FeatureCollection>('/api/leads/fiber-heatmap', { query: bbox as unknown as Record<string, number> }),
 };
