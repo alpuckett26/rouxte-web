@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Pressable, Linking, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Pressable, Linking, Alert, Vibration } from 'react-native';
 import Mapbox, { type MapView as MapboxMapViewType } from '@rnmapbox/maps';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/api/leads';
@@ -43,8 +43,10 @@ export default function MapScreen() {
 
   const [leadFilter, setLeadFilter] = useState<LeadFilter>('all');
   const [styleMode, setStyleMode] = useState<StyleMode>('streets');
-  const [showFiberLayer, setShowFiberLayer] = useState(true);
-  const [showAddressDots, setShowAddressDots] = useState(false);
+  // fcc_att_blocks is currently empty in prod, so default the polygon layer off.
+  // fcc_att_locations has 11.9M rows, so default address dots on — that's the real coverage signal.
+  const [showFiberLayer, setShowFiberLayer] = useState(false);
+  const [showAddressDots, setShowAddressDots] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(false);
 
   const [bbox, setBbox] = useState<BBox | null>(null);
@@ -77,7 +79,7 @@ export default function MapScreen() {
   const fccCoverageQ = useQuery({
     queryKey: ['fcc-coverage', bbox],
     queryFn:  () => (bbox ? fccApi.coverage(bbox) : Promise.resolve(emptyFc())),
-    enabled:  !!bbox && zoom >= 13 && showAddressDots,
+    enabled:  !!bbox && zoom >= 12 && showAddressDots,
     staleTime: 60 * 60 * 1000,
   });
 
@@ -134,7 +136,8 @@ export default function MapScreen() {
     }, 600);
   }, []);
 
-  // Tap on a lead circle — open detail sheet
+  // Tap on a lead circle — open detail sheet. Single-tap on empty map = no-op
+  // (long-press is the only way to drop a new pin — avoids accidental captures).
   const onLeadCirclePress = useCallback((e: { features?: Array<{ properties?: { id?: string } }> }) => {
     const id = e.features?.[0]?.properties?.id;
     if (!id) return;
@@ -142,28 +145,43 @@ export default function MapScreen() {
     if (lead) setSelectedLead(lead);
   }, [geolocatedLeads]);
 
-  // Long-press a lead → quick-log sheet (uses Mapbox long-press detection via second tap handler)
-  // RNMapbox doesn't expose long-press on layers natively; we use a fallback button in the lead sheet
-  // for "Quick log" that opens the same sheet.
-
-  // Tap empty map → capture lead at that coord
-  const onMapPress = useCallback((e: { geometry?: { coordinates?: [number, number] }; features?: unknown[] }) => {
-    // If a lead feature was hit, onLeadCirclePress on the ShapeSource fires first; skip here.
+  // Long-press anywhere → if a lead is at that point, open quick-log sheet;
+  // otherwise open capture-lead modal at that coordinate.
+  // Vibrate briefly so the user knows the gesture registered.
+  const onMapLongPress = useCallback(async (e: { geometry?: { coordinates?: [number, number] } }) => {
     if (!e.geometry?.coordinates) return;
     const [lng, lat] = e.geometry.coordinates;
-    // Defer to allow ShapeSource onPress to run first
-    setTimeout(() => {
-      if (!selectedLeadRef.current && !captureRef.current) {
-        setCaptureCoord({ lat, lng });
-      }
-    }, 200);
-  }, []);
+    Vibration.vibrate(40);
 
-  // Refs used by the deferred check above
-  const selectedLeadRef = useRef<Lead | null>(null);
-  const captureRef = useRef<{ lat: number; lng: number } | null>(null);
-  React.useEffect(() => { selectedLeadRef.current = selectedLead; }, [selectedLead]);
-  React.useEffect(() => { captureRef.current = captureCoord; }, [captureCoord]);
+    const map = mapRef.current;
+    if (map) {
+      try {
+        // Convert geo → screen point and check whether a lead circle is there
+        const screenPoint = await (map as unknown as {
+          getPointInView: (c: [number, number]) => Promise<[number, number]>;
+        }).getPointInView([lng, lat]);
+        const result = await (map as unknown as {
+          queryRenderedFeaturesAtPoint: (
+            p: [number, number],
+            filter?: unknown,
+            layers?: string[],
+          ) => Promise<GeoJSON.FeatureCollection | null>;
+        }).queryRenderedFeaturesAtPoint(screenPoint, undefined, ['leads-circles']);
+        const hit = result?.features?.[0];
+        const hitId = (hit?.properties as { id?: string } | undefined)?.id;
+        if (hitId) {
+          const lead = geolocatedLeads.find((l) => l.id === hitId);
+          if (lead) {
+            setQuickLogLead(lead);
+            return;
+          }
+        }
+      } catch {
+        /* fall through to capture */
+      }
+    }
+    setCaptureCoord({ lat, lng });
+  }, [geolocatedLeads]);
 
   const noGeolocated = !leadsQ.isLoading && geolocatedLeads.length === 0;
 
@@ -180,7 +198,7 @@ export default function MapScreen() {
           style={styles.map}
           styleURL={STYLE_URLS[styleMode]}
           onCameraChanged={onCameraChanged}
-          onPress={onMapPress}
+          onLongPress={onMapLongPress}
         >
           <Mapbox.Camera zoomLevel={11} centerCoordinate={center} animationMode="flyTo" animationDuration={0} />
 
@@ -303,8 +321,8 @@ export default function MapScreen() {
         {zoom < 11 && (showFiberLayer || showHeatmap) && (
           <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom in to see overlays</Text></View>
         )}
-        {zoom < 13 && showAddressDots && (
-          <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom to 13+ for AT&T address dots</Text></View>
+        {zoom < 12 && showAddressDots && (
+          <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom to 12+ for AT&T address dots</Text></View>
         )}
       </View>
 
@@ -312,7 +330,7 @@ export default function MapScreen() {
         <View style={styles.emptyOverlay}>
           <Text tone="dim" weight="medium">{totalLeads} leads — none have coordinates yet</Text>
           <Text tone="mute" variant="caption" style={{ marginTop: 4, textAlign: 'center' }}>
-            Geocode them on the web (Leads → Import) or tap an empty area below to capture a new lead at that location.
+            Geocode them on the web (Leads → Import) or long-press the map to drop a pin and capture a new lead.
           </Text>
         </View>
       )}
@@ -321,7 +339,7 @@ export default function MapScreen() {
         <View style={styles.emptyOverlay}>
           <Text tone="dim" weight="medium">No leads yet</Text>
           <Text tone="mute" variant="caption" style={{ marginTop: 4, textAlign: 'center' }}>
-            Tap an empty area to drop a pin and capture a lead.
+            Long-press anywhere on the map to drop a pin and capture a lead.
           </Text>
         </View>
       )}
@@ -470,15 +488,30 @@ function CaptureLeadModal({ coord, onClose, onCreated }: {
   coord: { lat: number; lng: number } | null; onClose: () => void; onCreated: (leadId: string) => void;
 }) {
   const [address, setAddress] = useState('');
+  const [addressLoading, setAddressLoading] = useState(false);
   const [attStatus, setAttStatus] = useState<'checking' | 'available' | 'unavailable' | null>(null);
 
-  // Auto-fetch FCC availability when modal opens
+  // Auto-fetch FCC availability + reverse-geocode address when modal opens
   React.useEffect(() => {
-    if (!coord) { setAddress(''); setAttStatus(null); return; }
+    if (!coord) { setAddress(''); setAddressLoading(false); setAttStatus(null); return; }
+
     setAttStatus('checking');
     fccApi.check(coord.lat, coord.lng)
       .then((res) => setAttStatus(res.att_available ? 'available' : 'unavailable'))
       .catch(() => setAttStatus(null));
+
+    setAddressLoading(true);
+    setAddress('');
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${coord.lng},${coord.lat}.json` +
+      `?access_token=${encodeURIComponent(config.mapbox.token)}&types=address&limit=1`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((j: { features?: Array<{ place_name?: string }> }) => {
+        const placeName = j?.features?.[0]?.place_name;
+        if (placeName) setAddress(placeName);
+      })
+      .catch(() => { /* user can type manually */ })
+      .finally(() => setAddressLoading(false));
   }, [coord]);
 
   const create = useMutation({
@@ -516,7 +549,7 @@ function CaptureLeadModal({ coord, onClose, onCreated }: {
         label="Address"
         value={address}
         onChangeText={setAddress}
-        placeholder="123 Main St, Houston TX"
+        placeholder={addressLoading ? 'Looking up address…' : '123 Main St, Houston TX'}
         autoComplete="street-address"
         style={{ marginTop: 12 }}
       />
