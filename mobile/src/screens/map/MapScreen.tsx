@@ -1,5 +1,6 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Pressable, Linking, Alert, Vibration } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Mapbox, { type MapView as MapboxMapViewType } from '@rnmapbox/maps';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/api/leads';
@@ -49,6 +50,21 @@ export default function MapScreen() {
   const [showAddressDots, setShowAddressDots] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(false);
 
+  // Field Mode — the map is a coverage lookup tool by default; flip Field Mode
+  // ON to overlay your assigned leads on top while actively working a route.
+  // Keeps the default load fast (no big /api/leads round-trip).
+  const [fieldMode, setFieldMode] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('map.fieldMode').then((v) => { if (v === 'true') setFieldMode(true); });
+  }, []);
+  const toggleFieldMode = useCallback(() => {
+    setFieldMode((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem('map.fieldMode', String(next)).catch(() => { /* ignore */ });
+      return next;
+    });
+  }, []);
+
   const [bbox, setBbox] = useState<BBox | null>(null);
   const [zoom, setZoom] = useState(11);
 
@@ -60,13 +76,14 @@ export default function MapScreen() {
   const bboxFetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const leadsQ = useQuery({
-    queryKey: ['leads-map', leadFilter],
+    queryKey: ['leads-map', leadFilter, fieldMode],
     queryFn:  () => leadsApi.list({
       page_size: 500,
       ...(leadFilter === 'fiber' && { carrier: 'att' }),
     }),
     staleTime: 5 * 60_000, // 5 min — map data doesn't change minute-to-minute
     retry: 1,
+    enabled: fieldMode, // Only fetch leads when in Field Mode
   });
 
   const fccBlocksQ = useQuery({
@@ -193,7 +210,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {leadsQ.isLoading ? (
+      {fieldMode && leadsQ.isLoading ? (
         <View style={styles.fullLoader}>
           <ActivityIndicator size="large" color={colors.brand} />
           <Text tone="dim" style={{ marginTop: 12 }}>Loading leads…</Text>
@@ -285,26 +302,37 @@ export default function MapScreen() {
             </Mapbox.ShapeSource>
           )}
 
-          {/* Leads (status-colored, always on top) */}
-          <Mapbox.ShapeSource id="leads-source" shape={features as GeoJSON.FeatureCollection} onPress={onLeadCirclePress}>
-            <Mapbox.CircleLayer
-              id="leads-circles"
-              style={{
-                circleColor: statusColorExpression as never,
-                circleRadius: 6,
-                circleStrokeWidth: 1.5,
-                circleStrokeColor: '#0a0f1e',
-              }}
-            />
-          </Mapbox.ShapeSource>
+          {/* Leads (status-colored, always on top) — only in Field Mode */}
+          {fieldMode && (
+            <Mapbox.ShapeSource id="leads-source" shape={features as GeoJSON.FeatureCollection} onPress={onLeadCirclePress}>
+              <Mapbox.CircleLayer
+                id="leads-circles"
+                style={{
+                  circleColor: statusColorExpression as never,
+                  circleRadius: 6,
+                  circleStrokeWidth: 1.5,
+                  circleStrokeColor: '#0a0f1e',
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
         </Mapbox.MapView>
       )}
 
       {/* Top filter bar */}
       <View style={styles.topBar}>
         <View style={styles.chipRow}>
-          <FilterChip label="All leads"   active={leadFilter === 'all'}   onPress={() => setLeadFilter('all')} />
-          <FilterChip label="AT&T fiber"  active={leadFilter === 'fiber'} onPress={() => setLeadFilter('fiber')} />
+          <FilterChip
+            label={fieldMode ? '✓ Field Mode' : 'Field Mode'}
+            active={fieldMode}
+            onPress={toggleFieldMode}
+          />
+          {fieldMode && (
+            <>
+              <FilterChip label="All leads"   active={leadFilter === 'all'}   onPress={() => setLeadFilter('all')} />
+              <FilterChip label="AT&T fiber"  active={leadFilter === 'fiber'} onPress={() => setLeadFilter('fiber')} />
+            </>
+          )}
         </View>
 
         <View style={[styles.chipRow, { marginTop: 4 }]}>
@@ -334,10 +362,15 @@ export default function MapScreen() {
           />
         </View>
 
-        {!leadsQ.isLoading && (
+        {(!fieldMode || !leadsQ.isLoading) && (
           <Text variant="caption" tone="dim" style={styles.countLabel}>
-            {geolocatedLeads.length} on map
-            {totalLeads > geolocatedLeads.length && ` · ${totalLeads - geolocatedLeads.length} no coords`}
+            {fieldMode && (
+              <>
+                {geolocatedLeads.length} on map
+                {totalLeads > geolocatedLeads.length && ` · ${totalLeads - geolocatedLeads.length} no coords`}
+              </>
+            )}
+            {!fieldMode && 'Lookup mode'}
             {showAddressDots && fccCoverageQ.data && (() => {
               const feats = fccCoverageQ.data.features ?? [];
               if (isHex) {
@@ -357,7 +390,7 @@ export default function MapScreen() {
         )}
       </View>
 
-      {noGeolocated && totalLeads > 0 && (
+      {fieldMode && noGeolocated && totalLeads > 0 && (
         <View style={styles.emptyOverlay}>
           <Text tone="dim" weight="medium">{totalLeads} leads — none have coordinates yet</Text>
           <Text tone="mute" variant="caption" style={{ marginTop: 4, textAlign: 'center' }}>
@@ -366,7 +399,7 @@ export default function MapScreen() {
         </View>
       )}
 
-      {noGeolocated && totalLeads === 0 && (
+      {fieldMode && noGeolocated && totalLeads === 0 && (
         <View style={styles.emptyOverlay}>
           <Text tone="dim" weight="medium">No leads yet</Text>
           <Text tone="mute" variant="caption" style={{ marginTop: 4, textAlign: 'center' }}>
@@ -377,14 +410,16 @@ export default function MapScreen() {
 
       {showKnockCounter && <KnockCounter bottomOffset={16} position="bottom-right" />}
 
-      <View style={styles.legend}>
-        {Object.entries(STATUS_HEX).slice(0, 6).map(([status, hex]) => (
-          <View key={status} style={styles.legendRow}>
-            <View style={[styles.legendDot, { backgroundColor: hex }]} />
-            <Text variant="caption" tone="dim">{status.replace(/_/g, ' ')}</Text>
-          </View>
-        ))}
-      </View>
+      {fieldMode && (
+        <View style={styles.legend}>
+          {Object.entries(STATUS_HEX).slice(0, 6).map(([status, hex]) => (
+            <View key={status} style={styles.legendRow}>
+              <View style={[styles.legendDot, { backgroundColor: hex }]} />
+              <Text variant="caption" tone="dim">{status.replace(/_/g, ' ')}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <LeadSheet
         lead={selectedLead}
