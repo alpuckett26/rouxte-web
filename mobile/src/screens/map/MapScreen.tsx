@@ -485,6 +485,27 @@ export default function MapScreen() {
           <View style={styles.zoomHint}><Text variant="caption" tone="dim">Zoom in to see AT&T coverage</Text></View>
         )}
 
+        {showAddressDots && fccCoverageQ.error && (
+          <Pressable onPress={() => fccCoverageQ.refetch()} style={[styles.zoomHint, { backgroundColor: colors.danger + '33', borderColor: colors.danger, borderWidth: 1 }]}>
+            <Text variant="caption" tone="danger" weight="semibold">
+              AT&T coverage failed — tap to retry
+            </Text>
+            <Text variant="caption" tone="dim" style={{ fontSize: 10, marginTop: 2 }}>
+              {String((fccCoverageQ.error as Error)?.message ?? 'unknown error').slice(0, 80)}
+            </Text>
+          </Pressable>
+        )}
+        {showAddressDots && fccCoverageQ.isFetching && !fccCoverageQ.data && (
+          <View style={styles.zoomHint}>
+            <Text variant="caption" tone="dim">Loading AT&T coverage…</Text>
+          </View>
+        )}
+        {showAddressDots && !fccCoverageQ.isFetching && !fccCoverageQ.error && fccCoverageQ.data && (fccCoverageQ.data.features ?? []).length === 0 && zoom >= 10 && (
+          <View style={styles.zoomHint}>
+            <Text variant="caption" tone="dim">No AT&T addresses in this view</Text>
+          </View>
+        )}
+
         {fieldMode && (
           <View style={{ marginTop: 6, alignItems: 'center', gap: 4 }}>
             <StatsBar
