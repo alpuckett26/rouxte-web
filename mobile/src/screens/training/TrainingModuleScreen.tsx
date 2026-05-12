@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { trainingApi } from '@/api/training';
-import { Text, Card, Button } from '@/components/ui';
+import { Screen, Text, Card, Button, Badge, Skeleton } from '@/components/ui';
 import { colors } from '@/lib/colors';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MoreStackParamList } from '@/types';
@@ -11,51 +11,77 @@ type Props = NativeStackScreenProps<MoreStackParamList, 'TrainingModule'>;
 
 export default function TrainingModuleScreen({ route, navigation }: Props) {
   const { moduleId } = route.params;
-  const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['training', moduleId], queryFn: () => trainingApi.get(moduleId) });
+  const q = useQuery({ queryKey: ['training-doc', moduleId], queryFn: () => trainingApi.doc(moduleId) });
 
-  const startMutation = useMutation({
-    mutationFn: () => trainingApi.setProgress(moduleId, 'in_progress'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['training'] }),
-  });
-
-  React.useEffect(() => {
-    if (q.data?.progress?.status === 'available') {
-      startMutation.mutate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q.data?.progress?.status]);
-
-  const module = q.data?.module;
-
-  if (!module) {
+  if (q.isLoading) {
     return (
-      <View style={styles.center}>
-        <Text tone="dim">{q.isLoading ? 'Loading…' : 'Module not found.'}</Text>
-      </View>
+      <Screen>
+        <Skeleton height={28} width="60%" style={{ marginBottom: 16 }} />
+        <Skeleton height={200} borderRadius={12} />
+      </Screen>
     );
   }
 
-  return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: 16 }}>
-      <Text variant="title" weight="bold">{module.title}</Text>
-      {module.description && <Text tone="dim" style={{ marginTop: 6 }}>{module.description}</Text>}
-
-      {module.content_md && (
-        <Card style={{ marginTop: 18 }}>
-          <Text style={{ lineHeight: 22 }}>{module.content_md}</Text>
+  if (q.error || !q.data) {
+    return (
+      <Screen>
+        <Card style={{ alignItems: 'center' }}>
+          <Text tone="danger">Failed to load module.</Text>
         </Card>
-      )}
+      </Screen>
+    );
+  }
 
-      <Button
-        title="Take quiz"
-        onPress={() => navigation.navigate('TrainingQuiz', { moduleId })}
-        style={{ marginTop: 24 }}
-      />
-    </ScrollView>
+  const doc = q.data.data;
+  const progress = q.data.progress;
+  const passed = progress?.quiz_passed === true;
+  const attempts = progress?.quiz_attempts ?? 0;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <Text variant="title" weight="bold">{doc.title}</Text>
+            {attempts > 0 && (
+              <Text variant="caption" tone="dim" style={{ marginTop: 4 }}>
+                {attempts} quiz attempt{attempts === 1 ? '' : 's'}
+              </Text>
+            )}
+          </View>
+          {passed && <Badge label="Passed" color="green" dot />}
+        </View>
+
+        <Card style={{ marginTop: 16 }}>
+          {doc.content ? (
+            <Text style={{ lineHeight: 22 }}>{doc.content}</Text>
+          ) : (
+            <Text tone="dim">This module has no content yet.</Text>
+          )}
+        </Card>
+
+        <Text variant="caption" tone="mute" style={{ marginTop: 12, textAlign: 'center' }}>
+          Read through the material, then take the quiz. You need 80% or better to pass.
+        </Text>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Button
+          title={passed ? 'Retake Quiz' : 'Take Quiz'}
+          onPress={() => navigation.navigate('TrainingQuiz', { moduleId })}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  footer: {
+    position: 'absolute',
+    left: 0, right: 0, bottom: 0,
+    padding: 12, paddingBottom: 24,
+    backgroundColor: colors.bg + 'f0',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
 });
