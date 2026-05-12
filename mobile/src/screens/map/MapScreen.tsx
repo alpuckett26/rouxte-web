@@ -772,29 +772,17 @@ function CaptureLeadModal({ coord, onClose, onCreated }: {
         {address || (addressLoading ? 'Looking up address…' : 'Drop a pin to capture')}
       </Text>
 
-      <View style={{ marginBottom: 12 }}>
+      <View style={{ marginBottom: 16 }}>
         {attStatus === 'checking' && <Text variant="caption" tone="dim">Checking AT&T availability…</Text>}
         {attStatus === 'available' && <Badge label="✓ AT&T Fiber available" color="green" dot />}
         {attStatus === 'unavailable' && <Badge label="No AT&T fiber here" color="gray" dot />}
       </View>
 
-      {/* Edit affordance — small, secondary. Most reps won't need to edit. */}
-      <Input
-        label="Edit address (optional)"
-        value={address}
-        onChangeText={setAddress}
-        placeholder="123 Main St, Houston TX"
-        autoComplete="street-address"
-        multiline
-        numberOfLines={2}
-        style={{ marginBottom: 12 }}
-      />
-
       <Button
         title="Save lead"
         onPress={() => create.mutate()}
         loading={create.isPending}
-        disabled={!address.trim()}
+        disabled={!address.trim() || addressLoading}
       />
     </Modal>
   );
