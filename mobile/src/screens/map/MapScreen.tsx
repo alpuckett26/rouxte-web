@@ -758,22 +758,36 @@ function CaptureLeadModal({ coord, onClose, onCreated }: {
 
   if (!coord) return null;
   return (
-    <Modal visible onClose={onClose} title="Capture lead at this location">
-      <Text variant="caption" tone="dim" style={{ marginBottom: 8 }}>
-        {coord.lat.toFixed(5)}, {coord.lng.toFixed(5)}
+    <Modal visible onClose={onClose} title="New lead">
+      {/* Address as the prominent heading — starts with the street so the
+          rep sees what matters first, wraps if long. The lat/lng row was
+          removed (no user value). */}
+      <Text
+        variant="title"
+        weight="semibold"
+        numberOfLines={3}
+        ellipsizeMode="tail"
+        style={{ marginBottom: 10 }}
+      >
+        {address || (addressLoading ? 'Looking up address…' : 'Drop a pin to capture')}
       </Text>
 
-      {attStatus === 'checking' && <Text variant="caption" tone="dim">Checking AT&T availability…</Text>}
-      {attStatus === 'available' && <Badge label="✓ AT&T Fiber available" color="green" dot />}
-      {attStatus === 'unavailable' && <Badge label="No AT&T fiber here" color="gray" dot />}
+      <View style={{ marginBottom: 12 }}>
+        {attStatus === 'checking' && <Text variant="caption" tone="dim">Checking AT&T availability…</Text>}
+        {attStatus === 'available' && <Badge label="✓ AT&T Fiber available" color="green" dot />}
+        {attStatus === 'unavailable' && <Badge label="No AT&T fiber here" color="gray" dot />}
+      </View>
 
+      {/* Edit affordance — small, secondary. Most reps won't need to edit. */}
       <Input
-        label="Address"
+        label="Edit address (optional)"
         value={address}
         onChangeText={setAddress}
-        placeholder={addressLoading ? 'Looking up address…' : '123 Main St, Houston TX'}
+        placeholder="123 Main St, Houston TX"
         autoComplete="street-address"
-        style={{ marginTop: 12 }}
+        multiline
+        numberOfLines={2}
+        style={{ marginBottom: 12 }}
       />
 
       <Button
