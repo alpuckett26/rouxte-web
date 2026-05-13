@@ -30,14 +30,15 @@ export interface OrgMember {
   role: 'admin' | 'sales_manager' | 'team_lead' | 'sales_rep';
 }
 
-export const managerApi = {
-  queue:       () => api.get<SalesQueueResponse>('/api/manager/sales-queue'),
-  signoff:     (logId: string, action: 'sale_verified' | 'sale_rejected', note?: string) =>
-    api.post<{ ok: true }>(`/api/manager/sales-queue/${logId}`, { action, note }),
-  orgMembers:  () => api.get<{ data: OrgMember[] }>('/api/manager/org-members'),
-  myTeam:      () => api.get<{ data: MyTeamResponse | null; message?: string }>('/api/manager/my-team'),
-  teams:       () => api.get<{ data: Array<{ id: string; name: string; member_count: number }> }>('/api/manager/teams'),
-};
+export interface TeamWithStats {
+  id: string;
+  name: string;
+  tier: number;
+  created_at: string;
+  member_count: number;
+  leads_count: number;
+  sales_this_month: number;
+}
 
 export interface TeamMemberStats {
   user_id: string;
@@ -52,3 +53,14 @@ export interface MyTeamResponse {
   team: { id: string; name: string; tier: number };
   members: TeamMemberStats[];
 }
+
+export const managerApi = {
+  queue:       () => api.get<SalesQueueResponse>('/api/manager/sales-queue'),
+  signoff:     (logId: string, action: 'sale_verified' | 'sale_rejected', note?: string) =>
+    api.post<{ ok: true }>(`/api/manager/sales-queue/${logId}`, { action, note }),
+  orgMembers:  () => api.get<{ data: OrgMember[] }>('/api/manager/org-members'),
+  myTeam:      () => api.get<{ data: MyTeamResponse | null; message?: string }>('/api/manager/my-team'),
+  teams:       () => api.get<{ data: TeamWithStats[] }>('/api/manager/teams'),
+  createTeam:  (name: string) =>
+    api.post<{ data: TeamWithStats }>('/api/manager/teams', { name }),
+};
