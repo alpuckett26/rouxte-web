@@ -68,8 +68,17 @@ export async function POST(request: NextRequest) {
   // Build a unique Daily room slug: org-prefix + timestamp
   const slug = `rouxte-${profile.org_id.slice(0, 8)}-${Date.now()}`;
 
-  // Create room on Daily — expires in 8h to cover long scheduled meetings
-  const room = await createDailyRoom({ name: slug, expiresIn: 8 * 60 * 60 });
+  // Create room on Daily — expires in 8h to cover long scheduled meetings.
+  // Surface Daily's actual error so the mobile client can show something
+  // useful instead of a generic 500.
+  let room: Awaited<ReturnType<typeof createDailyRoom>>;
+  try {
+    room = await createDailyRoom({ name: slug, expiresIn: 8 * 60 * 60 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error creating Daily room";
+    console.error("[/api/meetings POST] Daily room creation failed:", msg);
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 
   const { data: meeting, error } = await admin
     .from("meetings")

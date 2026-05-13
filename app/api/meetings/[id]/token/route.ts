@@ -33,12 +33,20 @@ export async function POST(_req: NextRequest, { params }: Params) {
   const isOwner = meeting.created_by === user.id || ["admin", "sales_manager"].includes(profile.role);
   const userName = profile.full_name || user.email?.split("@")[0] || "Guest";
 
-  const { token } = await createDailyToken({
-    roomName: meeting.room_name,
-    userId:   user.id,
-    userName,
-    isOwner,
-  });
+  let token: string;
+  try {
+    const res = await createDailyToken({
+      roomName: meeting.room_name,
+      userId:   user.id,
+      userName,
+      isOwner,
+    });
+    token = res.token;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error creating Daily token";
+    console.error("[/api/meetings/:id/token POST] Daily token creation failed:", msg);
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 
   // Mark meeting as live when someone joins (in case it was waiting)
   if (meeting.status === "waiting") {
