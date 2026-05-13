@@ -36,15 +36,51 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .maybeSingle();
   if (!period) return NextResponse.json({ error: "Pay period not found" }, { status: 404 });
 
+  // Org override rates — team_lead and sales_manager get a % of every team
+  // sale. Defaults are 2% / 4% set via the orgs columns; managers can tune
+  // them in the Compensation screen.
+  const { data: orgRow } = await admin
+    .from("orgs")
+    .select("team_lead_override_pct, manager_override_pct")
+    .eq("id", callerProfile.org_id)
+    .maybeSingle();
+  const teamLeadOverridePct = Number(orgRow?.team_lead_override_pct ?? 0);
+  const managerOverridePct  = Number(orgRow?.manager_override_pct  ?? 0);
+
   const periodStart = new Date(`${period.period_start}T00:00:00Z`);
   const periodEnd   = new Date(`${period.period_end}T23:59:59Z`);
 
   // Get all reps in org
   const { data: reps } = await admin
     .from("user_profiles")
-    .select("user_id, full_name, sales_tier_id, hourly_rate, total_sales_count, trial_started_at, graduated_at, standing")
+    .select("user_id, full_name, sales_tier_id, hourly_rate, total_sales_count, trial_started_at, graduated_at, standing, team_id")
     .eq("org_id", callerProfile.org_id)
     .eq("role", "sales_rep");
+
+  // Team-membership lookup — used by the override passes below.
+  // Each team_members row is a (team_id, user_id, role) tuple. A sales_manager
+  // is paid override only on sales in teams where they have a 'sales_manager'
+  // membership row (per-team assignment, per the locked-in design).
+  const { data: teamMemberships } = await admin
+    .from("team_members")
+    .select("team_id, user_id, role, teams!inner(org_id, name)")
+    .eq("teams.org_id", callerProfile.org_id);
+
+  // team_id → user_id of the team_lead (one per team)
+  const teamLeadByTeam: Record<string, string> = {};
+  // team_id → array of sales_manager user_ids
+  const managersByTeam: Record<string, string[]> = {};
+  // team_id → team name (for line item labels)
+  const teamNameById: Record<string, string> = {};
+  for (const tm of teamMemberships ?? []) {
+    const teamRel = (tm as { teams?: { name?: string } }).teams;
+    if (teamRel?.name) teamNameById[tm.team_id] = teamRel.name;
+    if (tm.role === "team_lead") teamLeadByTeam[tm.team_id] = tm.user_id;
+    if (tm.role === "sales_manager") {
+      if (!managersByTeam[tm.team_id]) managersByTeam[tm.team_id] = [];
+      managersByTeam[tm.team_id]!.push(tm.user_id);
+    }
+  }
 
   if (!reps?.length) return NextResponse.json({ stubs_generated: 0 });
 
@@ -213,6 +249,118 @@ export async function POST(_req: NextRequest, { params }: Params) {
           .in("id", repChargebacks.map((c) => c.id));
       }
     }
+  }
+
+  // ─── Override commission pass ─────────────────────────────────────────────
+  // Build a map of repId → user_profile (with team_id) for fast lookup
+  const repsById: Record<string, { team_id: string | null; full_name: string | null }> =
+    Object.fromEntries(reps.map((r) => [r.user_id, { team_id: r.team_id, full_name: r.full_name }]));
+
+  // Aggregate override earnings: recipientUserId → { lineItems[], total, role, sourceTeams: Set }
+  interface OverrideAgg {
+    role: "team_lead" | "sales_manager";
+    lineItems: object[];
+    total: number;
+    salesCount: number;
+  }
+  const overrideAggs: Record<string, OverrideAgg> = {};
+
+  if (teamLeadOverridePct > 0 || managerOverridePct > 0) {
+    for (const log of saleLogs ?? []) {
+      const repId = log.actor_id;
+      const teamId = repsById[repId]?.team_id;
+      if (!teamId) continue; // rep not on a team → no overrides
+      const payout = Number((log.metadata as Record<string, unknown> | null | undefined)?.payout_amount) || 0;
+      if (payout <= 0) continue;
+
+      // Team lead override
+      const teamLeadId = teamLeadByTeam[teamId];
+      if (teamLeadId && teamLeadId !== repId && teamLeadOverridePct > 0) {
+        const amount = (teamLeadOverridePct / 100) * payout;
+        const agg = overrideAggs[teamLeadId] ?? { role: "team_lead", lineItems: [], total: 0, salesCount: 0 };
+        agg.lineItems.push({
+          type: "team_lead_override",
+          log_id: log.id,
+          lead_id: log.lead_id,
+          date: log.ts,
+          rep_id: repId,
+          rep_name: repsById[repId]?.full_name ?? null,
+          team_id: teamId,
+          team_name: teamNameById[teamId] ?? null,
+          payout_amount: payout,
+          override_pct: teamLeadOverridePct,
+          override_amount: amount,
+        });
+        agg.total += amount;
+        agg.salesCount += 1;
+        overrideAggs[teamLeadId] = agg;
+      }
+
+      // Sales-manager override(s) — assigned per-team
+      if (managerOverridePct > 0) {
+        const managers = managersByTeam[teamId] ?? [];
+        for (const mgrId of managers) {
+          if (mgrId === repId) continue; // don't pay self-override on own sale
+          const amount = (managerOverridePct / 100) * payout;
+          const agg = overrideAggs[mgrId] ?? { role: "sales_manager", lineItems: [], total: 0, salesCount: 0 };
+          agg.lineItems.push({
+            type: "manager_override",
+            log_id: log.id,
+            lead_id: log.lead_id,
+            date: log.ts,
+            rep_id: repId,
+            rep_name: repsById[repId]?.full_name ?? null,
+            team_id: teamId,
+            team_name: teamNameById[teamId] ?? null,
+            payout_amount: payout,
+            override_pct: managerOverridePct,
+            override_amount: amount,
+          });
+          agg.total += amount;
+          agg.salesCount += 1;
+          overrideAggs[mgrId] = agg;
+        }
+      }
+    }
+  }
+
+  // Persist override stubs (one per recipient). Use commission pay_type;
+  // sales_count counts overrides earned, not own sales.
+  for (const [recipientId, agg] of Object.entries(overrideAggs)) {
+    const { data: recipientProfile } = await admin
+      .from("user_profiles")
+      .select("full_name")
+      .eq("user_id", recipientId)
+      .maybeSingle();
+
+    const { data: stub } = await admin
+      .from("paystubs")
+      .upsert(
+        {
+          org_id: callerProfile.org_id,
+          user_id: recipientId,
+          pay_period_id: periodId,
+          period_start: period.period_start,
+          period_end: period.period_end,
+          pay_type: "commission",
+          hourly_rate: null,
+          hours_worked: null,
+          gross_commission: agg.total,
+          chargebacks: 0,
+          bonus: 0,
+          net_pay: agg.total,
+          line_items: agg.lineItems,
+          sales_count: agg.salesCount,
+          status: "pending_approval",
+          manager_notes: agg.role === "team_lead"
+            ? `Team-lead override @ ${teamLeadOverridePct}% — paid by ${(recipientProfile?.full_name ?? "team lead")}'s team sales`
+            : `Sales-manager override @ ${managerOverridePct}% — paid by assigned-team sales`,
+        },
+        { onConflict: "user_id,pay_period_id" }
+      )
+      .select("id")
+      .single();
+    if (stub) generatedStubIds.push(stub.id);
   }
 
   // Mark period as closed

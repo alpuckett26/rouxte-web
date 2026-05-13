@@ -15,4 +15,8 @@ export interface MeResponse {
 export const meApi = {
   get:        () => api.get<MeResponse>('/api/me'),
   updatePhone: (phone: string) => api.patch<{ ok: true }>('/api/me/phone', { phone }),
+  registerPushToken: (token: string, platform: 'android' | 'ios', app_version?: string) =>
+    api.post<{ ok: true }>('/api/me/push-token', { token, platform, app_version }),
+  unregisterPushToken: (token: string) =>
+    api.delete<{ ok: true }>('/api/me/push-token', { body: { token } }),
 };

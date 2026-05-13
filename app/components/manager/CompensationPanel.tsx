@@ -27,6 +27,14 @@ export default function CompensationPanel() {
   const [tierEdits, setTierEdits] = useState<Record<string, string>>({});
   const [tierSaving, setTierSaving] = useState(false);
 
+  // Override rates (org-wide) — team_lead and sales_manager get a % of every
+  // sale made by reps under their team. Editing requires admin role.
+  const [teamLeadPct, setTeamLeadPct] = useState("");
+  const [managerPct,  setManagerPct]  = useState("");
+  const [overrideLoading, setOverrideLoading] = useState(true);
+  const [overrideSaving,  setOverrideSaving]  = useState(false);
+  const [overrideError,   setOverrideError]   = useState("");
+
   const fetchPackages = useCallback(async () => {
     const res = await fetch("/api/packages");
     const d = await res.json();
@@ -45,7 +53,34 @@ export default function CompensationPanel() {
     setLoadingTiers(false);
   }, []);
 
-  useEffect(() => { fetchPackages(); fetchTiers(); }, [fetchPackages, fetchTiers]);
+  const fetchOverrides = useCallback(async () => {
+    const res = await fetch("/api/org/settings");
+    if (res.ok) {
+      const d = await res.json();
+      setTeamLeadPct(String(d.data?.team_lead_override_pct ?? "0"));
+      setManagerPct(String(d.data?.manager_override_pct ?? "0"));
+    }
+    setOverrideLoading(false);
+  }, []);
+
+  async function saveOverrides() {
+    setOverrideError(""); setOverrideSaving(true);
+    const res = await fetch("/api/org/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        team_lead_override_pct: parseFloat(teamLeadPct || "0"),
+        manager_override_pct:   parseFloat(managerPct  || "0"),
+      }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setOverrideError(d.error ?? `Save failed (${res.status})`);
+    }
+    setOverrideSaving(false);
+  }
+
+  useEffect(() => { fetchPackages(); fetchTiers(); fetchOverrides(); }, [fetchPackages, fetchTiers, fetchOverrides]);
 
   async function createPackage() {
     if (!pkgName.trim() || !pkgPayout) { setPkgError("Name and payout are required"); return; }
@@ -131,6 +166,73 @@ export default function CompensationPanel() {
               })}
               <div className="pt-2 border-t border-gray-100 flex justify-end">
                 <Button size="sm" loading={tierSaving} onClick={saveTiers}>Save Tiers</Button>
+              </div>
+            </div>
+          </Card>
+        )}
+      </section>
+
+      {/* ── Override Commission ── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-800">Override Commission</h2>
+            <p className="text-xs text-gray-500">
+              % of payout earned by team leads + sales managers on team sales. Paid on top of the rep's commission, every period.
+            </p>
+          </div>
+        </div>
+        {overrideLoading ? (
+          <div className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
+        ) : (
+          <Card padding="md">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-32 shrink-0">
+                  <p className="text-sm font-semibold text-gray-900">Team Lead</p>
+                  <p className="text-xs text-gray-500">Per team sale</p>
+                </div>
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="number" min={0} max={100} step={0.25}
+                    value={teamLeadPct}
+                    onChange={(e) => setTeamLeadPct(e.target.value)}
+                    className="w-20 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-sm text-gray-500">% of payout</span>
+                  <div className="flex gap-3 ml-4 text-xs text-gray-400">
+                    {[500, 350, 200].map((amt) => (
+                      <span key={amt}>${amt} → <span className="font-medium text-gray-700">${((parseFloat(teamLeadPct || "0") / 100) * amt).toFixed(2)}</span></span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-32 shrink-0">
+                  <p className="text-sm font-semibold text-gray-900">Sales Manager</p>
+                  <p className="text-xs text-gray-500">Per sale on assigned teams</p>
+                </div>
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="number" min={0} max={100} step={0.25}
+                    value={managerPct}
+                    onChange={(e) => setManagerPct(e.target.value)}
+                    className="w-20 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-sm text-gray-500">% of payout</span>
+                  <div className="flex gap-3 ml-4 text-xs text-gray-400">
+                    {[500, 350, 200].map((amt) => (
+                      <span key={amt}>${amt} → <span className="font-medium text-gray-700">${((parseFloat(managerPct || "0") / 100) * amt).toFixed(2)}</span></span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {overrideError && <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-600">{overrideError}</p>}
+              <p className="text-xs text-gray-500 -mb-1">
+                Sales managers earn override only on teams they're assigned to. Assign them via Manage → People → set role on a team.
+              </p>
+              <div className="pt-2 border-t border-gray-100 flex justify-end">
+                <Button size="sm" loading={overrideSaving} onClick={saveOverrides}>Save Overrides</Button>
               </div>
             </div>
           </Card>

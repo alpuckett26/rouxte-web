@@ -13,7 +13,7 @@ export async function GET() {
   if (!profile) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { data: org } = await admin.from("orgs")
-    .select("id, name, provider_name, service_type, provider_color")
+    .select("id, name, provider_name, service_type, provider_color, team_lead_override_pct, manager_override_pct")
     .eq("id", profile.org_id).maybeSingle();
 
   return NextResponse.json({ data: org });
@@ -33,9 +33,23 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const allowed = ["name", "provider_name", "service_type", "provider_color"];
+  const allowed = [
+    "name", "provider_name", "service_type", "provider_color",
+    "team_lead_override_pct", "manager_override_pct",
+  ];
   const update = Object.fromEntries(
-    Object.entries(body).filter(([k]) => allowed.includes(k))
+    Object.entries(body)
+      .filter(([k]) => allowed.includes(k))
+      .map(([k, v]) => {
+        // Sanitize the two numeric overrides
+        if (k === "team_lead_override_pct" || k === "manager_override_pct") {
+          const n = Number(v);
+          if (Number.isFinite(n) && n >= 0 && n <= 100) return [k, n];
+          return [k, null];
+        }
+        return [k, v];
+      })
+      .filter(([, v]) => v !== null)
   );
 
   const { data, error } = await admin.from("orgs")
