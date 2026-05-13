@@ -54,6 +54,20 @@ export interface MyTeamResponse {
   members: TeamMemberStats[];
 }
 
+export interface FunnelStats {
+  rep_id: string;
+  full_name: string;
+  slug: string;
+  funnel_name: string;
+  active: boolean;
+  scan_count: number;
+  total_submissions: number;
+  hot_count: number;
+  warm_count: number;
+  cold_count: number;
+  last_submission_at: string | null;
+}
+
 export const managerApi = {
   queue:       () => api.get<SalesQueueResponse>('/api/manager/sales-queue'),
   signoff:     (logId: string, action: 'sale_verified' | 'sale_rejected', note?: string) =>
@@ -63,4 +77,5 @@ export const managerApi = {
   teams:       () => api.get<{ data: TeamWithStats[] }>('/api/manager/teams'),
   createTeam:  (name: string) =>
     api.post<{ data: TeamWithStats }>('/api/manager/teams', { name }),
+  funnels:     () => api.get<{ data: FunnelStats[] }>('/api/manager/funnels'),
 };
