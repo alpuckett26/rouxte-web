@@ -33,6 +33,9 @@ export async function createDailyRoom(opts: {
   enableRecording?: boolean;
 }): Promise<DailyRoom> {
   const exp = Math.floor(Date.now() / 1000) + (opts.expiresIn ?? 4 * 60 * 60);
+  // Only forward max_participants when the caller explicitly sets it — Daily
+  // rejects values above the account plan's cap, so the safest default is to
+  // let Daily apply the plan default rather than hardcode 50.
   const body: Record<string, unknown> = {
     name: opts.name,
     privacy: "private",
@@ -42,7 +45,7 @@ export async function createDailyRoom(opts: {
       enable_chat: true,
       start_audio_off: false,
       start_video_off: false,
-      max_participants: opts.maxParticipants ?? 50,
+      ...(opts.maxParticipants !== undefined ? { max_participants: opts.maxParticipants } : {}),
       ...(opts.enableRecording ? { enable_recording: "cloud" } : {}),
     },
   };
