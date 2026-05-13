@@ -59,6 +59,7 @@ export type MoreStackParamList = {
   Card: undefined;
   Store: undefined;
   Meetings: undefined;
+  MeetingRoom: { id: string; title?: string };
   Manager: undefined;
   Payroll: undefined;
   Settings: undefined;

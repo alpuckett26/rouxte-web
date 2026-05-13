@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Linking, Alert, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView, Pressable } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { meetingsApi, type Meeting } from '@/api/meetings';
 import { Screen, Text, Card, Button, Badge, Skeleton, ErrorBanner } from '@/components/ui';
 import { colors } from '@/lib/colors';
+import type { MoreStackParamList } from '@/types';
+
+type Nav = NativeStackNavigationProp<MoreStackParamList, 'Meetings'>;
 
 function fmtTime(iso: string | null): string {
   if (!iso) return '';
@@ -18,7 +23,7 @@ function fmtTime(iso: string | null): string {
 
 export default function MeetingsScreen() {
   const qc = useQueryClient();
-  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const navigation = useNavigation<Nav>();
   const [creating, setCreating] = useState(false);
 
   const q = useQuery({
@@ -31,32 +36,15 @@ export default function MeetingsScreen() {
     mutationFn: () => meetingsApi.create('Quick meeting', 'instant'),
     onMutate:   () => setCreating(true),
     onSettled:  () => setCreating(false),
-    onSuccess:  async (res) => {
+    onSuccess:  (res) => {
       qc.invalidateQueries({ queryKey: ['meetings'] });
-      await join(res.data.id);
+      join(res.data.id, res.data.title);
     },
     onError: (e: Error) => Alert.alert('Could not create meeting', e.message),
   });
 
-  async function join(id: string) {
-    setJoiningId(id);
-    try {
-      const { token, room_url } = await meetingsApi.joinToken(id);
-      // Daily Prebuilt accepts the meeting token as ?t=<jwt>, then handles
-      // camera/mic prompts and the call UI itself.
-      const sep = room_url.includes('?') ? '&' : '?';
-      const joinUrl = `${room_url}${sep}t=${encodeURIComponent(token)}`;
-      const ok = await Linking.canOpenURL(joinUrl);
-      if (!ok) {
-        Alert.alert('Cannot open meeting', 'No browser available to open the meeting link.');
-        return;
-      }
-      await Linking.openURL(joinUrl);
-    } catch (e) {
-      Alert.alert('Could not join meeting', (e as Error).message);
-    } finally {
-      setJoiningId(null);
-    }
+  function join(id: string, title?: string) {
+    navigation.navigate('MeetingRoom', { id, title });
   }
 
   const active = q.data?.data?.active ?? [];
@@ -68,7 +56,7 @@ export default function MeetingsScreen() {
         <View style={{ flex: 1 }}>
           <Text variant="title" weight="bold">Meetings</Text>
           <Text variant="caption" tone="dim" style={{ marginTop: 2 }}>
-            In-app video powered by Daily.co. Opens in your browser.
+            In-app video powered by Daily.co.
           </Text>
         </View>
         <Button
@@ -91,7 +79,7 @@ export default function MeetingsScreen() {
           </Card>
         ) : (
           active.map((m) => (
-            <Row key={m.id} meeting={m} joining={joiningId === m.id} onJoin={() => join(m.id)} />
+            <Row key={m.id} meeting={m} joining={false} onJoin={() => join(m.id, m.title)} />
           ))
         )}
 
