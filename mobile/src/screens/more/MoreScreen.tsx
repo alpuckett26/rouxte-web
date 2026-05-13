@@ -45,12 +45,12 @@ export default function MoreScreen({ navigation }: Props) {
       <Row label="Resource library"  onPress={() => navigation.navigate('Resources')} />
       <Row label="Meetings"          description="In-app video" onPress={() => navigation.navigate('Meetings')} />
       <Row label="Store"             description="Gear + badges" onPress={() => navigation.navigate('Store')} />
+      <Row label="Payroll"           description="Your pay stubs" onPress={() => navigation.navigate('Payroll')} />
 
       {showManager && (
         <>
           <Text variant="caption" tone="dim" style={styles.section}>MANAGE</Text>
           <Row label="Manager" description={showFullManager ? 'Queue, team, funnels' : 'Team view'} onPress={() => navigation.navigate('Manager')} />
-          {showFullManager && <Row label="Payroll" description="Periods + stubs" onPress={() => navigation.navigate('Payroll')} />}
         </>
       )}
 
