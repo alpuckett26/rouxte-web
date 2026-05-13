@@ -17,6 +17,7 @@ type Props = NativeStackScreenProps<LeadsStackParamList, 'LeadsList'>;
 
 const PAGE_SIZE = 100;
 type CarrierFilter = 'all' | 'att';
+type Scope = 'mine' | 'org';
 
 export default function LeadsScreen({ navigation }: Props) {
   const { profile } = useProfile();
@@ -26,16 +27,19 @@ export default function LeadsScreen({ navigation }: Props) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [carrierFilter, setCarrierFilter] = useState<CarrierFilter>('all');
+  // Manager-only scope toggle. Reps always see their own leads via RLS.
+  const [scope, setScope] = useState<Scope>('org');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
 
   const q = useQuery({
-    queryKey: ['leads', { statusFilter, carrierFilter, page }],
+    queryKey: ['leads', { statusFilter, carrierFilter, scope, page, userId: profile?.user_id }],
     queryFn:  () => leadsApi.list({
       ...(statusFilter !== 'all' && { status: statusFilter }),
       ...(carrierFilter === 'att' && { carrier: 'att' }),
+      ...(isManager && scope === 'mine' && profile?.user_id && { assigned_to: profile.user_id }),
       page,
       page_size: PAGE_SIZE,
     }),
@@ -85,6 +89,9 @@ export default function LeadsScreen({ navigation }: Props) {
         onStatusFilter={(s) => { setStatusFilter(s); setPage(1); }}
         carrierFilter={carrierFilter}
         onCarrierFilter={(c) => { setCarrierFilter(c); setPage(1); }}
+        scope={scope}
+        onScope={(s) => { setScope(s); setPage(1); }}
+        showScope={isManager}
       />
 
       {q.isLoading ? (
@@ -175,12 +182,30 @@ function Header({
 
 function FilterBar({
   statusFilter, onStatusFilter, carrierFilter, onCarrierFilter,
+  scope, onScope, showScope,
 }: {
   statusFilter: LeadStatus | 'all'; onStatusFilter: (s: LeadStatus | 'all') => void;
   carrierFilter: CarrierFilter; onCarrierFilter: (c: CarrierFilter) => void;
+  scope: Scope; onScope: (s: Scope) => void; showScope: boolean;
 }) {
   return (
     <View style={styles.filterBar}>
+      {showScope && (
+        <View style={styles.carrierRow}>
+          <Pressable
+            onPress={() => onScope('org')}
+            style={[styles.chip, styles.chipSmall, scope === 'org' && styles.chipActive]}
+          >
+            <Text variant="caption" tone={scope === 'org' ? 'default' : 'dim'}>All org</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onScope('mine')}
+            style={[styles.chip, styles.chipSmall, scope === 'mine' && styles.chipActive]}
+          >
+            <Text variant="caption" tone={scope === 'mine' ? 'default' : 'dim'}>Assigned to me</Text>
+          </Pressable>
+        </View>
+      )}
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
