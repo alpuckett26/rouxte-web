@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getTier } from "@/lib/billing/tiers";
 
 interface OrgDetail {
   org: {
@@ -112,16 +113,24 @@ export default function AdminOrgDetailClient({ orgId }: { orgId: string }) {
       {/* Subscription card */}
       <Section title="Subscription">
         {data.subscription ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Stat label="Status" value={data.subscription.status} />
-            <Stat label="Tier" value={data.subscription.tier_key} />
-            <Stat label="Trial ends" value={fmtDate(data.subscription.trial_ends_at)} />
-            <Stat label="Next billing" value={data.subscription.current_period_end ? fmtDate(data.subscription.current_period_end) : "—"} />
-            <Stat label="Card on file" value={data.subscription.square_card_id ? "Yes" : "No"} />
-            <Stat label="Failed charges" value={String(data.subscription.failed_charge_count ?? 0)} />
-            <Stat label="Last attempt" value={data.subscription.last_charge_attempt_at ? fmtDate(data.subscription.last_charge_attempt_at) : "Never"} />
-            <Stat label="Billing email" value={data.subscription.billing_email ?? "—"} />
-          </div>
+          <>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Stat label="Status" value={data.subscription.status} />
+              <Stat label="Tier" value={data.subscription.tier_key} />
+              <Stat label="Trial ends" value={fmtDate(data.subscription.trial_ends_at)} />
+              <Stat label="Next billing" value={data.subscription.current_period_end ? fmtDate(data.subscription.current_period_end) : "—"} />
+              <Stat label="Card on file" value={data.subscription.square_card_id ? "Yes" : "No"} />
+              <Stat label="Failed charges" value={String(data.subscription.failed_charge_count ?? 0)} />
+              <Stat label="Last attempt" value={data.subscription.last_charge_attempt_at ? fmtDate(data.subscription.last_charge_attempt_at) : "Never"} />
+              <Stat label="Billing email" value={data.subscription.billing_email ?? "—"} />
+            </div>
+            <ForceRenewalButton
+              orgId={orgId}
+              tierKey={data.subscription.tier_key}
+              userCount={data.users.length}
+              hasCard={!!data.subscription.square_card_id}
+            />
+          </>
         ) : (
           <div className="text-sm text-gray-500">No subscription record.</div>
         )}
@@ -323,4 +332,110 @@ function fmtDate(iso: string): string {
 }
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function ForceRenewalButton({
+  orgId, tierKey, userCount, hasCard,
+}: {
+  orgId: string;
+  tierKey: string;
+  userCount: number;
+  hasCard: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ action: string; amount_cents?: number; payment_id?: string; reason?: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const tier = getTier(tierKey);
+  const pricePerRep = tier?.monthly_price_cents ?? 0;
+  const estimatedCents = pricePerRep * userCount;
+
+  async function run() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/orgs/${orgId}/force-renewal`, { method: "POST" });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || `Renewal failed (${res.status})`);
+      setResult(j.result);
+      setConfirming(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Renewal failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 pt-5 border-t border-gray-100">
+      {!confirming && !result && (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={!hasCard || estimatedCents === 0}
+          className="text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          ⚡ Force renewal now
+        </button>
+      )}
+      {!hasCard && !result && (
+        <span className="ml-3 text-xs text-gray-500">No card on file</span>
+      )}
+
+      {confirming && !result && (
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 max-w-xl">
+          <div className="font-semibold text-red-900">Charge this org's card now?</div>
+          <div className="mt-2 text-sm text-red-800">
+            This will run the renewal engine with <code>force=true</code> against Square. Real money moves —
+            no trial, no waiting.
+          </div>
+          <div className="mt-3 rounded-lg bg-white border border-red-200 p-3 text-sm">
+            <div className="flex justify-between"><span className="text-gray-500">Tier</span><span className="font-semibold">{tier?.name ?? tierKey}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Per-rep price</span><span className="font-mono tabular-nums">${(pricePerRep / 100).toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Rep count</span><span className="font-mono tabular-nums">{userCount}</span></div>
+            <div className="flex justify-between mt-2 pt-2 border-t border-gray-100 font-bold">
+              <span>Total</span>
+              <span className="font-mono tabular-nums">${(estimatedCents / 100).toFixed(2)}</span>
+            </div>
+          </div>
+          {error && <div className="mt-3 text-sm text-red-700">{error}</div>}
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => setConfirming(false)} disabled={submitting}
+              className="text-sm font-medium text-gray-600 px-3 py-2 rounded-lg hover:bg-white">
+              Cancel
+            </button>
+            <button type="button" onClick={run} disabled={submitting}
+              className="text-sm font-bold text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg disabled:opacity-50">
+              {submitting ? "Charging…" : `Charge $${(estimatedCents / 100).toFixed(2)}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {result && (
+        <div className={[
+          "rounded-xl p-4 max-w-xl",
+          result.action === "charged" ? "bg-green-50 border border-green-200 text-green-900" :
+          result.action === "failed" || result.action === "suspended" ? "bg-red-50 border border-red-200 text-red-900" :
+          "bg-amber-50 border border-amber-200 text-amber-900",
+        ].join(" ")}>
+          <div className="font-semibold">Result: {result.action}</div>
+          {result.amount_cents !== undefined && (
+            <div className="mt-1 text-sm">
+              Amount: <span className="font-mono">${(result.amount_cents / 100).toFixed(2)}</span>
+            </div>
+          )}
+          {result.payment_id && (
+            <div className="mt-1 text-xs font-mono opacity-70">Square ID: {result.payment_id}</div>
+          )}
+          {result.reason && (
+            <div className="mt-1 text-sm">Reason: {result.reason}</div>
+          )}
+          <button type="button" onClick={() => { setResult(null); window.location.reload(); }}
+            className="mt-3 text-xs font-semibold underline">Refresh page →</button>
+        </div>
+      )}
+    </div>
+  );
 }
