@@ -157,12 +157,12 @@ function TierCard({ tier }: { tier: Tier }) {
   return (
     <div className={["relative rounded-2xl border bg-white p-6 sm:p-7 flex flex-col", ring].join(" ")}>
       {popular && !enterprise && (
-        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-xs font-semibold tracking-wide uppercase shadow`}>
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-[10px] font-semibold tracking-wider uppercase shadow whitespace-nowrap`}>
           Most popular
         </div>
       )}
       {enterprise && (
-        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-xs font-semibold tracking-wide uppercase shadow`}>
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-[10px] font-semibold tracking-wider uppercase shadow whitespace-nowrap`}>
           For master dealers
         </div>
       )}
