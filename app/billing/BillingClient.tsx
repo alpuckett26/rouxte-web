@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { TIERS, formatPriceLabel, getTier } from "@/lib/billing/tiers";
+import type { SquarePaymentMethod } from "@/lib/billing/square-sdk-types";
+
+type SquareCard = SquarePaymentMethod;
 
 interface BillingStatus {
   org_id: string;
@@ -19,19 +22,6 @@ interface BillingStatus {
   billing_email: string | null;
   billing_name: string | null;
   viewer_is_admin: boolean;
-}
-
-declare global {
-  interface Window {
-    Square?: {
-      payments: (appId: string, locationId: string) => Promise<{ card: () => Promise<SquareCard> }>;
-    };
-  }
-}
-interface SquareCard {
-  attach: (selector: string) => Promise<void>;
-  tokenize: () => Promise<{ status: "OK" | "Error"; token?: string; errors?: Array<{ message: string }> }>;
-  destroy?: () => Promise<void>;
 }
 
 const SQUARE_SDK_SANDBOX = "https://sandbox.web.squarecdn.com/v1/square.js";
