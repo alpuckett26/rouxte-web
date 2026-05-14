@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AppShell from "@/components/AppShell";
 import GettingStartedClient from "./GettingStartedClient";
 
@@ -8,7 +9,9 @@ export const metadata = {
 export default function GettingStartedPage() {
   return (
     <AppShell>
-      <GettingStartedClient />
+      <Suspense fallback={null}>
+        <GettingStartedClient />
+      </Suspense>
     </AppShell>
   );
 }
