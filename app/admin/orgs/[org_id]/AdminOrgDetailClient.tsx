@@ -197,7 +197,7 @@ export default function AdminOrgDetailClient({ orgId }: { orgId: string }) {
               {data.users.map((u) => (
                 <tr key={u.user_id} className="border-b border-gray-100">
                   <td className="py-2">{u.full_name || <span className="text-gray-400 italic">—</span>}</td>
-                  <td><RoleBadge role={u.role} /></td>
+                  <td><RoleEditor userId={u.user_id} role={u.role} /></td>
                   <td>
                     {u.onboarding_complete
                       ? <span className="text-green-700 text-xs">complete</span>
@@ -317,14 +317,62 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RoleBadge({ role }: { role: string }) {
-  const map: Record<string, string> = {
-    admin:         "bg-purple-100 text-purple-700",
-    sales_manager: "bg-blue-100 text-blue-700",
-    team_lead:     "bg-teal-100 text-teal-700",
-    sales_rep:     "bg-gray-100 text-gray-700",
-  };
-  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${map[role] ?? "bg-gray-100"}`}>{role}</span>;
+const ROLE_OPTIONS = ["admin", "sales_manager", "team_lead", "sales_rep"] as const;
+const ROLE_COLORS: Record<string, string> = {
+  admin:         "bg-purple-100 text-purple-700",
+  sales_manager: "bg-blue-100 text-blue-700",
+  team_lead:     "bg-teal-100 text-teal-700",
+  sales_rep:     "bg-gray-100 text-gray-700",
+};
+
+function RoleEditor({ userId, role }: { userId: string; role: string }) {
+  const [current, setCurrent] = useState(role);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function changeRole(next: string) {
+    if (next === current) return;
+    const previous = current;
+    setCurrent(next);
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: next }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || `Update failed (${res.status})`);
+    } catch (e) {
+      setCurrent(previous); // rollback on failure
+      setError(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <select
+        value={current}
+        onChange={(e) => changeRole(e.target.value)}
+        disabled={saving}
+        className={[
+          "rounded-full px-2 py-0.5 text-[10px] font-semibold border-0 cursor-pointer",
+          "focus:outline-none focus:ring-2 focus:ring-blue-500",
+          ROLE_COLORS[current] ?? "bg-gray-100 text-gray-700",
+          saving ? "opacity-60" : "",
+        ].join(" ")}
+      >
+        {ROLE_OPTIONS.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+      {saving && <span className="text-[10px] text-gray-400">saving…</span>}
+      {error && <span className="text-[10px] text-red-600" title={error}>!</span>}
+    </div>
+  );
 }
 
 function fmtDate(iso: string): string {
