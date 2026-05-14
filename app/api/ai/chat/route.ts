@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 const DAILY_LIMIT = 50;
 
@@ -97,9 +98,10 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (!profile) return new Response(JSON.stringify({ error: "Profile not found" }), { status: 400 });
 
-  // Rate limiting — managers/admins exempt
+  // Rate limiting — managers/admins/super-admins exempt
   const isManager = ["admin", "sales_manager", "team_lead"].includes(profile.role);
-  if (!isManager) {
+  const isSuperAdmin = isSuperAdminEmail(user.email);
+  if (!isManager && !isSuperAdmin) {
     const today = new Date().toISOString().split("T")[0];
     const { data: usage } = await admin.from("ai_usage")
       .select("prompts_used")
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   // Increment usage
-  if (!isManager) {
+  if (!isManager && !isSuperAdmin) {
     const today = new Date().toISOString().split("T")[0];
     const { data: usage } = await admin.from("ai_usage").select("id, prompts_used, total_prompts_used").eq("user_id", user.id).eq("date", today).maybeSingle();
     if (usage) {

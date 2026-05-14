@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createCustomerWithCard } from "@/lib/billing/square-subscriptions";
 import { getTier, TRIAL_DAYS } from "@/lib/billing/tiers";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 /**
  * POST /api/billing/start-trial
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
   if (!profile?.org_id) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
-  if (profile.role !== "admin") {
+  if (profile.role !== "admin" && !isSuperAdminEmail(user.email)) {
     return NextResponse.json(
       { error: "Only org admins can start a trial" },
       { status: 403 },

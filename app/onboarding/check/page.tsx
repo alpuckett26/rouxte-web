@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 // Server component: reads onboarding_step and redirects to the right screen
 export default async function OnboardingCheckPage() {
@@ -7,6 +8,11 @@ export default async function OnboardingCheckPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth");
+
+  // Super-admins (platform operators) skip onboarding entirely
+  if (isSuperAdminEmail(user.email)) {
+    redirect("/dashboard");
+  }
 
   const { data: profile } = await supabase
     .from("user_profiles")

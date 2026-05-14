@@ -10,6 +10,7 @@ export interface ProfileData {
   full_name: string | null;
   org_id: string | null;
   team_id: string | null;
+  is_super_admin?: boolean;
 }
 
 let cache: ProfileData | null = null;

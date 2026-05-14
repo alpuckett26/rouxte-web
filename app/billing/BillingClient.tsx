@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
+import { useProfile } from "@/lib/hooks/useProfile";
+import PricingModal from "@/components/billing/PricingModal";
 import { TIERS, formatPriceLabel, getTier } from "@/lib/billing/tiers";
 import type { SquarePaymentMethod } from "@/lib/billing/square-sdk-types";
 
@@ -29,12 +31,14 @@ const SQUARE_SDK_PROD    = "https://web.squarecdn.com/v1/square.js";
 
 export default function BillingClient() {
   const router = useRouter();
+  const { profile } = useProfile();
   const [status, setStatus] = useState<BillingStatus | null | "loading">("loading");
   const [updatingCard, setUpdatingCard] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
 
   function refresh() {
     setStatus("loading");
@@ -52,11 +56,20 @@ export default function BillingClient() {
 
   if (status === null) {
     return (
-      <div className="max-w-3xl mx-auto text-center py-20">
-        <h1 className="text-2xl font-bold text-gray-900">No active subscription</h1>
-        <p className="mt-3 text-gray-600">You don't have a Rouxte plan yet.</p>
-        <Button className="mt-6" onClick={() => router.push("/dashboard")}>Start a trial →</Button>
-      </div>
+      <>
+        <div className="max-w-3xl mx-auto text-center py-20">
+          <h1 className="text-2xl font-bold text-gray-900">No active subscription</h1>
+          <p className="mt-3 text-gray-600">You don't have a Rouxte plan yet.</p>
+          <Button className="mt-6" onClick={() => setEnrolling(true)}>Start free trial →</Button>
+        </div>
+        {enrolling && (
+          <PricingModal
+            defaultEmail={profile?.email}
+            defaultName={profile?.full_name ?? undefined}
+            onComplete={() => { setEnrolling(false); refresh(); }}
+          />
+        )}
+      </>
     );
   }
 

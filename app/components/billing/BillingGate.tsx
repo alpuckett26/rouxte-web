@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useProfile } from "@/lib/hooks/useProfile";
 import PricingModal from "./PricingModal";
 import TrialBanner from "./TrialBanner";
 
@@ -30,6 +31,7 @@ interface BillingStatus {
  */
 export default function BillingGate({ email, name }: { email?: string; name?: string }) {
   const pathname = usePathname() ?? "";
+  const { profile } = useProfile();
   const [status, setStatus] = useState<BillingStatus | null | "loading">("loading");
 
   useEffect(() => {
@@ -48,6 +50,9 @@ export default function BillingGate({ email, name }: { email?: string; name?: st
     pathname.startsWith("/pricing") ||
     pathname.startsWith("/billing") ||
     pathname.startsWith("/auth");
+
+  // Super-admins (platform operators) bypass billing entirely
+  if (profile?.is_super_admin) return null;
 
   if (skipGate || status === "loading") return null;
 

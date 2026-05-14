@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 const DAILY_LIMIT = 20;
 const TOTAL_LIMIT = 200;
@@ -156,11 +157,12 @@ export async function POST(request: NextRequest) {
 
   const dailyUsed = usage?.prompts_used ?? 0;
   const totalUsed = usage?.total_prompts_used ?? 0;
+  const isSuperAdmin = isSuperAdminEmail(user.email);
 
-  if (dailyUsed >= DAILY_LIMIT) {
+  if (!isSuperAdmin && dailyUsed >= DAILY_LIMIT) {
     return NextResponse.json({ error: `Daily limit reached (${DAILY_LIMIT}/day). Resets at midnight.`, code: "daily_limit" }, { status: 429 });
   }
-  if (totalUsed >= TOTAL_LIMIT) {
+  if (!isSuperAdmin && totalUsed >= TOTAL_LIMIT) {
     return NextResponse.json({ error: `Total AI cap reached (${TOTAL_LIMIT}). Ask your manager to increase your tier.`, code: "total_limit" }, { status: 429 });
   }
 
@@ -202,11 +204,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "AI service unavailable. Try again shortly." }, { status: 503 });
   }
 
-  // Update usage
-  if (usage) {
-    await admin.from("ai_usage").update({ prompts_used: dailyUsed + 1, total_prompts_used: totalUsed + 1 }).eq("id", usage.id);
-  } else {
-    await admin.from("ai_usage").insert({ org_id: profile.org_id, user_id: user.id, date: today, prompts_used: 1, total_prompts_used: totalUsed + 1 });
+  // Update usage (super-admins not counted)
+  if (!isSuperAdmin) {
+    if (usage) {
+      await admin.from("ai_usage").update({ prompts_used: dailyUsed + 1, total_prompts_used: totalUsed + 1 }).eq("id", usage.id);
+    } else {
+      await admin.from("ai_usage").insert({ org_id: profile.org_id, user_id: user.id, date: today, prompts_used: 1, total_prompts_used: totalUsed + 1 });
+    }
   }
   await admin.from("ai_prompt_logs").insert({ org_id: profile.org_id, user_id: user.id, lead_id: lead_id ?? null, prompt_type, tokens: inputTokens + outputTokens });
 

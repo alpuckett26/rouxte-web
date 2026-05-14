@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/lead-expiry",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/billing-renewal",
+      "schedule": "5 0 * * *"
     }
   ]
 }

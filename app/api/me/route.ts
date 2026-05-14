@@ -1,11 +1,14 @@
 ﻿import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const is_super_admin = isSuperAdminEmail(user.email);
 
   const { data: profile } = await supabase
     .from("user_profiles")
@@ -27,13 +30,14 @@ export async function GET() {
 
   // Return flat object — useProfile and other consumers expect the profile at the root level
   return NextResponse.json({
-    user_id:    user.id,
-    email:      user.email,
-    role:       profile?.role      ?? "sales_rep",
-    full_name:  profile?.full_name ?? null,
-    org_id:     profile?.org_id    ?? null,
-    team_id:    profile?.team_id   ?? null,
-    avatar_url: profile?.avatar_url ?? null,
+    user_id:        user.id,
+    email:          user.email,
+    role:           profile?.role      ?? "sales_rep",
+    full_name:      profile?.full_name ?? null,
+    org_id:         profile?.org_id    ?? null,
+    team_id:        profile?.team_id   ?? null,
+    avatar_url:     profile?.avatar_url ?? null,
     org_name,
+    is_super_admin,
   });
 }
