@@ -6,6 +6,7 @@ import { useProfile } from "@/lib/hooks/useProfile";
 import { UserRole } from "@/lib/types";
 import IdleTimeout from "./IdleTimeout";
 import NotificationBell from "./NotificationBell";
+import BillingGate from "./billing/BillingGate";
 
 interface NavItem {
   href: string;
@@ -189,6 +190,7 @@ export default function AppShell({
     return (
       <div className="h-dvh flex flex-col bg-gray-50 overflow-hidden">
         <IdleTimeout />
+        <BillingGate email={profile?.email} name={profile?.full_name ?? undefined} />
         {header}
         <main className="flex-1 min-h-0 relative z-10 md:mx-auto md:w-full md:max-w-6xl md:px-4 md:py-6">
           {children}
@@ -201,6 +203,7 @@ export default function AppShell({
   return (
     <div className="min-h-screen bg-gray-50">
       <IdleTimeout />
+      <BillingGate email={profile?.email} name={profile?.full_name ?? undefined} />
       {header}
       {/* pb-16 md:pb-0 keeps content above the fixed mobile nav */}
       <main className="relative z-10 mx-auto max-w-6xl px-4 py-6 pb-20 md:pb-6">
