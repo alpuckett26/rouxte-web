@@ -19,6 +19,8 @@ export interface Tier {
   monthly_price_cents: number | null;
   /** Short tagline shown under the tier name. */
   tagline: string;
+  /** Optional "Best for: X" buyer-targeting line shown on the card. */
+  best_for?: string;
   /** Marketing copy shown above the feature list. */
   description: string;
   /** Feature bullets. */
@@ -37,6 +39,7 @@ export const TIERS: readonly Tier[] = [
     name: "Field",
     monthly_price_cents: 999, // $9.99
     tagline: "For solo reps and small crews getting started",
+    best_for: "Best for solo reps and brand-new dealer crews",
     description:
       "Everything a rep needs to knock doors, capture leads, and log sales — without a back office.",
     features: [
@@ -55,6 +58,7 @@ export const TIERS: readonly Tier[] = [
     name: "Pro",
     monthly_price_cents: 1999, // $19.99
     tagline: "For dealerships running a real org",
+    best_for: "Best for active dealer teams selling fiber + wireless daily",
     description:
       "Everything in Field, plus the manager tools, quoting, payroll, training, and in-app meetings your team actually runs on.",
     features: [
@@ -77,6 +81,7 @@ export const TIERS: readonly Tier[] = [
     name: "Enterprise",
     monthly_price_cents: null,
     tagline: "For master dealers and large multi-org operations",
+    best_for: "Best for master dealers, MSO partners, and rev-share resellers",
     description:
       "Built for master dealers like RS&I — white-label, multi-org control, dedicated support, and revenue share on every sub-dealer you bring on.",
     features: [

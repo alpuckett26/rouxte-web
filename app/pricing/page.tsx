@@ -62,14 +62,23 @@ export default function PricingPage() {
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-12 text-center">
-        <div className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold tracking-wide uppercase">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold tracking-wide uppercase">
+          <span className="h-1.5 w-1.5 rounded-full bg-lime-500" />
           Built for door-to-door fiber + wireless
         </div>
-        <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-gray-900">
-          Pricing that fits how dealers actually run.
+        <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 [text-wrap:balance]">
+          Built for fiber and wireless crews —
+          <br />
+          <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-lime-600 bg-clip-text text-transparent">
+            without SPOTIO-level pricing.
+          </span>
         </h1>
-        <p className="mt-5 text-lg text-gray-600 max-w-2xl mx-auto">
-          Per-rep, monthly, no annual lock-in. {TRIAL_DAYS}-day free trial on every plan — card on file but no charge until day {TRIAL_DAYS + 1}.
+        <p className="mt-5 text-lg text-gray-600 max-w-2xl mx-auto [text-wrap:pretty]">
+          Rouxte gives door-to-door telecom teams lead maps, AI coaching, quote tools, sales
+          logging, training, and manager visibility starting at <strong>$9.99 per rep</strong>.
+        </p>
+        <p className="mt-3 text-sm text-gray-500">
+          Start free for {TRIAL_DAYS} days. No charge during trial. Cancel before day {TRIAL_DAYS + 1} and you won't be billed.
         </p>
       </section>
 
@@ -79,7 +88,15 @@ export default function PricingPage() {
           {ordered.map((t) => <TierCard key={t.key} tier={t} />)}
         </div>
 
-        <p className="mt-6 text-center text-xs text-gray-500">
+        {/* Trust badges */}
+        <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5"><span className="text-lime-600">✓</span> No annual contract required</span>
+          <span className="flex items-center gap-1.5"><span className="text-lime-600">✓</span> Cancel anytime during trial</span>
+          <span className="flex items-center gap-1.5"><span className="text-lime-600">✓</span> Per-rep, monthly billing</span>
+          <span className="flex items-center gap-1.5"><span className="text-lime-600">✓</span> No setup or onboarding fees</span>
+        </div>
+
+        <p className="mt-4 text-center text-xs text-gray-400">
           Enterprise typically replies in under 24 hours. Master dealer rev-share terms scale with volume.
         </p>
       </section>
@@ -175,6 +192,17 @@ function TierCard({ tier }: { tier: Tier }) {
         {!enterprise && <span className="text-sm text-gray-500">/rep/mo</span>}
       </div>
       <p className="mt-3 text-sm text-gray-600">{tier.tagline}</p>
+
+      {tier.best_for && (
+        <div className={[
+          "mt-3 rounded-lg px-3 py-2 text-xs font-medium",
+          popular    ? "bg-blue-50 text-blue-800 border border-blue-100" :
+          enterprise ? "bg-lime-50 text-lime-800 border border-lime-100" :
+                       "bg-gray-50 text-gray-700 border border-gray-100",
+        ].join(" ")}>
+          🎯 {tier.best_for}
+        </div>
+      )}
 
       <ul className="mt-5 space-y-2.5 text-sm text-gray-700 flex-1">
         {tier.features.map((f) => (

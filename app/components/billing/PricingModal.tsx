@@ -322,6 +322,17 @@ function TierCard({ tier, onSelect }: { tier: Tier; onSelect: () => void }) {
       </div>
       <p className="mt-3 text-sm text-gray-600">{tier.tagline}</p>
 
+      {tier.best_for && (
+        <div className={[
+          "mt-3 rounded-lg px-3 py-2 text-xs font-medium",
+          popular    ? "bg-blue-50 text-blue-800 border border-blue-100" :
+          enterprise ? "bg-lime-50 text-lime-800 border border-lime-100" :
+                       "bg-gray-50 text-gray-700 border border-gray-100",
+        ].join(" ")}>
+          🎯 {tier.best_for}
+        </div>
+      )}
+
       <ul className="mt-5 space-y-2.5 text-sm text-gray-700 flex-1">
         {tier.features.map((f) => (
           <li key={f} className="flex gap-2.5">
