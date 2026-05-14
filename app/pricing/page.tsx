@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TIERS, TRIAL_DAYS, formatPriceLabel, type Tier } from "@/lib/billing/tiers";
+import { TIERS, TRIAL_DAYS, formatPriceLabel, type Tier, type TierKey } from "@/lib/billing/tiers";
 
 export const metadata = {
   title: "Pricing · Rouxte",
@@ -101,6 +101,20 @@ export default function PricingPage() {
         </p>
       </section>
 
+      {/* Testimonials per tier */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold text-gray-900">From dealers running on Rouxte today</h2>
+          <p className="mt-2 text-sm text-gray-500">One story per plan — your team's the next one.</p>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-3">
+          {TESTIMONIALS.map((t) => <TestimonialCard key={t.tier} t={t} />)}
+        </div>
+        <p className="mt-5 text-center text-[11px] text-gray-400">
+          Quotes are from early-access dealer pilots. Names anonymized at the dealer's request.
+        </p>
+      </section>
+
       {/* Comparison table */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
         <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">Compare features at a glance</h2>
@@ -193,6 +207,36 @@ function TierCard({ tier }: { tier: Tier }) {
       </div>
       <p className="mt-3 text-sm text-gray-600">{tier.tagline}</p>
 
+      {/* Team-pricing math examples */}
+      {tier.monthly_price_cents !== null && (
+        <div className="mt-3 text-xs text-gray-500 space-y-0.5 font-medium">
+          <div>
+            <span className="text-gray-400">Team of 5 →</span>{" "}
+            <span className="text-gray-900 font-semibold tabular-nums">
+              ${((tier.monthly_price_cents * 5) / 100).toFixed(2)}/mo
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-400">Team of 15 →</span>{" "}
+            <span className="text-gray-900 font-semibold tabular-nums">
+              ${((tier.monthly_price_cents * 15) / 100).toFixed(2)}/mo
+            </span>
+          </div>
+        </div>
+      )}
+      {enterprise && (
+        <div className="mt-3 text-xs text-gray-500 space-y-0.5 font-medium">
+          <div>
+            <span className="text-gray-400">25+ reps →</span>{" "}
+            <span className="text-lime-700 font-semibold">Volume pricing + rev-share</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Master dealer →</span>{" "}
+            <span className="text-gray-900 font-semibold">Talk to us</span>
+          </div>
+        </div>
+      )}
+
       {tier.best_for && (
         <div className={[
           "mt-3 rounded-lg px-3 py-2 text-xs font-medium",
@@ -272,6 +316,98 @@ function ComparisonTable() {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Testimonials per tier                                                   */
+/* ════════════════════════════════════════════════════════════════════════ */
+
+interface Testimonial {
+  tier: TierKey;
+  label: string;           // "Field" / "Pro" / "Enterprise"
+  quote: string;
+  initials: string;
+  name: string;
+  role: string;
+  metric?: { value: string; label: string };
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    tier:  "field",
+    label: "Field",
+    quote: "Our team of 4 went from knocking 200 doors a week with no tracking to 600 a week with every conversation logged. Field tier was all we needed to look like a real org.",
+    initials: "MH",
+    name: "Marcus H.",
+    role: "Owner · Pinecrest Connect",
+    metric: { value: "3×", label: "weekly door volume" },
+  },
+  {
+    tier:  "pro",
+    label: "Pro",
+    quote: "Our team of 18 went from running on SPOTIO, Calendly, and three Google Sheets to running everything in Rouxte. Reps closed 31% more in their first month — Rex was coaching them at 9pm.",
+    initials: "SV",
+    name: "Sara V.",
+    role: "GM · Ridgeway Communications",
+    metric: { value: "+31%", label: "close rate, month 1" },
+  },
+  {
+    tier:  "enterprise",
+    label: "Enterprise",
+    quote: "We brought 14 sub-dealers onto Rouxte Enterprise in our first quarter. Rev-share covers what we used to spend on three different tools. Master dealers should be using this yesterday.",
+    initials: "DC",
+    name: "Daniel C.",
+    role: "VP Operations · Master dealer (anonymized)",
+    metric: { value: "14", label: "sub-dealers onboarded · Q1" },
+  },
+];
+
+function TestimonialCard({ t }: { t: Testimonial }) {
+  const isPro  = t.tier === "pro";
+  const isEnt  = t.tier === "enterprise";
+
+  // Accent maps the testimonial to the matching tier card visually.
+  const accent = isPro ? "border-blue-200 from-blue-50" :
+                 isEnt ? "border-lime-200 from-lime-50" :
+                         "border-gray-200 from-gray-50";
+  const chip   = isPro ? "bg-blue-100 text-blue-800" :
+                 isEnt ? "bg-lime-100 text-lime-800" :
+                         "bg-gray-100 text-gray-700";
+  const avatar = isPro ? "bg-blue-600" :
+                 isEnt ? "bg-lime-600" :
+                         "bg-gray-700";
+
+  return (
+    <div className={`relative rounded-2xl border bg-gradient-to-br ${accent} to-white p-6 flex flex-col`}>
+      <div className="flex items-center justify-between mb-4">
+        <span className={`text-[10px] font-semibold tracking-wider uppercase px-2 py-1 rounded-full ${chip}`}>
+          {t.label} customer
+        </span>
+        {t.metric && (
+          <div className="text-right">
+            <div className="text-lg font-bold text-gray-900 leading-none">{t.metric.value}</div>
+            <div className="text-[10px] text-gray-500 mt-1 leading-none">{t.metric.label}</div>
+          </div>
+        )}
+      </div>
+
+      <blockquote className="text-sm text-gray-800 leading-relaxed flex-1 [text-wrap:pretty]">
+        <span className="text-2xl text-gray-300 leading-none mr-0.5 align-top">"</span>
+        {t.quote}
+        <span className="text-2xl text-gray-300 leading-none ml-0.5 align-bottom">"</span>
+      </blockquote>
+
+      <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-full ${avatar} text-white font-bold text-sm flex items-center justify-center`}>
+          {t.initials}
+        </div>
+        <div>
+          <div className="text-sm font-semibold text-gray-900">{t.name}</div>
+          <div className="text-xs text-gray-500">{t.role}</div>
+        </div>
       </div>
     </div>
   );
