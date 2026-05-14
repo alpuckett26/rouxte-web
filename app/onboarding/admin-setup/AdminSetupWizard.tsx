@@ -1,8 +1,39 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Autosave — survives reload, tab close, and power loss                   */
+/* ════════════════════════════════════════════════════════════════════════ */
+
+const DRAFT_KEY_SHAPE = "rouxte-wizard-shape-v1";
+const DRAFT_KEY_SOLO  = "rouxte-wizard-solo-v1";
+const DRAFT_KEY_TEAM  = "rouxte-wizard-team-v1";
+
+function readDraft<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch { return fallback; }
+}
+
+function writeDraft(key: string, value: unknown): void {
+  if (typeof window === "undefined") return;
+  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+function clearAllDrafts(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(DRAFT_KEY_SHAPE);
+    window.localStorage.removeItem(DRAFT_KEY_SOLO);
+    window.localStorage.removeItem(DRAFT_KEY_TEAM);
+  } catch {}
+}
 
 /* ════════════════════════════════════════════════════════════════════════ */
 /*  Types                                                                   */
@@ -83,11 +114,21 @@ const EMPTY_COMP: CompRow = {
 
 export default function AdminSetupWizard() {
   const router = useRouter();
-  const [shape, setShape] = useState<Shape>(null);
+  const [shape, setShape] = useState<Shape>(() => readDraft<Shape>(DRAFT_KEY_SHAPE, null));
+
+  useEffect(() => { writeDraft(DRAFT_KEY_SHAPE, shape); }, [shape]);
+
+  function goBackToShape() {
+    setShape(null);
+  }
+  function finishAll(path: string) {
+    clearAllDrafts();
+    router.push(path);
+  }
 
   if (shape === null) return <ShapePicker onPick={setShape} />;
-  if (shape === "solo") return <SoloSetup onDone={() => router.push("/dashboard")} onBack={() => setShape(null)} />;
-  return <TeamWizard onDone={() => router.push("/getting-started?welcome=1")} onBack={() => setShape(null)} />;
+  if (shape === "solo") return <SoloSetup onDone={() => finishAll("/dashboard")} onBack={goBackToShape} />;
+  return <TeamWizard onDone={() => finishAll("/getting-started?welcome=1")} onBack={goBackToShape} />;
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
@@ -138,9 +179,11 @@ function ShapePicker({ onPick }: { onPick: (s: Shape) => void }) {
 /* ════════════════════════════════════════════════════════════════════════ */
 
 function SoloSetup({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [perSale, setPerSale] = useState<string>("");
+  const [perSale, setPerSale] = useState<string>(() => readDraft<string>(DRAFT_KEY_SOLO, ""));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { writeDraft(DRAFT_KEY_SOLO, perSale); }, [perSale]);
 
   async function save() {
     setSubmitting(true);
@@ -221,21 +264,27 @@ function SoloSetup({ onDone, onBack }: { onDone: () => void; onBack: () => void 
 /*  Team path — multi-step                                                  */
 /* ════════════════════════════════════════════════════════════════════════ */
 
+interface TeamDraft { form: TeamForm; stepIdx: number }
+
+const TEAM_DEFAULT: TeamForm = {
+  orgName:    "",
+  niche:      "",
+  carriers:   [],
+  brandColor: "#2563eb",
+  counts:     { sales_manager: 0, team_lead: 0, sales_rep: 0 },
+  members:    [],
+  compRows:   [{ ...EMPTY_COMP }],
+  territoryZips: "",
+};
+
 function TeamWizard({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [stepIdx, setStepIdx] = useState(0);
+  const initial = readDraft<TeamDraft | null>(DRAFT_KEY_TEAM, null);
+  const [stepIdx, setStepIdx] = useState<number>(initial?.stepIdx ?? 0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<TeamForm>(initial?.form ?? TEAM_DEFAULT);
 
-  const [form, setForm] = useState<TeamForm>({
-    orgName:    "",
-    niche:      "",
-    carriers:   [],
-    brandColor: "#2563eb",
-    counts:     { sales_manager: 0, team_lead: 0, sales_rep: 0 },
-    members:    [],
-    compRows:   [{ ...EMPTY_COMP }],
-    territoryZips: "",
-  });
+  useEffect(() => { writeDraft(DRAFT_KEY_TEAM, { form, stepIdx }); }, [form, stepIdx]);
 
   const step = TEAM_STEPS[stepIdx];
   const progress = Math.round((stepIdx / (TEAM_STEPS.length - 1)) * 100);
