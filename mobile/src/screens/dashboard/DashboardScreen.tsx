@@ -12,6 +12,7 @@ import { colors } from '@/lib/colors';
 import { LOG_EVENT_LABELS } from '@/lib/logs';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { KnockCounter } from '@/components/dashboard/KnockCounter';
+import { TrialBanner } from '@/components/TrialBanner';
 import type { MainTabParamList, LogEventType, UserRole } from '@/types';
 
 type Nav = BottomTabNavigationProp<MainTabParamList>;
@@ -51,6 +52,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+    <TrialBanner />
     <Screen
       refreshing={dashQ.isFetching && !dashQ.isLoading}
       onRefresh={() => { dashQ.refetch(); salesQ.refetch(); aiUsage.refetch(); }}

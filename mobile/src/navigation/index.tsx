@@ -4,8 +4,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { colors } from '@/lib/colors';
 import { useAuth } from '@/hooks/useAuth';
+import { BillingGate } from '@/components/BillingGate';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+
+function GatedMain() {
+  return (
+    <BillingGate>
+      <MainNavigator />
+    </BillingGate>
+  );
+}
 
 const Stack = createNativeStackNavigator();
 
@@ -56,7 +65,7 @@ export default function RootNavigator() {
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {session ? (
-          <Stack.Screen name="Main" component={MainNavigator} />
+          <Stack.Screen name="Main" component={GatedMain} />
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         )}
