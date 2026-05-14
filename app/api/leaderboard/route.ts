@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     .select("actor_id, event_type, lead_id")
     .eq("org_id", profile.org_id)
     .in("actor_id", repIds)
-    .in("event_type", ["sale_submitted", "appointment_set", "status_changed", "note_added"]);
+    .in("event_type", ["sale_submitted", "quote_sent", "appointment_set", "status_changed", "note_added"]);
 
   // Training is cumulative — don't date-filter it
   if (since && metric !== "training") logQuery = logQuery.gte("ts", since);
@@ -112,21 +112,23 @@ export async function GET(request: NextRequest) {
   }
 
   // Aggregate activity
-  const counts: Record<string, { sales: number; appointments: number; doors: Set<string> }> = {};
-  for (const rep of reps) counts[rep.user_id] = { sales: 0, appointments: 0, doors: new Set() };
+  const counts: Record<string, { sales: number; quotes: number; appointments: number; doors: Set<string> }> = {};
+  for (const rep of reps) counts[rep.user_id] = { sales: 0, quotes: 0, appointments: 0, doors: new Set() };
 
   for (const log of logs ?? []) {
     const c = counts[log.actor_id];
     if (!c) continue;
-    if (log.event_type === "sale_submitted")    c.sales++;
+    if (log.event_type === "sale_submitted")       c.sales++;
+    else if (log.event_type === "quote_sent")      c.quotes++;
     else if (log.event_type === "appointment_set") c.appointments++;
-    else if (log.lead_id)                         c.doors.add(log.lead_id);
+    else if (log.lead_id)                          c.doors.add(log.lead_id);
   }
 
   // Build entries
   const entries: LeaderboardEntry[] = reps.map((rep) => {
     const c               = counts[rep.user_id];
     const sales           = c.sales;
+    const quotes          = c.quotes;
     const appointments    = c.appointments;
     const doors           = c.doors.size;
     const trainingModules = trainingMap[rep.user_id] ?? 0;
@@ -141,6 +143,7 @@ export async function GET(request: NextRequest) {
       avatar_url:       (rep as { avatar_url?: string | null }).avatar_url ?? null,
       team_name:        rep.team_id ? (teamMap[rep.team_id] ?? null) : null,
       sales,
+      quotes,
       appointments,
       doors,
       training_pct:     trainingPct,
@@ -154,6 +157,7 @@ export async function GET(request: NextRequest) {
   // Sort by selected metric
   const sortFn: Record<Metric, (a: LeaderboardEntry, b: LeaderboardEntry) => number> = {
     sales:        (a, b) => b.sales        - a.sales        || a.full_name.localeCompare(b.full_name),
+    quotes:       (a, b) => b.quotes       - a.quotes       || a.full_name.localeCompare(b.full_name),
     appointments: (a, b) => b.appointments - a.appointments || a.full_name.localeCompare(b.full_name),
     doors:        (a, b) => b.doors        - a.doors        || a.full_name.localeCompare(b.full_name),
     training:     (a, b) => b.training_pct - a.training_pct || b.training_modules - a.training_modules || a.full_name.localeCompare(b.full_name),

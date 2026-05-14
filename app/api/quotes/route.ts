@@ -119,6 +119,27 @@ export async function POST(request: NextRequest) {
         : undefined,
     });
 
+    // Activity log — feeds the analytics chart + leaderboard quotes metric
+    await admin.from("sales_activity_log").insert({
+      org_id:     profile.org_id,
+      actor_id:   user.id,
+      lead_id:    quote.lead_id ?? null,
+      team_id:    null,
+      event_type: "quote_sent",
+      summary:    `Fiber quote sent to ${quote.customer_name ?? quote.customer_email}`,
+      metadata: {
+        quote_id:        quote.id,
+        quote_type:      "fiber",
+        fiber_plan:      quote.fiber_plan,
+        plan_label:      fiberPlan?.label ?? null,
+        plan_speed:      fiberPlan?.speed ?? null,
+        monthly_total:   quote.monthly_total,
+        wireless_bundle: quote.wireless_bundle === true,
+        customer_email:  quote.customer_email,
+      },
+      is_incident: false,
+    });
+
     await admin.from("leads").insert({
       org_id:               profile.org_id,
       created_by:           user.id,
@@ -187,6 +208,25 @@ export async function POST(request: NextRequest) {
       attachments: pdfBuffer
         ? [{ filename: "quote.pdf", content: pdfBuffer }]
         : undefined,
+    });
+
+    // Activity log — feeds the analytics chart + leaderboard quotes metric
+    await admin.from("sales_activity_log").insert({
+      org_id:     profile.org_id,
+      actor_id:   user.id,
+      lead_id:    quote.lead_id ?? null,
+      team_id:    null,
+      event_type: "quote_sent",
+      summary:    `Wireless quote sent to ${quote.customer_name ?? quote.customer_email}`,
+      metadata: {
+        quote_id:       quote.id,
+        quote_type:     "wireless",
+        total_lines:    quote.total_lines ?? 1,
+        monthly_total:  quote.monthly_total,
+        discount_type:  quote.discount_type ?? "none",
+        customer_email: quote.customer_email,
+      },
+      is_incident: false,
     });
   }
 

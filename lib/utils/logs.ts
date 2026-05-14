@@ -15,6 +15,7 @@ export const LOG_EVENT_LABELS: Record<LogEventType, string> = {
   sale_submitted: "Sale Submitted",
   sale_verified: "Sale Verified",
   sale_rejected: "Sale Rejected",
+  quote_sent: "Quote Sent",
   // Compliance
   no_solicit_observed: "No Solicitation Sign Observed",
   do_not_knock_marked: "Do Not Knock Marked",

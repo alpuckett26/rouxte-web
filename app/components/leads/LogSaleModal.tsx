@@ -21,6 +21,7 @@ export default function LogSaleModal({ leadId, address, onClose, onLogged }: Pro
   const [customerName, setCustomerName] = useState("");
   const [installDate, setInstallDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [wirelessAdded, setWirelessAdded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,6 +60,8 @@ export default function LogSaleModal({ leadId, address, onClose, onLogged }: Pro
             package_id: selectedPkgId,
             package_name: selectedPkg?.name,
             package_category: selectedPkg?.category,
+            speed_mbps: selectedPkg?.speed_mbps ?? null,
+            wireless_added: wirelessAdded,
             payout_amount: selectedPkg?.payout_amount,
             chargeback_days: selectedPkg?.chargeback_days ?? 90,
             commission_pct: myTier?.commission_pct ?? null,
@@ -165,6 +168,15 @@ export default function LogSaleModal({ leadId, address, onClose, onLogged }: Pro
             No commission tier assigned — contact your manager.
           </p>
         )}
+
+        {/* Bundle flag */}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox"
+            checked={wirelessAdded}
+            onChange={(e) => setWirelessAdded(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+          <span className="text-sm text-gray-700">Wireless add-on included (bundle)</span>
+        </label>
 
         {/* Customer details */}
         <div className="flex flex-col gap-1">

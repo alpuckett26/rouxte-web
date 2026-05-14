@@ -36,6 +36,7 @@ export type LogEventType =
   | "sale_submitted"
   | "sale_verified"
   | "sale_rejected"
+  | "quote_sent"
   // Compliance
   | "no_solicit_observed"
   | "do_not_knock_marked"

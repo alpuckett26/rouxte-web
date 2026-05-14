@@ -7,6 +7,7 @@ export interface LeaderboardEntry {
   avatar_url: string | null;
   team_name: string | null;
   sales: number;
+  quotes: number;
   appointments: number;
   doors: number;
   training_pct: number;
@@ -16,7 +17,7 @@ export interface LeaderboardEntry {
   is_me: boolean;
 }
 
-export type Metric = "sales" | "appointments" | "doors" | "training";
+export type Metric = "sales" | "quotes" | "appointments" | "doors" | "training";
 export type Period = "today" | "week" | "month" | "alltime";
 
 export interface BonusWinner {
