@@ -8,21 +8,40 @@ import { inviteEmail } from "@/lib/email/templates";
 /**
  * POST /api/onboarding/admin-setup
  *
- * Persists the admin onboarding wizard data onto the org row.
- * Stored in orgs.onboarding_state (jsonb) so we can ship without
- * a full schema for every field. A follow-up migration can promote
- * frequently-queried fields (niche, brand_color) to first-class
- * columns.
+ * Persists the admin onboarding wizard. Two shapes:
  *
- * Body:
- *   org_name?         updates orgs.name if provided
- *   niche             'fiber' | 'wireless' | 'both'
- *   primary_carriers  string[]
- *   brand_color       hex string
- *   invite_emails     string[]  (queued — not yet emailed)
- *   invite_role       'sales_rep' | 'team_lead' | 'sales_manager'
- *   territory_zips    string[]
+ *   Solo:
+ *     { shape: "solo", solo_comp_per_sale_cents: number }
+ *
+ *   Team:
+ *     { shape: "team",
+ *       org_name, niche, primary_carriers, brand_color,
+ *       members: Array<{ email, full_name, role, commission_pct? }>,
+ *       comp_plans: Array<{ carrier, product, rep_payout_cents,
+ *                           manager_override_cents, lead_override_cents }>,
+ *       territory_zips: string[] }
+ *
+ * orgs.onboarding_state captures everything in JSONB for now. Comp plans
+ * land in their own `comp_plans` table so we can join them at quote time.
  */
+
+type Role = "admin" | "sales_manager" | "team_lead" | "sales_rep";
+const ROLES: Role[] = ["admin", "sales_manager", "team_lead", "sales_rep"];
+
+interface Member {
+  email: string;
+  full_name?: string;
+  role: Role;
+  commission_pct?: number;
+}
+interface CompPlanRow {
+  carrier: string;
+  product: string;
+  rep_payout_cents: number;
+  manager_override_cents: number;
+  lead_override_cents: number;
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -47,81 +66,144 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); }
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  const orgName        = typeof body.org_name === "string" ? body.org_name.trim() : "";
-  const niche          = typeof body.niche === "string" ? body.niche : null;
-  const carriers       = Array.isArray(body.primary_carriers) ? body.primary_carriers : [];
-  const brandColor     = typeof body.brand_color === "string" ? body.brand_color : null;
-  const inviteEmails   = Array.isArray(body.invite_emails) ? body.invite_emails : [];
-  const inviteRole     = typeof body.invite_role === "string" ? body.invite_role : "sales_rep";
-  const territoryZips  = Array.isArray(body.territory_zips) ? body.territory_zips : [];
+  const shape = body.shape === "solo" ? "solo" : "team";
 
+  // ─── Solo branch ────────────────────────────────────────────────────────
+  if (shape === "solo") {
+    const compCents = typeof body.solo_comp_per_sale_cents === "number"
+      ? Math.max(0, Math.round(body.solo_comp_per_sale_cents))
+      : 0;
+
+    const { error } = await admin
+      .from("orgs")
+      .update({
+        onboarding_state: { shape: "solo", solo_comp_per_sale_cents: compCents },
+        onboarding_completed_at: new Date().toISOString(),
+      })
+      .eq("id", profile.org_id);
+
+    if (error) {
+      console.error("[admin-setup/solo] DB error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, shape: "solo" });
+  }
+
+  // ─── Team branch ────────────────────────────────────────────────────────
+  const orgName     = typeof body.org_name === "string" ? body.org_name.trim() : "";
+  const niche       = typeof body.niche === "string" ? body.niche : null;
+  const carriers    = Array.isArray(body.primary_carriers) ? body.primary_carriers : [];
+  const brandColor  = typeof body.brand_color === "string" ? body.brand_color : null;
+  const territoryZips = Array.isArray(body.territory_zips) ? body.territory_zips : [];
+
+  const membersRaw = Array.isArray(body.members) ? body.members : [];
+  const members: Member[] = membersRaw
+    .map((m): Member | null => {
+      const row = m as Record<string, unknown>;
+      const email = typeof row.email === "string" ? row.email.trim().toLowerCase() : "";
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+      const roleRaw = typeof row.role === "string" ? row.role : "sales_rep";
+      const role = ROLES.includes(roleRaw as Role) ? (roleRaw as Role) : "sales_rep";
+      return {
+        email,
+        full_name: typeof row.full_name === "string" ? row.full_name.trim() : undefined,
+        role,
+        commission_pct: typeof row.commission_pct === "number" ? row.commission_pct : undefined,
+      };
+    })
+    .filter((m): m is Member => m !== null);
+
+  const compPlansRaw = Array.isArray(body.comp_plans) ? body.comp_plans : [];
+  const compPlans: CompPlanRow[] = compPlansRaw
+    .map((p): CompPlanRow | null => {
+      const row = p as Record<string, unknown>;
+      const carrier = typeof row.carrier === "string" ? row.carrier.trim() : "";
+      const product = typeof row.product === "string" ? row.product.trim() : "";
+      if (!carrier || !product) return null;
+      return {
+        carrier,
+        product,
+        rep_payout_cents: typeof row.rep_payout_cents === "number" ? Math.max(0, Math.round(row.rep_payout_cents)) : 0,
+        manager_override_cents: typeof row.manager_override_cents === "number" ? Math.max(0, Math.round(row.manager_override_cents)) : 0,
+        lead_override_cents: typeof row.lead_override_cents === "number" ? Math.max(0, Math.round(row.lead_override_cents)) : 0,
+      };
+    })
+    .filter((p): p is CompPlanRow => p !== null && p.rep_payout_cents > 0);
+
+  // Persist org state
   const onboardingState = {
+    shape: "team",
     niche,
     primary_carriers: carriers,
     brand_color: brandColor,
-    invite_role: inviteRole,
     territory_zips: territoryZips,
+    team_size: members.length,
   };
 
-  const update: Record<string, unknown> = {
+  const orgUpdate: Record<string, unknown> = {
     onboarding_state: onboardingState,
     onboarding_completed_at: new Date().toISOString(),
   };
-  if (orgName) update.name = orgName;
+  if (orgName) orgUpdate.name = orgName;
 
-  const { error } = await admin
-    .from("orgs")
-    .update(update)
-    .eq("id", profile.org_id);
-
-  if (error) {
-    console.error("[/api/onboarding/admin-setup] DB error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error: orgErr } = await admin
+    .from("orgs").update(orgUpdate).eq("id", profile.org_id);
+  if (orgErr) {
+    console.error("[admin-setup/team] org update error:", orgErr);
+    return NextResponse.json({ error: orgErr.message }, { status: 500 });
   }
 
-  // ─── Dispatch invites ──────────────────────────────────────────────────
+  // Persist comp plans — replace the org's plans wholesale on save
+  if (compPlans.length > 0) {
+    await admin.from("comp_plans").delete().eq("org_id", profile.org_id);
+    const { error: cpErr } = await admin.from("comp_plans").insert(
+      compPlans.map((p) => ({ ...p, org_id: profile.org_id })),
+    );
+    if (cpErr) {
+      console.error("[admin-setup/team] comp_plans insert error:", cpErr);
+      // non-fatal — log and continue so we don't block invites
+    }
+  }
+
+  // Dispatch invites — one per row, each with its own role
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.com";
-  const { data: org } = await admin
-    .from("orgs").select("name").eq("id", profile.org_id).single();
+  const { data: org } = await admin.from("orgs").select("name").eq("id", profile.org_id).single();
   const orgName_ = org?.name ?? orgName ?? "your team";
 
-  const invitesAttempted: Array<{ email: string; sent: boolean; reason?: string }> = [];
+  const invitesAttempted: Array<{ email: string; role: Role; sent: boolean; reason?: string }> = [];
 
-  for (const raw of inviteEmails) {
-    const email = String(raw).trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      invitesAttempted.push({ email, sent: false, reason: "invalid_email" });
-      continue;
-    }
-
+  for (const m of members) {
     const token = randomBytes(16).toString("hex");
     const { error: inviteErr } = await admin.from("invites").insert({
       org_id:     profile.org_id,
       created_by: user.id,
-      email,
-      role:       inviteRole,
+      email:      m.email,
+      role:       m.role,
       team_id:    null,
       token,
     });
     if (inviteErr) {
-      invitesAttempted.push({ email, sent: false, reason: inviteErr.message });
+      invitesAttempted.push({ email: m.email, role: m.role, sent: false, reason: inviteErr.message });
       continue;
     }
 
     const inviteUrl = `${appUrl}/invite/${token}`;
     const { subject, html } = inviteEmail({
       orgName:     orgName_,
-      role:        inviteRole,
+      role:        m.role,
       inviteUrl,
       inviterName: profile.full_name ?? "Your Manager",
     });
-    const sent = await sendEmail({ from: FROM, to: email, subject, html });
-    invitesAttempted.push({ email, sent });
+    const sent = await sendEmail({ from: FROM, to: m.email, subject, html });
+    invitesAttempted.push({ email: m.email, role: m.role, sent });
   }
 
   return NextResponse.json({
     ok: true,
+    shape: "team",
     invites: invitesAttempted,
     invites_sent: invitesAttempted.filter((i) => i.sent).length,
+    comp_plans_saved: compPlans.length,
   });
 }
