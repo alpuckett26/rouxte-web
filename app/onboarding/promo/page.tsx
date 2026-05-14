@@ -3,45 +3,24 @@
 import { useRouter } from "next/navigation";
 import ScreenShell from "@/components/ScreenShell";
 import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
 
-const features = [
-  {
-    icon: (
-      <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-      </svg>
-    ),
-    title: "FCC Broadband Map Overlay",
-    desc: "See carrier availability at every door before you knock.",
-  },
-  {
-    icon: (
-      <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    ),
-    title: "Lead CRM + Sales Logger",
-    desc: "Track every door, note, and sale with an immutable audit trail.",
-  },
-  {
-    icon: (
-      <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-    title: "Compliance & No Solicitation",
-    desc: "QR-based opt-outs, Do Not Knock lists, and full manager signoffs.",
-  },
-  {
-    icon: (
-      <svg className="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    title: "AI Coaching",
-    desc: "Objection scripts, pitch variations, and next-best-action suggestions.",
-  },
+const CAPABILITIES: Array<{ emoji: string; title: string; blurb: string }> = [
+  { emoji: "🗺️", title: "FCC fiber overlay map",   blurb: "Real coverage at every address — never knock blind." },
+  { emoji: "🎯", title: "SmartPitch funnels",       blurb: "Per-rep scored lead capture link with QR." },
+  { emoji: "🤖", title: "Rex, your AI coach",       blurb: "Voice roleplay, rebuttals, scripts — never sleeps." },
+  { emoji: "🎓", title: "Training + quizzes",       blurb: "Module-based learning paths with graduation." },
+  { emoji: "🧾", title: "Fiber + wireless quotes",  blurb: "PDF + email + customer signoff in one tap." },
+  { emoji: "💵", title: "Auto-paid commissions",    blurb: "Weekly periods, manager approval, overrides built in." },
+  { emoji: "🛡️", title: "Compliance & sign-off",   blurb: "Append-only logger, DNK lists, manager queue." },
+  { emoji: "📹", title: "In-app video meetings",    blurb: "Daily.co-powered, instant or scheduled, no extra tools." },
+  { emoji: "📲", title: "Field Mode + offline",     blurb: "One-handed mobile UX. Knock through dead zones." },
+];
+
+const NEXT_STEPS: Array<{ n: string; label: string; sub: string }> = [
+  { n: "1", label: "Tell us about you",  sub: "Quick profile — name, role, contact." },
+  { n: "2", label: "Pick a plan",         sub: "30 days free. Card on file, no charge today." },
+  { n: "3", label: "Set up your org",     sub: "Branding, team invites, territory zips." },
+  { n: "4", label: "Take the tour",       sub: "Walk-through of every feature, with deep links." },
 ];
 
 export default function PromoPage() {
@@ -58,35 +37,76 @@ export default function PromoPage() {
 
   return (
     <ScreenShell>
-      <div className="flex flex-col items-center min-h-[85vh] py-12">
-        <img src="/logo.svg" alt="Rouxte" className="h-9 mb-4" />
+      <div className="py-8 sm:py-12">
 
-        <h1 className="text-3xl font-semibold text-gray-900 text-center mb-2">
-          Built for the field
-        </h1>
-        <p className="text-gray-500 text-center max-w-sm mb-10">
-          Everything your team needs to knock smarter, sell faster, and stay protected.
-        </p>
+        {/* Hero */}
+        <div className="text-center mb-12 max-w-2xl mx-auto">
+          <img src="/logo.svg" alt="Rouxte" className="h-9 mx-auto mb-6" />
+          <div className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold tracking-wide uppercase mb-4">
+            Welcome aboard
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight tracking-tight [text-wrap:balance]">
+            Your dealership.
+            <br />
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">
+              In a box.
+            </span>
+          </h1>
+          <p className="mt-5 text-lg text-gray-600 [text-wrap:pretty]">
+            Onboarding, training, lead capture, AI coaching, quoting, video meetings, payroll —
+            every tool you need to run a door-to-door fiber or wireless team. Take a quick look
+            at what's inside.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 gap-4 w-full max-w-lg mb-10">
-          {features.map((f) => (
-            <Card key={f.title} padding="md">
-              <div className="flex items-start gap-4">
-                <div className="shrink-0 w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
-                  {f.icon}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">{f.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
+        {/* Capability grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-12 max-w-4xl mx-auto">
+          {CAPABILITIES.map((c) => (
+            <div
+              key={c.title}
+              className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <div className="flex items-start gap-3">
+                <div className="text-2xl shrink-0">{c.emoji}</div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-gray-900 text-sm leading-snug">{c.title}</div>
+                  <div className="text-xs text-gray-500 mt-1 leading-relaxed">{c.blurb}</div>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
 
-        <Button size="lg" className="w-full max-w-lg" onClick={proceed}>
-          Set Up My Profile
-        </Button>
+        {/* What happens next */}
+        <div className="max-w-3xl mx-auto rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 sm:p-8 mb-10">
+          <div className="text-xs font-semibold tracking-wide uppercase text-blue-700 mb-4">
+            Here's what's next
+          </div>
+          <ol className="grid sm:grid-cols-2 gap-4">
+            {NEXT_STEPS.map((s) => (
+              <li key={s.n} className="flex gap-3">
+                <div className="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center">
+                  {s.n}
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 text-sm">{s.label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{s.sub}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-5 text-xs text-gray-400 text-center">
+            Whole thing takes about 10 minutes. Your team can already start knocking on the
+            mobile app while you finish setup on web.
+          </p>
+        </div>
+
+        {/* CTA */}
+        <div className="max-w-md mx-auto">
+          <Button size="lg" className="w-full" onClick={proceed}>
+            Let's go →
+          </Button>
+        </div>
       </div>
     </ScreenShell>
   );
