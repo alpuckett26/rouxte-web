@@ -126,7 +126,7 @@ Pivot to the value prop.
 ## Likely questions + answers
 
 **Q: How do you handle our existing dealers' data?**
-A: Migration is a service we provide on the Enterprise tier. Bring your CSV / Salesforce export / whatever and we import + clean. Roadmap item: a direct connector to the top 3 dealer CRMs.
+A: We have a white-glove migration concierge — discovery call, data mapping, staging review, cutover in 5 days with zero downtime. Founding dealers and Enterprise get it included; everyone else pays a flat fee. Full process is at https://rouxte.com/migration. Roadmap item: direct API connectors to the top 3 dealer CRMs (today it's a managed-service import).
 
 **Q: Can sub-dealers be on different tiers?**
 A: Yes — each dealer is its own org with its own subscription. RS&I sees roll-up reporting across all of them in your Enterprise console.

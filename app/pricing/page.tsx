@@ -7,7 +7,7 @@ export const metadata = {
     "Per-rep monthly pricing for the door-to-door sales operating system. 30-day free trial on every plan.",
 };
 
-const FAQ: Array<{ q: string; a: string }> = [
+const FAQ: Array<{ q: string; a: React.ReactNode }> = [
   {
     q: "Do you charge during the free trial?",
     a: "No. We collect a card so service continues uninterrupted on day 31, but we don't charge anything during the free trial. Cancel anytime before day 31 and you're never billed.",
@@ -15,6 +15,17 @@ const FAQ: Array<{ q: string; a: string }> = [
   {
     q: "How does per-rep pricing work?",
     a: "We bill once per month based on the number of active reps in your org during that period. A rep who knocks at least one door or logs any activity counts as active. Reps you've invited but never logged in don't count.",
+  },
+  {
+    q: "I'm switching from SPOTIO / SalesRabbit / something else. How does my data come over?",
+    a: (
+      <>
+        We have a white-glove migration concierge — discovery call, data mapping, staging review,
+        cutover. Five days, zero downtime. Founding dealers and Enterprise customers get it
+        included; everyone else pays a flat fee. Full process is at{" "}
+        <Link href="/migration" className="text-blue-600 font-semibold underline">/migration</Link>.
+      </>
+    ),
   },
   {
     q: "Can I mix tiers across teams?",
