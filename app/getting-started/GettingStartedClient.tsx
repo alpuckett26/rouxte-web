@@ -69,6 +69,23 @@ const SECTIONS: Section[] = [
     audience: "rep",
   },
   {
+    id: "card",
+    title: "Digital Business Card",
+    icon: "🪪",
+    blurb:
+      "Every rep gets their own digital card — name, photo, role, and a tap-to-text/call number. Hand it out via QR or text message instead of paper.",
+    steps: [
+      "Open Card from the More menu.",
+      "Upload a headshot and customize your title and tagline.",
+      "Share via QR code at the door or a short link in a follow-up text.",
+    ],
+    tips: [
+      "Pair the card with your SmartPitch slug for a one-tap path from intro → scored lead.",
+    ],
+    link: { href: "/card", label: "Open My Card" },
+    audience: "rep",
+  },
+  {
     id: "smartpitch",
     title: "SmartPitch Funnel",
     icon: "🎯",
@@ -129,6 +146,23 @@ const SECTIONS: Section[] = [
     audience: "all",
   },
   {
+    id: "goals",
+    title: "Goals + Leaderboard",
+    icon: "🏆",
+    blurb:
+      "Set per-rep and team-wide goals (knocks, leads, sales, dollars). The leaderboard ranks the org so reps can see exactly where they stand.",
+    steps: [
+      "Open Goals → set targets for the week, month, or quarter.",
+      "Reps see their progress on their Home dashboard.",
+      "Open Leaderboard to see the live org ranking.",
+    ],
+    tips: [
+      "Pair leaderboards with store credit rewards to drive friendly competition between teams.",
+    ],
+    link: { href: "/leaderboard", label: "Open Leaderboard" },
+    audience: "all",
+  },
+  {
     id: "manager",
     title: "Manager Queue",
     icon: "🛡️",
@@ -140,6 +174,25 @@ const SECTIONS: Section[] = [
       "Approve, reject, or send back — every action is logged.",
     ],
     link: { href: "/manager/queue", label: "Open Manager Queue" },
+    audience: "manager",
+  },
+  {
+    id: "readiness",
+    title: "Field Readiness Tracker",
+    icon: "✅",
+    blurb:
+      "Before a new rep hits the doors, managers can verify a checklist of readiness items — gear, paperwork, training certs, ride-along sign-off — and gate access until they're complete.",
+    steps: [
+      "Open Manager → Onboarding → Field Readiness.",
+      "Build your readiness checklist (org-wide + per-team items).",
+      "Each rep sees a progress meter. Managers check off items as they're verified.",
+      "Reps that aren't field-ready are visually flagged on the team roster.",
+    ],
+    tips: [
+      "Combine with the Training section: require a passing quiz score before the matching readiness item is checked.",
+      "Add 'ride-along complete' and 'first verified sale' as readiness items so managers track post-training graduation.",
+    ],
+    link: { href: "/manager/team", label: "Open Manager Onboarding" },
     audience: "manager",
   },
   {
@@ -182,6 +235,25 @@ const SECTIONS: Section[] = [
       "Graduated status (10+ sales) unlocks badges and store credit.",
     ],
     link: { href: "/training", label: "Open Training" },
+    audience: "all",
+  },
+  {
+    id: "store",
+    title: "Store + Branded Swag",
+    icon: "🛍️",
+    blurb:
+      "An in-app store for Rouxte-branded merch and a badge designer for reps. Designed in-app, checked out via Square, fulfilled by Printful — no warehouse for you to run.",
+    steps: [
+      "Open Store from the More menu.",
+      "Reps design their own custom badge (name, photo, accent color).",
+      "Order goes straight to Printful for fulfillment — shipped to the rep's address.",
+      "Graduated reps (10+ sales) unlock additional merch tiers + store credit.",
+    ],
+    tips: [
+      "Run leaderboard contests with store credit as the prize — turns the scoreboard into a real reward loop.",
+      "Enterprise orgs get fully white-labeled merch with their own brand on every item.",
+    ],
+    link: { href: "/store", label: "Open Store" },
     audience: "all",
   },
   {
