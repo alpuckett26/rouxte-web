@@ -107,7 +107,10 @@ export default function PricingModal({ defaultEmail, defaultName, onComplete }: 
     };
   }, [step, sqEnv, sqAppId, sqLocation, demoMode]);
 
-  const pickable = useMemo(() => TIERS.filter((t) => t.key !== "enterprise"), []);
+  const ordered = useMemo(() => {
+    const order: Record<string, number> = { field: 0, pro: 1, enterprise: 2 };
+    return [...TIERS].sort((a, b) => (order[a.key] ?? 99) - (order[b.key] ?? 99));
+  }, []);
 
   function chooseTier(t: Tier) {
     if (t.key === "enterprise") {
@@ -177,11 +180,7 @@ export default function PricingModal({ defaultEmail, defaultName, onComplete }: 
       <div className="min-h-full flex items-start sm:items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden">
           {step === "pick" && (
-            <PickStep
-              tiers={pickable}
-              enterprise={TIERS.find((t) => t.key === "enterprise")!}
-              onPick={chooseTier}
-            />
+            <PickStep tiers={ordered} onPick={chooseTier} />
           )}
           {step === "pay" && tier && (
             <PayStep
@@ -211,12 +210,13 @@ export default function PricingModal({ defaultEmail, defaultName, onComplete }: 
 /*  Step 1 — Pick a tier                                                    */
 /* ════════════════════════════════════════════════════════════════════════ */
 function PickStep({
-  tiers, enterprise, onPick,
-}: { tiers: Tier[]; enterprise: Tier; onPick: (t: Tier) => void }) {
+  tiers, onPick,
+}: { tiers: Tier[]; onPick: (t: Tier) => void }) {
   return (
     <div className="px-6 sm:px-10 py-10">
       <div className="text-center mb-10">
-        <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold tracking-wide uppercase mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold tracking-wide uppercase mb-3">
+          <span className="h-1.5 w-1.5 rounded-full bg-lime-500" />
           {TRIAL_DAYS} days free · no charge during trial
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Pick the plan that fits your crew</h1>
@@ -233,17 +233,6 @@ function PickStep({
         ))}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 sm:p-8 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
-        <div>
-          <div className="text-xs font-semibold tracking-wide text-blue-700 uppercase">{enterprise.name} · Master dealers</div>
-          <h3 className="text-xl font-semibold text-gray-900 mt-1">{enterprise.tagline}</h3>
-          <p className="text-gray-600 mt-2 max-w-2xl">{enterprise.description}</p>
-        </div>
-        <Button size="lg" variant="secondary" onClick={() => onPick(enterprise)}>
-          {enterprise.cta} →
-        </Button>
-      </div>
-
       <p className="mt-6 text-center text-xs text-gray-500">
         All prices are USD, billed monthly per active rep. Cancel anytime during the trial — we won't bill the card.
       </p>
@@ -252,35 +241,55 @@ function PickStep({
 }
 
 function TierCard({ tier, onSelect }: { tier: Tier; onSelect: () => void }) {
-  const popular = tier.popular === true;
+  const popular    = tier.popular === true;
+  const enterprise = tier.key === "enterprise";
+
+  // Blue stays the dominant brand color; Enterprise picks up brand green
+  // (#72C41A ≈ Tailwind lime) to distinguish it from Pro.
+  const ring  = enterprise ? "border-lime-500 shadow-xl ring-2 ring-lime-100" :
+                popular    ? "border-blue-600 shadow-xl ring-2 ring-blue-100" :
+                             "border-gray-200 shadow-sm";
+  const check = enterprise ? "text-lime-600" : "text-blue-600";
+  const badge = enterprise ? "bg-lime-500" : "bg-blue-600";
+
   return (
-    <div className={[
-      "relative rounded-2xl border bg-white p-6 flex flex-col",
-      popular ? "border-blue-600 shadow-xl ring-2 ring-blue-100" : "border-gray-200 shadow-sm",
-    ].join(" ")}>
-      {popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold tracking-wide uppercase shadow">
+    <div className={["relative rounded-2xl border bg-white p-6 flex flex-col", ring].join(" ")}>
+      {popular && !enterprise && (
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-xs font-semibold tracking-wide uppercase shadow`}>
           Most popular
         </div>
       )}
-      <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{tier.name}</div>
+      {enterprise && (
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-xs font-semibold tracking-wide uppercase shadow`}>
+          For master dealers
+        </div>
+      )}
+
+      <div className={`text-sm font-semibold uppercase tracking-wide ${enterprise ? "text-lime-700" : "text-gray-500"}`}>
+        {tier.name}
+      </div>
       <div className="mt-2 flex items-baseline gap-1">
         <span className="text-4xl font-bold text-gray-900">{formatPriceLabel(tier).split("/")[0]}</span>
-        <span className="text-sm text-gray-500">/rep/mo</span>
+        {!enterprise && <span className="text-sm text-gray-500">/rep/mo</span>}
       </div>
       <p className="mt-3 text-sm text-gray-600">{tier.tagline}</p>
+
       <ul className="mt-5 space-y-2.5 text-sm text-gray-700 flex-1">
         {tier.features.map((f) => (
           <li key={f} className="flex gap-2.5">
-            <span className="text-blue-600 mt-0.5">✓</span>
+            <span className={`${check} mt-0.5`}>✓</span>
             <span>{f}</span>
           </li>
         ))}
       </ul>
+
       <Button
-        variant={popular ? "primary" : "secondary"}
+        variant={popular || enterprise ? "primary" : "secondary"}
         size="lg"
-        className="mt-6 w-full"
+        className={[
+          "mt-6 w-full",
+          enterprise ? "!bg-gray-900 hover:!bg-black" : "",
+        ].join(" ")}
         onClick={onSelect}
       >
         {tier.cta}

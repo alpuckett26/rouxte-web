@@ -35,8 +35,11 @@ const FAQ: Array<{ q: string; a: string }> = [
 ];
 
 export default function PricingPage() {
-  const enterprise = TIERS.find((t) => t.key === "enterprise")!;
-  const pickable = TIERS.filter((t) => t.key !== "enterprise");
+  // All three tiers in one row, ordered Field → Pro → Enterprise.
+  const ordered = [...TIERS].sort((a, b) => {
+    const order: Record<string, number> = { field: 0, pro: 1, enterprise: 2 };
+    return (order[a.key] ?? 99) - (order[b.key] ?? 99);
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/40">
@@ -70,36 +73,15 @@ export default function PricingPage() {
         </p>
       </section>
 
-      {/* Tiers */}
+      {/* Tiers — three cards side by side */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
         <div className="grid gap-6 lg:grid-cols-3">
-          {pickable.map((t) => <TierCard key={t.key} tier={t} />)}
+          {ordered.map((t) => <TierCard key={t.key} tier={t} />)}
         </div>
 
-        {/* Enterprise row */}
-        <div className="mt-8 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 sm:p-10">
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <div className="text-xs font-semibold tracking-wide uppercase text-blue-300">{enterprise.name}</div>
-              <h2 className="mt-2 text-2xl sm:text-3xl font-bold">{enterprise.tagline}</h2>
-              <p className="mt-3 text-gray-300 max-w-2xl">{enterprise.description}</p>
-              <ul className="mt-5 grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-200">
-                {enterprise.features.map((f) => (
-                  <li key={f} className="flex gap-2"><span className="text-blue-400 mt-0.5">✓</span><span>{f}</span></li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex flex-col justify-center gap-3">
-              <a
-                href="mailto:sales@rouxte.com?subject=Enterprise%20%E2%80%94%20Master%20Dealer%20Inquiry"
-                className="inline-flex items-center justify-center bg-white text-gray-900 font-semibold px-5 py-3 rounded-xl hover:bg-gray-100"
-              >
-                {enterprise.cta} →
-              </a>
-              <div className="text-xs text-gray-400 text-center">Typical reply &lt; 24 hours</div>
-            </div>
-          </div>
-        </div>
+        <p className="mt-6 text-center text-xs text-gray-500">
+          Enterprise typically replies in under 24 hours. Master dealer rev-share terms scale with volume.
+        </p>
       </section>
 
       {/* Comparison table */}
@@ -152,39 +134,60 @@ export default function PricingPage() {
 }
 
 function TierCard({ tier }: { tier: Tier }) {
-  const popular = tier.popular === true;
+  const popular    = tier.popular === true;
+  const enterprise = tier.key === "enterprise";
+
+  // Color theming — blue is the dominant brand color; Enterprise picks up a
+  // splash of brand green (#72C41A ≈ lime-500/600) to set it apart from Pro.
+  const ring  = enterprise ? "border-lime-500 shadow-xl ring-2 ring-lime-100" :
+                popular    ? "border-blue-600 shadow-xl ring-2 ring-blue-100" :
+                             "border-gray-200 shadow-sm";
+  const check = enterprise ? "text-lime-600" : "text-blue-600";
+  const badge = enterprise ? "bg-lime-500" : "bg-blue-600";
+  const cta   = enterprise
+    ? "bg-gray-900 text-white hover:bg-black"
+    : popular
+    ? "bg-blue-600 text-white hover:bg-blue-700"
+    : "bg-white text-gray-800 border border-gray-200 hover:bg-gray-50";
+
+  const href = enterprise
+    ? "mailto:sales@rouxte.com?subject=Enterprise%20%E2%80%94%20Master%20Dealer%20Inquiry"
+    : "/auth/signup";
+
   return (
-    <div className={[
-      "relative rounded-2xl border bg-white p-6 sm:p-7 flex flex-col",
-      popular ? "border-blue-600 shadow-xl ring-2 ring-blue-100" : "border-gray-200 shadow-sm",
-    ].join(" ")}>
-      {popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold tracking-wide uppercase shadow">
+    <div className={["relative rounded-2xl border bg-white p-6 sm:p-7 flex flex-col", ring].join(" ")}>
+      {popular && !enterprise && (
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-xs font-semibold tracking-wide uppercase shadow`}>
           Most popular
         </div>
       )}
-      <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{tier.name}</div>
+      {enterprise && (
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full ${badge} text-white text-xs font-semibold tracking-wide uppercase shadow`}>
+          For master dealers
+        </div>
+      )}
+
+      <div className={`text-sm font-semibold uppercase tracking-wide ${enterprise ? "text-lime-700" : "text-gray-500"}`}>
+        {tier.name}
+      </div>
       <div className="mt-2 flex items-baseline gap-1">
         <span className="text-4xl font-bold text-gray-900">{formatPriceLabel(tier).split("/")[0]}</span>
-        <span className="text-sm text-gray-500">/rep/mo</span>
+        {!enterprise && <span className="text-sm text-gray-500">/rep/mo</span>}
       </div>
       <p className="mt-3 text-sm text-gray-600">{tier.tagline}</p>
+
       <ul className="mt-5 space-y-2.5 text-sm text-gray-700 flex-1">
         {tier.features.map((f) => (
           <li key={f} className="flex gap-2.5">
-            <span className="text-blue-600 mt-0.5">✓</span>
+            <span className={`${check} mt-0.5`}>✓</span>
             <span>{f}</span>
           </li>
         ))}
       </ul>
+
       <Link
-        href="/auth/signup"
-        className={[
-          "mt-6 inline-flex items-center justify-center font-semibold px-5 py-3 rounded-xl transition",
-          popular
-            ? "bg-blue-600 text-white hover:bg-blue-700"
-            : "bg-white text-gray-800 border border-gray-200 hover:bg-gray-50",
-        ].join(" ")}
+        href={href}
+        className={["mt-6 inline-flex items-center justify-center font-semibold px-5 py-3 rounded-xl transition", cta].join(" ")}
       >
         {tier.cta}
       </Link>
