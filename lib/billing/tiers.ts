@@ -83,7 +83,7 @@ export const TIERS: readonly Tier[] = [
     tagline: "For master dealers and large multi-org operations",
     best_for: "Best for master dealers, MSO partners, and rev-share resellers",
     description:
-      "Built for master dealers like RS&I — white-label, multi-org control, dedicated support, and revenue share on every sub-dealer you bring on.",
+      "Built for master dealers and rev-share partners — white-label, multi-org control, dedicated support, and revenue share on every sub-dealer you bring on.",
     features: [
       "Everything in Pro",
       "White-label / custom branding",

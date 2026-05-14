@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TIERS, TRIAL_DAYS, formatPriceLabel, type Tier, type TierKey } from "@/lib/billing/tiers";
+import { TIERS, TRIAL_DAYS, formatPriceLabel, type Tier } from "@/lib/billing/tiers";
 
 export const metadata = {
   title: "Pricing · Rouxte",
@@ -101,17 +101,24 @@ export default function PricingPage() {
         </p>
       </section>
 
-      {/* Testimonials per tier */}
+      {/* Founding Dealer Program */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
         <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold text-gray-900">From dealers running on Rouxte today</h2>
-          <p className="mt-2 text-sm text-gray-500">One story per plan — your team's the next one.</p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-100 text-lime-800 text-xs font-semibold tracking-wide uppercase mb-3">
+            <span className="h-1.5 w-1.5 rounded-full bg-lime-500 animate-pulse" />
+            Now accepting founding dealers
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Join the founding dealer program</h2>
+          <p className="mt-2 text-sm text-gray-500 max-w-2xl mx-auto">
+            We're onboarding the first wave of door-to-door dealers. Get in early and you'll
+            get more than software — you'll shape the platform alongside our founders.
+          </p>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
-          {TESTIMONIALS.map((t) => <TestimonialCard key={t.tier} t={t} />)}
+          {FOUNDING_PERKS.map((p) => <FoundingPerk key={p.title} perk={p} />)}
         </div>
-        <p className="mt-5 text-center text-[11px] text-gray-400">
-          Quotes are from early-access dealer pilots. Names anonymized at the dealer's request.
+        <p className="mt-6 text-center text-xs text-gray-400">
+          Founding dealer pricing is locked in for the life of your account, even after public launch.
         </p>
       </section>
 
@@ -322,93 +329,80 @@ function ComparisonTable() {
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
-/*  Testimonials per tier                                                   */
+/*  Founding Dealer Program                                                 */
 /* ════════════════════════════════════════════════════════════════════════ */
 
-interface Testimonial {
-  tier: TierKey;
-  label: string;           // "Field" / "Pro" / "Enterprise"
-  quote: string;
-  initials: string;
-  name: string;
-  role: string;
-  metric?: { value: string; label: string };
+interface FoundingPerkDef {
+  emoji: string;
+  title: string;
+  blurb: string;
+  bullets: string[];
+  accent: "gray" | "blue" | "lime";
 }
 
-const TESTIMONIALS: Testimonial[] = [
+const FOUNDING_PERKS: FoundingPerkDef[] = [
   {
-    tier:  "field",
-    label: "Field",
-    quote: "Our team of 4 went from knocking 200 doors a week with no tracking to 600 a week with every conversation logged. Field tier was all we needed to look like a real org.",
-    initials: "MH",
-    name: "Marcus H.",
-    role: "Owner · Pinecrest Connect",
-    metric: { value: "3×", label: "weekly door volume" },
+    emoji: "🔒",
+    title: "Lifetime pricing lock",
+    blurb: "Whatever you pay at signup is your price forever — even after public launch when rates go up.",
+    bullets: [
+      "$9.99 Field, $19.99 Pro guaranteed for life",
+      "No surprise renewals or price hikes",
+      "Locks for every rep you ever add",
+    ],
+    accent: "gray",
   },
   {
-    tier:  "pro",
-    label: "Pro",
-    quote: "Our team of 18 went from running on SPOTIO, Calendly, and three Google Sheets to running everything in Rouxte. Reps closed 31% more in their first month — Rex was coaching them at 9pm.",
-    initials: "SV",
-    name: "Sara V.",
-    role: "GM · Ridgeway Communications",
-    metric: { value: "+31%", label: "close rate, month 1" },
+    emoji: "🎙️",
+    title: "Direct line to product",
+    blurb: "Your feedback ships. Founding dealers get a Slack/Signal line straight to the founders and roadmap input.",
+    bullets: [
+      "Weekly product office hours",
+      "Feature requests prioritized over public roadmap",
+      "Beta access to every new feature",
+    ],
+    accent: "blue",
   },
   {
-    tier:  "enterprise",
-    label: "Enterprise",
-    quote: "We brought 14 sub-dealers onto Rouxte Enterprise in our first quarter. Rev-share covers what we used to spend on three different tools. Master dealers should be using this yesterday.",
-    initials: "DC",
-    name: "Daniel C.",
-    role: "VP Operations · Master dealer (anonymized)",
-    metric: { value: "14", label: "sub-dealers onboarded · Q1" },
+    emoji: "🛟",
+    title: "White-glove onboarding",
+    blurb: "We migrate your team, configure your org, train your managers. You knock on day one.",
+    bullets: [
+      "Hands-on data migration from existing tools",
+      "Live training for your management layer",
+      "First 30 days of priority support included",
+    ],
+    accent: "lime",
   },
 ];
 
-function TestimonialCard({ t }: { t: Testimonial }) {
-  const isPro  = t.tier === "pro";
-  const isEnt  = t.tier === "enterprise";
-
-  // Accent maps the testimonial to the matching tier card visually.
-  const accent = isPro ? "border-blue-200 from-blue-50" :
-                 isEnt ? "border-lime-200 from-lime-50" :
-                         "border-gray-200 from-gray-50";
-  const chip   = isPro ? "bg-blue-100 text-blue-800" :
-                 isEnt ? "bg-lime-100 text-lime-800" :
-                         "bg-gray-100 text-gray-700";
-  const avatar = isPro ? "bg-blue-600" :
-                 isEnt ? "bg-lime-600" :
-                         "bg-gray-700";
+function FoundingPerk({ perk }: { perk: FoundingPerkDef }) {
+  const accent = {
+    gray: { border: "border-gray-200", gradient: "from-gray-50", chip: "bg-gray-100 text-gray-700" },
+    blue: { border: "border-blue-200", gradient: "from-blue-50", chip: "bg-blue-100 text-blue-800" },
+    lime: { border: "border-lime-200", gradient: "from-lime-50", chip: "bg-lime-100 text-lime-800" },
+  }[perk.accent];
 
   return (
-    <div className={`relative rounded-2xl border bg-gradient-to-br ${accent} to-white p-6 flex flex-col`}>
+    <div className={`relative rounded-2xl border ${accent.border} bg-gradient-to-br ${accent.gradient} to-white p-6 flex flex-col`}>
       <div className="flex items-center justify-between mb-4">
-        <span className={`text-[10px] font-semibold tracking-wider uppercase px-2 py-1 rounded-full ${chip}`}>
-          {t.label} customer
+        <span className={`text-[10px] font-semibold tracking-wider uppercase px-2 py-1 rounded-full ${accent.chip}`}>
+          Founding dealer perk
         </span>
-        {t.metric && (
-          <div className="text-right">
-            <div className="text-lg font-bold text-gray-900 leading-none">{t.metric.value}</div>
-            <div className="text-[10px] text-gray-500 mt-1 leading-none">{t.metric.label}</div>
-          </div>
-        )}
+        <div className="text-2xl leading-none">{perk.emoji}</div>
       </div>
 
-      <blockquote className="text-sm text-gray-800 leading-relaxed flex-1 [text-wrap:pretty]">
-        <span className="text-2xl text-gray-300 leading-none mr-0.5 align-top">"</span>
-        {t.quote}
-        <span className="text-2xl text-gray-300 leading-none ml-0.5 align-bottom">"</span>
-      </blockquote>
+      <h3 className="text-lg font-bold text-gray-900">{perk.title}</h3>
+      <p className="mt-2 text-sm text-gray-600 leading-relaxed flex-1 [text-wrap:pretty]">{perk.blurb}</p>
 
-      <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-full ${avatar} text-white font-bold text-sm flex items-center justify-center`}>
-          {t.initials}
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-gray-900">{t.name}</div>
-          <div className="text-xs text-gray-500">{t.role}</div>
-        </div>
-      </div>
+      <ul className="mt-4 space-y-1.5 text-xs text-gray-700">
+        {perk.bullets.map((b) => (
+          <li key={b} className="flex gap-2">
+            <span className="text-lime-600 mt-0.5 shrink-0">✓</span>
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

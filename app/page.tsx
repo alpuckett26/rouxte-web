@@ -187,7 +187,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Master dealer / RS&I pitch ────────────────────────────────────── */}
+      {/* ── Master dealer / rev-share pitch ───────────────────────────────── */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 py-24">
         <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0a0f1e] via-blue-950/50 to-indigo-950/30 p-8 sm:p-14 overflow-hidden relative">
           <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
@@ -197,9 +197,9 @@ export default function Home() {
               The platform your sub-dealers will actually keep using.
             </h2>
             <p className="mt-5 text-lg text-white/70 max-w-2xl [text-wrap:pretty]">
-              Master dealers like RS&I, AVB, and Vexus sit on Rouxte Enterprise. White-label your
-              own brand, manage every sub-dealer org from one console, and collect rev-share on
-              every monthly invoice — for the life of the account.
+              Rouxte Enterprise is built for master dealers and rev-share partners. White-label
+              your own brand, manage every sub-dealer org from one console, and collect
+              rev-share on every monthly invoice — for the life of the account.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a
