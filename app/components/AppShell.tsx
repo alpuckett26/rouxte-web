@@ -125,6 +125,15 @@ export default function AppShell({
               {roleBadge[profile.role]}
             </span>
           )}
+          {profile?.is_super_admin && (
+            <Link
+              href="/admin"
+              className="hidden sm:inline text-xs font-bold rounded-full bg-red-100 text-red-700 px-2 py-0.5 hover:bg-red-200"
+              title="Super-admin console"
+            >
+              ADMIN
+            </Link>
+          )}
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
