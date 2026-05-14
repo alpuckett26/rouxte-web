@@ -1,180 +1,257 @@
 # RS&I Demo Script
 
-**Audience:** RS&I (master dealer)
+**Audience:** RS&I — master dealer
 **Goal:** Get them excited enough to want the Enterprise rev-share conversation
-**Estimated length:** 8–10 min talk + Q&A
-**Format:** Live web walkthrough. Open `/pricing` first, then sign in to a demo org.
+**Length:** 8–10 min walkthrough + Q&A
+**Format:** Live web. Open `/pricing` first (shareable URL), then walk through a signup.
+**Tone:** Confident, direct, no soft-pedal. Anchor against SPOTIO explicitly.
 
 ---
 
-## Pre-demo checklist (do this 30 minutes before)
+## Pre-demo checklist (do 30 min before)
 
-- [ ] `.env.local` has `NEXT_PUBLIC_BILLING_DEMO_MODE=true` **and** `BILLING_DEMO_MODE=true`
-- [ ] Server SQL has been run: `org_subscriptions` table exists, `orgs.onboarding_state` column exists
-- [ ] Reset your demo org's subscription so the modal appears fresh:
-      ```sql
-      delete from org_subscriptions where org_id = '<YOUR_ORG_ID>';
-      update orgs set onboarding_state = '{}'::jsonb,
-                       onboarding_completed_at = null
-                where id = '<YOUR_ORG_ID>';
-      ```
-- [ ] `npm run dev` is running, browser at `http://localhost:3000`
-- [ ] Have a second tab open at `/pricing` (public marketing page) ready to switch to
-- [ ] Logged out of any test sessions in incognito so the demo runs from a "clean" perspective
+- [ ] **Vercel env vars set in production:**
+  - `NEXT_PUBLIC_BILLING_DEMO_MODE=true`
+  - `BILLING_DEMO_MODE=true`
+  - (Skip the `NEXT_PUBLIC_SQUARE_*` vars unless you want the real Square SDK form. Demo mode is more reliable for live presentation.)
+- [ ] **Supabase has the schema:** `org_subscriptions` table + `orgs.onboarding_state` / `onboarding_completed_at` columns
+- [ ] **Supabase custom SMTP configured** (so the signup confirmation email comes from `noreply@rouxte.com`, not Supabase's default)
+- [ ] **Reset your demo org so the modal opens fresh:**
+  ```sql
+  delete from org_subscriptions
+    where org_id = (select org_id from user_profiles where user_id = auth.uid());
+  update orgs set onboarding_state = '{}'::jsonb,
+                  onboarding_completed_at = null
+    where id = (select org_id from user_profiles where user_id = auth.uid());
+  ```
+- [ ] Browser tabs prepped:
+  - Tab 1: `https://rouxte.com/pricing`
+  - Tab 2: `https://rouxte.com` (landing)
+  - Tab 3: `https://rouxte.com/migration` (in case they ask)
+  - Tab 4: signed-out in incognito so signup flow is clean
+- [ ] Phone charged in case you want to demo mobile mid-pitch
 
 ---
 
-## The pitch (8 minutes, beat by beat)
+## The pitch (8–10 minutes, beat by beat)
 
-### 1 · "Here's what your sub-dealers see when they come to Rouxte" (1 min)
+### 1 · "This is what your sub-dealers see" (60 sec)
 
-**Open `/pricing`** (public page).
+**Open Tab 1: `https://rouxte.com/pricing`.**
 
-> "When a fiber or wireless dealer hears about us, this is where they land. Per-rep monthly,
-> 30-day free trial on every plan. We collect a card up front so they don't get cut off on
-> day 31, but we don't charge anything during the trial."
+> "When a fiber or wireless dealer hears about us, this is where they land."
 
-**Scroll to the comparison table.** Linger 3 seconds on Pro.
+**Pause on the headline.** Let them read: *"Built for fiber and wireless crews — without SPOTIO-level pricing."*
 
-> "Most of your sub-dealers are going to land on Pro. It's the package that includes the
-> manager queue, payroll, quoting, in-app meetings — the stuff a real dealership needs to
-> run. Field is the entry point — solo reps, brand new crews. Enterprise is where you and I
-> come in."
+> "That's the pitch — we're SPOTIO for door-to-door telecom, at a starter-friendly price. $9.99 a rep on Field. $19.99 on Pro. Everything in between is what your sub-dealers stop fighting because we built it for the door, not for an enterprise CRM."
 
-**Scroll to Enterprise card (the dark one).** Tap the "Master dealer rev-share" bullet with your cursor.
+**Hover on the team-pricing math under each card.**
 
-> "Enterprise is the tier we built specifically for master dealers like you. White-label,
-> multi-org control, and a revenue-share on every sub-dealer you bring onto the platform.
-> We pay you for the life of the account."
+> "A 15-rep crew on Pro is $300 a month. They're spending more than that on Calendly and DocuSign alone right now."
 
-### 2 · "Watch a new org sign up" (2 min)
+### 2 · "Why our pricing makes sense to dealers" (60 sec)
 
-**Sign in to your demo org.** Land on `/dashboard`. **The PricingModal opens automatically.**
+**Stay on `/pricing`. Scroll to the trust-badges row.**
 
-> "When a new admin hits the app, they can't actually use Rouxte until they're on a plan.
-> This modal blocks the dashboard until they pick something."
+> "No annual contract required. Cancel anytime during trial. Per-rep monthly billing. No setup or onboarding fees. The opposite of every other platform's sales process."
 
-**Pick Pro.** Show the card form step.
+**Scroll to the Founding Dealer Program section.**
 
-> "We're in demo mode right now so I can skip the card. In production this is Square Web
-> Payments — PCI-compliant, tokenized client-side, we never touch the actual card number.
-> The save just creates a Square Customer and saves the card on file. No charge until day 31."
+> "Right now we're onboarding our first wave of dealers. Founding-dealer pricing is locked for life. White-glove onboarding included. Direct line to our founders — your feedback shapes the platform. The minute we go public, prices go up and these perks go away."
+
+**That's the close-fast hook. Don't dwell.**
+
+### 3 · "Now watch what happens when a dealer signs up" (2 min)
+
+**Switch to Tab 4 (incognito). Sign up with a throwaway email.**
+
+> "Brand new admin. They just got the email confirmation. The first thing they see after verifying is the welcome page — what's in the box, four-step roadmap to setup, ten minutes total."
+
+**Land on `/onboarding/promo`.** Let them read the 9-card capability grid for a beat.
+
+> "Notice we're not making them watch a 15-minute video tour. The card grid IS the tour. They can scan it in 20 seconds and know what they bought."
+
+**Click "Let's go" → fill profile → land on `/dashboard`.** The PricingModal opens.
+
+> "And here's the gate. They can't actually use Rouxte until they pick a plan. This blocks every authenticated surface."
+
+### 4 · "Picking a plan" (90 sec)
+
+**Pause on the modal.** Three tier cards side by side. Most popular badge on Pro, lime-green "For master dealers" on Enterprise.
+
+> "Three tiers. The buyer-targeting line on each tells them in one sentence whether this is for them. Field is solo reps. Pro — and this is the money tier — is for dealer teams selling fiber and wireless daily. Enterprise is for master dealers like you."
+
+**Click Pro.**
+
+> "Now they pick how they pay. Apple Pay, Google Pay, or card. Square processes everything — PCI-tokenized, we never touch the card number."
+
+**Point at the trust footer.** *Secured by Square · VISA · MC · AMEX · DISC.*
+
+> "And we're in demo mode right now so I'll skip the actual card entry, but in production this is the real Square Web Payments SDK."
 
 **Click "Start my 30-day free trial."**
 
-### 3 · "Now they have to set up their org" (2 min)
+### 5 · "Then we walk them through setup" (90 sec)
 
 Wizard fires automatically.
 
-> "Right after they're a paying customer-in-waiting, we walk them through everything that
-> makes the rest of the app work. Three minutes, mostly skippable."
+> "The minute they're a paying customer-in-waiting, we set up their org. Six steps. Skippable where it makes sense."
 
-**Walk through:**
-- Org name + niche + carrier picks → "this filters their map overlay and Coach knowledge"
-- Branding step → "their logo on quotes, their color on the funnel"
-- Team invites → "paste 50 emails, hit continue, every rep gets a one-click signup email through Resend"
-- Territory zips → "we pre-fetch FCC fiber coverage for these areas so the map loads instantly when they zoom in"
+**Click through fast:**
+- Welcome → "Three minutes, mostly skippable"
+- Org → "Niche, carriers — this filters their map overlay and Coach knowledge"
+- Branding → "Logo and accent color show up on quotes, funnels, customer emails"
+- Team → "Paste 50 emails, hit continue, every rep gets an invite from Resend"
+- Territory → "Zip codes we pre-fetch FCC fiber coverage for"
+- Done → summary cards
 
 **Click "Save and take the tour."**
 
-### 4 · "Then we hand-hold them through the product" (2 min)
+### 6 · "And we walk them through every feature" (2 min)
 
-Lands on `/getting-started?welcome=1`.
+Lands on `/getting-started?welcome=1`. Sixteen sections — Dashboard, Map, Leads, SmartPitch, Digital Card, Coach (Rex), Quotes, Logger, Goals/Leaderboard, Manager Queue, Field Readiness, Payroll, Meetings, Training, Store, Settings.
 
-> "Twelve sections, every feature in Rouxte explained in plain English with deep links into
-> the app. This is the difference between paying for software and actually using it."
+> "Sixteen sections covering every feature, with deep links into the app. New rep, new manager, they pin this page in their browser and come back as questions come up."
 
-**Click the Map section open.** Show the "How to use it" steps.
+**Open the Map section** — read the bullets, point at the FCC fiber overlay note.
 
-**Then click "Open Map →".** Land on the actual map page.
+> "Real FCC AT&T fiber coverage at every address. Knock smart, not blind."
 
-> "Every section deep-links to the real surface. New rep, new manager, they can come back
-> to this any time and find what they need."
+**Open AI Coach (Rex) section.**
 
-### 5 · "And during the trial we keep them oriented" (30 sec)
+> "Claude-powered. Trained on your scripts. Voice mode. Homeowner roleplay. Reps get 50 prompts a day on Field, unlimited on Pro. Managers and admins always unlimited."
 
-**Notice the trial banner at the top.** "Trial · N days left · Manage billing."
+**Click "Open Map →"** to show the deep-link works → actual map page loads.
 
-> "Sticky banner, every page. Click 'Manage' and you're in the billing screen — change
-> card, change plan, cancel."
+> "Every section deep-links to the real screen."
 
-**Click "Manage billing."** Show the `/billing` screen.
+### 7 · "And the trial banner keeps them oriented" (30 sec)
 
-> "This is what your sub-dealer manages on their own. We don't have to be in the loop for
-> card updates, cancellations, none of that. It's all self-serve."
+**Notice the sticky banner at the top of every page.** *Trial · 30 days left · Manage billing.*
 
-### 6 · "Here's why RS&I should care" (1 min)
+> "Sticky, every page. One click to manage their card or cancel — fully self-serve. We don't need to be in the loop."
+
+**Click "Manage billing"** → `/billing` screen.
+
+> "Plan, status, days left, card on file, update card, cancel. They run their own billing."
+
+### 8 · "Here's why RS&I should care" (90 sec)
 
 Pivot to the value prop.
 
-> "Three things matter here for you:
+> "Three things matter for you specifically.
 >
-> One — **your sub-dealers stop quitting**. The reason dealers churn off door-to-door tools
-> is they don't see ROI in the first 30 days. The wizard + getting-started flow + AI Coach
-> push that activation curve hard.
+> **One — your sub-dealers will stop quitting.** The reason dealers churn off door-to-door tools is they don't see ROI in the first 30 days. The wizard, the directions-for-use page, and Rex coaching reps at 9pm push that activation curve hard.
 >
-> Two — **the rev-share scales with your roster**, not with our sales effort. Every dealer
-> you bring on pays us monthly, and you collect on every invoice they pay.
+> **Two — Enterprise pays YOU.** Master dealers on Rouxte Enterprise get rev-share on every sub-dealer's monthly invoice — for the life of the account. Sales-led, not service-led. Your roster grows, your cut grows.
 >
-> Three — **we're not building another generic CRM**. Every feature here is built for the
-> door — Field Mode, FCC fiber overlay, fiber and wireless quote builders, the carrier
-> overlay, the sales activity logger that goes incident-flag when someone hits a no-solicit.
-> Generic SaaS can't do that. We can because we focus."
+> **Three — we're not building another generic CRM.** Every feature is built for the door. FCC fiber overlay on the map. Carrier-aware quoting. Compliance logger. Field Mode with offline knock queue. SPOTIO can't ship these because they're not vertical-built. We can because we are."
+
+### 9 · "Want to migrate your existing sub-dealers?" (60 sec)
+
+**Switch to Tab 3: `https://rouxte.com/migration`.**
+
+> "White-glove concierge migration. Five days, zero downtime. Discovery call, data mapping, staging review you sign off on, cutover. Included on Enterprise. Founding dealers get it free. Everyone else pays a flat $499 under 10 reps or a per-rep rate above."
+
+**Scroll through the 8 source platforms.** SPOTIO, SalesRabbit, Salesforce, Pipedrive, Sheets, etc.
+
+> "We handle the export wrangling. Your reps keep knocking the whole time."
+
+### 10 · Close — book the follow-up
+
+> "What I'd want next is a 30-minute call with whoever runs sub-dealer onboarding at RS&I. We talk through your roster, your current toolchain, and what a founding-dealer Enterprise relationship looks like specifically for you. When works?"
+
+**Have a date in mind. Get a calendar invite on the spot.**
 
 ---
 
-## Likely questions + answers
+## Likely questions + prepared answers
 
 **Q: How do you handle our existing dealers' data?**
-A: We have a white-glove migration concierge — discovery call, data mapping, staging review, cutover in 5 days with zero downtime. Founding dealers and Enterprise get it included; everyone else pays a flat fee. Full process is at https://rouxte.com/migration. Roadmap item: direct API connectors to the top 3 dealer CRMs (today it's a managed-service import).
+A: White-glove concierge service detailed at `/migration`. Five days, zero downtime. Founding dealers and Enterprise customers get it included.
 
 **Q: Can sub-dealers be on different tiers?**
-A: Yes — each dealer is its own org with its own subscription. RS&I sees roll-up reporting across all of them in your Enterprise console.
+A: Yes — each dealer is its own org with its own subscription. As a master dealer you'd see roll-up reporting across all of them in your Enterprise console.
 
 **Q: White-label — how deep does it go?**
-A: Custom domain, custom logo, custom accent color org-wide. Custom email sender (so reps see invites from "Powered by RS&I" not Rouxte). API access for embedding the SmartPitch funnel in your existing dealer portal.
+A: Custom domain, custom logo, custom accent color org-wide. Custom email sender (so invites from your sub-dealers say "Powered by RS&I" not Rouxte). API access for embedding the SmartPitch funnel in your existing portal.
 
 **Q: SOC 2? HIPAA?**
-A: We're on SOC 2-Type-II infrastructure (Supabase + Vercel). We don't collect PHI so HIPAA doesn't apply. The dealer-side compliance work (DNC scrub, state solicitation rules, do-not-knock lists) is on the Enterprise roadmap.
+A: We're on SOC 2-Type-II infrastructure (Supabase + Vercel). We don't collect PHI so HIPAA doesn't apply. State solicitation rules and DNC scrubs are Enterprise-tier compliance features.
 
 **Q: What about the iPhone / Android app?**
-A: Native React Native app, same features, available now. Reps live in the mobile app; managers usually prefer web for the back-office stuff. *(If they push: mobile billing manage UI is shipping next sprint — the core flow works on mobile today, billing is web-only for the first cohort.)*
+A: Native React Native app on both stores. Reps live in the mobile app — Field Mode, offline knock queue, GPS puck, speech-to-text everywhere, push notifications. Managers usually prefer web for the back-office stuff.
 
 **Q: Pricing flexibility for big rosters?**
-A: That's an Enterprise conversation. Volume discounts, annual commits, custom rev-share — we work that with master dealers like you.
+A: That's the Enterprise conversation. Volume discounts, annual commits, custom rev-share — those all live there. We work the numbers with master dealers like you.
 
 **Q: When do you actually charge?**
-A: Day 31, automatically. Card on file gets charged for tier price × active reps that month. We don't bill inactive reps; "active" means logged at least one event during the period.
+A: Day 31, automatically. Card on file gets charged for tier price × active reps that month. We don't bill inactive reps — "active" means logged at least one event during the period.
+
+**Q: How is Rex different from ChatGPT?**
+A: Rex is trained on YOUR scripts, YOUR competitive intel, and YOUR rebuttal library. It's not a generic LLM — it knows AT&T's pitch language versus Frontier's, knows your sub-dealer's product matrix, knows when a rep is asking about a real homeowner objection versus practicing. Voice mode lets reps roleplay hands-free.
+
+**Q: Why should I trust you over SPOTIO?**
+A: SPOTIO is generic field sales. We're door-to-door telecom-native. They charge $75/rep/mo for less. We're starter-friendly at $9.99 because we're earning your trust. Founding-dealer pricing locks in for life — even when we go public and rates go up.
 
 ---
 
-## If something breaks (recover gracefully)
+## If something breaks (graceful recovery)
 
-**Modal doesn't appear:**
-- Hard-refresh the browser
-- Check that `org_subscriptions` row is empty for your org
-- If still broken: open `/pricing` instead — same content, public-facing
+**The pricing modal doesn't appear after signin:**
+- Hard-refresh
+- Check `org_subscriptions` is empty for your org (Supabase SQL editor)
+- Fall back to walking through `/pricing` directly — same content, public-facing
 
-**Square SDK fails:**
-- Toggle demo mode in `.env.local` and restart `npm run dev`
-- Or just skip the card-entry beat in the demo: "We're not going to wire the card here, that's the Square integration we already have working in our merch store"
+**Demo mode submission errors:**
+- Check both `NEXT_PUBLIC_BILLING_DEMO_MODE=true` AND `BILLING_DEMO_MODE=true` are set in Vercel env
+- Redeploy if you just set them
 
 **Wizard 500s:**
-- The wizard API requires the `onboarding_state` column. Verify the second SQL block ran.
-- Worst case, skip the wizard step and go straight to `/getting-started` to demo that.
+- Verify `orgs.onboarding_state` column exists (`alter table orgs add column if not exists onboarding_state jsonb default '{}'`)
+- Worst case: skip the wizard step entirely, walk through `/getting-started` directly
 
 **Trial banner doesn't show:**
-- Means your org has no `org_subscriptions` row or the status isn't 'trialing'. Run the SQL to insert a trialing row pointing 30 days out.
+- Means the `org_subscriptions` row insert failed or `status !== 'trialing'`. SQL-check the row.
+
+**Anything else:** keep moving. The story works even if a click breaks. Don't apologize on stage — say "great catch, we'll fix that today" and move to the next beat.
 
 ---
 
-## Backup slides (in case wifi dies)
+## Backup if the wifi dies
 
-Have these screenshots in a folder on desktop, just in case:
-- `/pricing` page
-- PricingModal step 2 (card form)
-- Wizard step 3 (branding with color picker)
-- Getting Started page with TOC open
-- Billing manage page with trial banner
+Have these screenshots in a desktop folder, ready to walk through in order:
 
-If the laptop melts, walk through the screenshots in order — the story still works.
+1. `/pricing` hero with SPOTIO headline + 3 tier cards
+2. PricingModal step 1 (tier picker)
+3. PricingModal step 2 (Apple Pay + Google Pay + card)
+4. Wizard step 3 (Branding with color picker showing brand colors)
+5. `/getting-started` with the TOC and Map section expanded
+6. `/billing` manage page with trial banner visible
+7. `/migration` page with the 5-day process
+8. Mobile app Field Mode on a phone screenshot
+
+If laptop dies, walk through the screenshots in order. The story still works.
+
+---
+
+## URLs to share / reference
+
+| Surface | URL |
+|---|---|
+| Landing (organization in a box) | https://rouxte.com |
+| Public pricing | https://rouxte.com/pricing |
+| Migration concierge | https://rouxte.com/migration |
+| Getting started TOC | https://rouxte.com/getting-started |
+| Sales contact | sales@rouxte.com |
+| Migration contact | migrations@rouxte.com |
+
+---
+
+## Post-demo follow-up
+
+Send within 4 hours of the meeting:
+- Recap email with the demo URLs
+- Founding-dealer pricing sheet (PDF, separately)
+- Calendar invite for the 30-min Enterprise call
+- Link to `/migration` if they asked about switching
