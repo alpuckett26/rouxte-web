@@ -30,26 +30,36 @@ export async function GET(_req: NextRequest, { params }: Params) {
   return NextResponse.json({ data: invite });
 }
 
-// POST /api/invites/[token]/accept — authenticated user accepts the invite
+// POST /api/invites/[token] — authenticated user accepts the invite
 export async function POST(_req: NextRequest, { params }: Params) {
   const { token } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to accept this invite", code: "unauthenticated" }, { status: 401 });
 
   const admin = createAdminClient();
 
-  // Validate invite
+  // Validate invite — pull email too so we can confirm the signed-in user matches
   const { data: invite } = await admin
     .from("invites")
-    .select("id, org_id, role, team_id, expires_at, accepted_at, full_name, phone, territory_zips")
+    .select("id, email, org_id, role, team_id, expires_at, accepted_at, full_name, phone, territory_zips")
     .eq("token", token)
     .maybeSingle();
 
-  if (!invite) return NextResponse.json({ error: "Invite not found" }, { status: 404 });
-  if (invite.accepted_at) return NextResponse.json({ error: "Already accepted" }, { status: 410 });
+  if (!invite) return NextResponse.json({ error: "Invite not found", code: "not_found" }, { status: 404 });
+  if (invite.accepted_at) return NextResponse.json({ error: "Invite already accepted", code: "already_accepted" }, { status: 410 });
   if (new Date(invite.expires_at) < new Date()) {
-    return NextResponse.json({ error: "Invite expired" }, { status: 410 });
+    return NextResponse.json({ error: "Invite expired", code: "expired" }, { status: 410 });
+  }
+
+  // Email-match guard — don't silently merge a different user into the org
+  const userEmail = (user.email ?? "").trim().toLowerCase();
+  const inviteEmailL = (invite.email ?? "").trim().toLowerCase();
+  if (userEmail && inviteEmailL && userEmail !== inviteEmailL) {
+    return NextResponse.json(
+      { error: `This invite was sent to ${invite.email}. Please log in with that email or request a new invite.`, code: "email_mismatch" },
+      { status: 403 },
+    );
   }
 
   // Get any existing profile for this user (any org)
