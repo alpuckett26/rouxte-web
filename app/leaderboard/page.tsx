@@ -354,7 +354,7 @@ export default function LeaderboardPage() {
           {tab === "leaderboard" && myEntry && (
             <p className="text-xs text-gray-400">
               You&apos;re <span className="text-blue-400 font-bold">#{myEntry.rank}</span>
-              {" · "}{getVal(myEntry, metric)}{metric === "training" ? "%" : ""} {getSuffix(metric)}
+              {" · "}{getVal(myEntry, metric)}{metric === "training" ? "% complete" : ` ${getSuffix(metric)}`}
               {metric === "sales" && myEntry.goal && ` · ${myEntry.goal_pct ?? 0}% of goal`}
             </p>
           )}
