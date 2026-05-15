@@ -42,7 +42,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
   // Validate invite
   const { data: invite } = await admin
     .from("invites")
-    .select("id, org_id, role, team_id, expires_at, accepted_at")
+    .select("id, org_id, role, team_id, expires_at, accepted_at, full_name, phone, territory_zips")
     .eq("token", token)
     .maybeSingle();
 
@@ -59,22 +59,28 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Upsert profile into the invited org — overwrite role/team if they self-onboarded elsewhere
+  // Upsert profile into the invited org — overwrite role/team if they self-onboarded elsewhere.
+  // Prefer the name the manager typed on the invite over what the user picked themselves.
+  const inviteFullName = (invite as { full_name?: string | null }).full_name;
+  const invitePhone    = (invite as { phone?: string | null }).phone;
+  const inviteZips     = (invite as { territory_zips?: string[] | null }).territory_zips;
+
+  const profilePayload: Record<string, unknown> = {
+    user_id: user.id,
+    org_id: invite.org_id,
+    role: invite.role,
+    team_id: invite.team_id ?? null,
+    full_name: inviteFullName ?? anyProfile?.full_name ?? user.email?.split("@")[0] ?? "",
+    onboarding_step: "complete",
+    onboarding_complete: true,
+    updated_at: new Date().toISOString(),
+  };
+  if (invitePhone) profilePayload.phone = invitePhone;
+  if (inviteZips && inviteZips.length > 0) profilePayload.territory = inviteZips.join(", ");
+
   const { error: profileError } = await admin
     .from("user_profiles")
-    .upsert(
-      {
-        user_id: user.id,
-        org_id: invite.org_id,
-        role: invite.role,
-        team_id: invite.team_id ?? null,
-        full_name: anyProfile?.full_name ?? user.email?.split("@")[0] ?? "",
-        onboarding_step: "complete",
-        onboarding_complete: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,org_id" }
-    );
+    .upsert(profilePayload, { onConflict: "user_id,org_id" });
 
   if (profileError) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });

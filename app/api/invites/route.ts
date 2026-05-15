@@ -54,11 +54,21 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const email: string = body.email?.trim().toLowerCase();
   const role: string = body.role ?? "sales_rep";
+  const fullName: string | null = typeof body.full_name === "string" ? body.full_name.trim() : null;
+  const phone: string | null = typeof body.phone === "string" ? body.phone.trim() || null : null;
+  const personalNote: string | null = typeof body.personal_note === "string" ? body.personal_note.trim() || null : null;
+  const territoryZips: string[] = Array.isArray(body.territory_zips)
+    ? body.territory_zips.map(String).map((z: string) => z.trim()).filter(Boolean)
+    : typeof body.territory_zips === "string"
+    ? body.territory_zips.split(/[\s,;]+/).map((s: string) => s.trim()).filter(Boolean)
+    : [];
+
   // Team leads can only invite reps to their own team
   const teamId: string | null =
     profile.role === "team_lead" ? (profile.team_id ?? null) : (body.team_id ?? null);
 
   if (!email) return NextResponse.json({ error: "Email is required" }, { status: 400 });
+  if (!fullName) return NextResponse.json({ error: "Full name is required" }, { status: 400 });
 
   const token = randomBytes(16).toString("hex");
 
@@ -72,6 +82,10 @@ export async function POST(request: NextRequest) {
       role,
       team_id: teamId,
       token,
+      full_name: fullName,
+      phone,
+      personal_note: personalNote,
+      territory_zips: territoryZips.length > 0 ? territoryZips : null,
     })
     .select("*, team:team_id(name)")
     .single();
@@ -83,11 +97,15 @@ export async function POST(request: NextRequest) {
   const inviteUrl = `${appUrl}/invite/${token}`;
 
   const { data: org } = await admin.from("orgs").select("name").eq("id", profile.org_id).single();
+  const teamName = (data as { team?: { name?: string } | null }).team?.name ?? undefined;
   const { subject, html } = inviteEmail({
     orgName: org?.name ?? "your team",
     role,
     inviteUrl,
     inviterName: (profile as { full_name?: string }).full_name ?? "Your Manager",
+    fullName: fullName ?? undefined,
+    personalNote: personalNote ?? undefined,
+    teamName,
   });
 
   const emailSent = await sendEmail({ from: FROM, to: email, subject, html });

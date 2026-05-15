@@ -40,20 +40,47 @@ function cta(href: string, label: string) {
 const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
 // ── Invite ────────────────────────────────────────────────────────────────────────────────────
-export function inviteEmail({ orgName, role, inviteUrl, inviterName }: {
-  orgName: string; role: string; inviteUrl: string; inviterName?: string;
+export function inviteEmail({ orgName, role, inviteUrl, inviterName, fullName, personalNote, teamName }: {
+  orgName: string; role: string; inviteUrl: string;
+  inviterName?: string;
+  fullName?: string;
+  personalNote?: string;
+  teamName?: string;
 }): { subject: string; html: string } {
   const roleLabel = ROLE_LABELS[role] ?? role;
+  const greeting = fullName ? `Hey ${fullName.split(" ")[0]},` : "Hey,";
   const from = inviterName ? `${inviterName} has invited you` : "You've been invited";
+  const teamLine = teamName
+    ? `<p style="margin:0 0 16px;font-size:14px;color:#475569;">You'll be on the <strong>${teamName}</strong> team.</p>`
+    : "";
+  const noteBlock = personalNote
+    ? `<div style="margin:0 0 24px;padding:14px 16px;background:#f8fafc;border-left:3px solid #1BAEE1;border-radius:6px;">
+         <p style="margin:0 0 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;">A note from ${inviterName ?? "your manager"}</p>
+         <p style="margin:0;font-size:14px;color:#334155;line-height:1.5;white-space:pre-wrap;">${escapeHtml(personalNote)}</p>
+       </div>`
+    : "";
+
   return {
     subject: `You've been invited to join ${orgName} on Rouxte`,
     html: wrapper(`
+      <p style="margin:0 0 8px;font-size:15px;color:#64748b;">${greeting}</p>
       <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">${from}</p>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;">to join <strong>${orgName}</strong> as a <strong>${roleLabel}</strong>.</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#475569;">to join <strong>${orgName}</strong> as a <strong>${roleLabel}</strong>.</p>
+      ${teamLine}
+      ${noteBlock}
       <a href="${inviteUrl}" style="display:block;background:#1BAEE1;color:#ffffff;text-align:center;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:24px;">Accept Invite &rarr;</a>
       <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">This invite expires in 7 days. If you didn't expect this, you can safely ignore it.</p>
     `),
   };
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ── Invite accepted (to manager) ─────────────────────────────────────────────────────────────
