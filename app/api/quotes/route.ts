@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Activity log — feeds the analytics chart + leaderboard quotes metric
-    await admin.from("sales_activity_log").insert({
+    const { error: fiberLogErr } = await admin.from("sales_activity_log").insert({
       org_id:     profile.org_id,
       actor_id:   user.id,
       lead_id:    quote.lead_id ?? null,
@@ -139,6 +139,9 @@ export async function POST(request: NextRequest) {
       },
       is_incident: false,
     });
+    if (fiberLogErr) {
+      console.error("[quotes/fiber] quote_sent log insert failed:", fiberLogErr.message);
+    }
 
     await admin.from("leads").insert({
       org_id:               profile.org_id,
@@ -211,7 +214,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Activity log — feeds the analytics chart + leaderboard quotes metric
-    await admin.from("sales_activity_log").insert({
+    const { error: wirelessLogErr } = await admin.from("sales_activity_log").insert({
       org_id:     profile.org_id,
       actor_id:   user.id,
       lead_id:    quote.lead_id ?? null,
@@ -228,6 +231,9 @@ export async function POST(request: NextRequest) {
       },
       is_incident: false,
     });
+    if (wirelessLogErr) {
+      console.error("[quotes/wireless] quote_sent log insert failed:", wirelessLogErr.message);
+    }
   }
 
   return NextResponse.json({ quote });
