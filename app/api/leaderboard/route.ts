@@ -43,14 +43,15 @@ export async function GET(request: NextRequest) {
 
   const since = periodStart(period);
 
-  // All reps in scope
-  // Everyone sees the full org board — it's motivational.
+  // All org members in scope
+  // Everyone sees the full org board — it's motivational. Admins and
+  // sales_managers are included too, so solo orgs (where the admin is
+  // the only seller) get credit for their sales and quotes.
   // Optional ?team_id= filter still available for drill-down.
   let repQuery = admin
     .from("user_profiles")
-    .select("user_id, full_name, team_id, avatar_url")
-    .eq("org_id", profile.org_id)
-    .in("role", ["sales_rep", "team_lead"]);
+    .select("user_id, full_name, team_id, avatar_url, role")
+    .eq("org_id", profile.org_id);
 
   if (teamId) repQuery = repQuery.eq("team_id", teamId);
 
