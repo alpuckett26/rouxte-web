@@ -5,14 +5,12 @@ import { STATUS_HEX } from '@/lib/colors';
 import type { LeadStatus } from '@/types';
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
-  new: 'New',
-  attempted: 'Attempted',
-  contacted: 'Contacted',
-  qualified: 'Qualified',
-  appointment_set: 'Appt Set',
-  sold: 'Sold',
-  installed: 'Installed',
-  closed_lost: 'Lost',
+  new:         'New',
+  attempted:   'Attempted',
+  interested:  'Interested',
+  appointment: 'Appointment',
+  sold:        'Sold',
+  lost:        'Lost',
 };
 
 export function StatusPill({ status }: { status: LeadStatus }) {

@@ -8,6 +8,7 @@ import Badge from "@/components/ui/Badge";
 import GoalProgressWidget from "@/components/dashboard/GoalProgressWidget";
 import KnockHistoryWidget from "@/components/dashboard/KnockHistoryWidget";
 import AnalyticsSummaryCard from "@/components/dashboard/AnalyticsSummaryCard";
+import AccountabilityCard from "@/components/dashboard/AccountabilityCard";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { LOG_EVENT_LABELS } from "@/lib/utils/logs";
 
@@ -83,6 +84,9 @@ export default function DashboardView() {
 
       {/* Goals widget — all roles */}
       <GoalProgressWidget />
+
+      {/* Accountability chain — every role except admin */}
+      <AccountabilityCard />
 
       {/* Analytics summary — elevated roles only, links to full /analytics */}
       {isElevated && <AnalyticsSummaryCard />}

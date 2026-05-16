@@ -5,12 +5,10 @@ export type UserRole = "admin" | "sales_manager" | "team_lead" | "sales_rep";
 export type LeadStatus =
   | "new"
   | "attempted"
-  | "contacted"
-  | "qualified"
-  | "appointment_set"
+  | "interested"
+  | "appointment"
   | "sold"
-  | "installed"
-  | "closed_lost";
+  | "lost";
 
 export type OnboardingStep =
   | "verify"
@@ -108,6 +106,7 @@ export interface Lead {
   created_by: string;
   follow_up_at: string | null;
   appointment_at: string | null;
+  installed_at: string | null;
   is_do_not_knock: boolean;
   is_opt_out: boolean;
   customer_name: string | null;

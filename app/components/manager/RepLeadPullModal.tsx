@@ -22,28 +22,24 @@ interface RepLeadData {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  new: "New",
-  attempted: "Attempted",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  appointment_set: "Appointment",
-  sold: "Sold",
-  installed: "Installed",
-  closed_lost: "Lost",
+  new:         "New",
+  attempted:   "Attempted",
+  interested:  "Interested",
+  appointment: "Appointment",
+  sold:        "Sold",
+  lost:        "Lost",
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  new: "bg-gray-100 text-gray-600",
-  attempted: "bg-yellow-100 text-yellow-700",
-  contacted: "bg-blue-100 text-blue-700",
-  qualified: "bg-purple-100 text-purple-700",
-  appointment_set: "bg-orange-100 text-orange-700",
-  sold: "bg-green-100 text-green-700",
-  installed: "bg-emerald-100 text-emerald-700",
-  closed_lost: "bg-red-100 text-red-600",
+  new:         "bg-gray-100 text-gray-600",
+  attempted:   "bg-yellow-100 text-yellow-700",
+  interested:  "bg-purple-100 text-purple-700",
+  appointment: "bg-orange-100 text-orange-700",
+  sold:        "bg-green-100 text-green-700",
+  lost:        "bg-red-100 text-red-600",
 };
 
-const PROTECTED = ["appointment_set", "sold", "installed"];
+const PROTECTED = ["appointment", "sold"];
 
 interface Props {
   repId: string;

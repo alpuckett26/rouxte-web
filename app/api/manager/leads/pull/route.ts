@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { LeadStatus } from "@/lib/types";
 
 // Statuses that require explicit `force: true` to pull
-const PROTECTED_STATUSES: LeadStatus[] = ["appointment_set", "sold", "installed"];
+const PROTECTED_STATUSES: LeadStatus[] = ["appointment", "sold"];
 
 /**
  * POST /api/manager/leads/pull

@@ -10,13 +10,14 @@ interface Props {
   onOpenFull: () => void;
 }
 
+// Canonical disposition set — labels match LEAD_STATUS_LABELS in lib/utils/leads.ts
+// so the rep sees the same word on the map, the detail page, and the leaderboard.
 const DISPOSITIONS = [
-  { status: "attempted",       label: "No Answer",        color: "bg-orange-100 text-orange-700 border-orange-200",  dot: "bg-orange-400" },
-  { status: "contacted",       label: "Contacted",         color: "bg-blue-100 text-blue-700 border-blue-200",        dot: "bg-blue-500" },
-  { status: "qualified",       label: "Interested",        color: "bg-purple-100 text-purple-700 border-purple-200",  dot: "bg-purple-500" },
-  { status: "appointment_set", label: "Appt Set",          color: "bg-yellow-100 text-yellow-700 border-yellow-200",  dot: "bg-yellow-400" },
-  { status: "closed_lost",     label: "Not Interested",    color: "bg-red-100 text-red-700 border-red-200",           dot: "bg-red-400" },
-  { status: "sold",            label: "SOLD",              color: "bg-green-100 text-green-700 border-green-200",     dot: "bg-green-500" },
+  { status: "attempted",   label: "Attempted",   color: "bg-orange-100 text-orange-700 border-orange-200", dot: "bg-orange-400" },
+  { status: "interested",  label: "Interested",  color: "bg-purple-100 text-purple-700 border-purple-200", dot: "bg-purple-500" },
+  { status: "appointment", label: "Appointment", color: "bg-yellow-100 text-yellow-700 border-yellow-200", dot: "bg-yellow-400" },
+  { status: "lost",        label: "Lost",        color: "bg-red-100 text-red-700 border-red-200",          dot: "bg-red-400" },
+  { status: "sold",        label: "SOLD",        color: "bg-green-100 text-green-700 border-green-200",    dot: "bg-green-500" },
 ];
 
 

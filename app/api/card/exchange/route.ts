@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     customer_name: name.trim(),
     phone:        phone.trim(),
     source:       "card_exchange",
-    status:       "contacted",
+    status:       "interested",
     carrier_availability: {},
   });
 

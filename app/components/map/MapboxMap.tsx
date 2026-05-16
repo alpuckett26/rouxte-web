@@ -10,14 +10,12 @@ import { useProfile } from "@/lib/hooks/useProfile";
 
 // Status → hex colour used in Mapbox paint expressions
 const STATUS_HEX: Record<string, string> = {
-  new: "#6b7280",
-  attempted: "#f97316",
-  contacted: "#3b82f6",
-  qualified: "#a855f7",
-  appointment_set: "#eab308",
-  sold: "#22c55e",
-  installed: "#16a34a",
-  closed_lost: "#ef4444",
+  new:         "#6b7280",
+  attempted:   "#f97316",
+  interested:  "#a855f7",
+  appointment: "#eab308",
+  sold:        "#22c55e",
+  lost:        "#ef4444",
 };
 
 // Build a flat Mapbox match expression for status colours
@@ -1319,7 +1317,7 @@ export default function MapboxMap({
           <div className="rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm px-3 py-2 text-xs text-gray-700">
             <p className="font-semibold mb-1.5 text-gray-900">Lead Status</p>
             {Object.entries(STATUS_HEX)
-              .filter(([s]) => s !== "closed_lost")
+              .filter(([s]) => s !== "lost")
               .map(([status, hex]) => (
                 <div key={status} className="flex items-center gap-1.5 mb-0.5 capitalize">
                   <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: hex }} />

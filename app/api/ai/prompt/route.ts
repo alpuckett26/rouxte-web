@@ -119,7 +119,7 @@ const PROMPT_TEMPLATES: Record<string, (ctx: PromptContext) => string> = {
     `Write a 30-second door pitch for ${address ?? "this address"}. ${att_available ? `AT&T fiber is available. Competitors: ${competitors?.join(", ") || "unknown"}.` : "AT&T fiber is not yet available — focus on getting contact info for when it is."} Lead status: ${current_status ?? "new"}.`,
 
   followup: ({ address, last_note, current_status }) =>
-    `Write a short follow-up text message for a prospect at ${address ?? "this address"}. Status: ${current_status ?? "contacted"}. ${last_note ? `Last note: "${last_note}"` : ""} Keep it under 2 sentences, friendly, not pushy.`,
+    `Write a short follow-up text message for a prospect at ${address ?? "this address"}. Status: ${current_status ?? "interested"}. ${last_note ? `Last note: "${last_note}"` : ""} Keep it under 2 sentences, friendly, not pushy.`,
 
   next_action: ({ address, current_status, att_available, last_note }) =>
     `What's the single best next action for this lead? Address: ${address ?? "unknown"}. Status: ${current_status ?? "new"}. AT&T available: ${att_available ? "yes" : "no"}. ${last_note ? `Last note: "${last_note}"` : ""} One sentence answer.`,

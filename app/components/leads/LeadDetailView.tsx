@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lead, LeadNote, LeadTag, SalesActivityLog } from "@/lib/types";
-import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_ORDER } from "@/lib/utils/leads";
+import { Lead, LeadNote, LeadStatus, LeadTag, SalesActivityLog } from "@/lib/types";
+import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, LEAD_STATUS_ORDER, isBackwardsTransition } from "@/lib/utils/leads";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -46,8 +46,17 @@ export default function LeadDetailView({ leadId }: Props) {
       .finally(() => setLoading(false));
   }, [leadId]);
 
-  async function updateStatus(newStatus: Lead["status"]) {
+  async function updateStatus(newStatus: Lead["status"], opts: { confirmBackwards?: boolean } = {}) {
     if (!lead) return;
+    // Sold is only reachable through the explicit "Log a sale" flow — keep
+    // status changes and sale logging atomic. See /api/leads/[id]/log-sale.
+    if (newStatus === "sold") { setLogSaleOpen(true); return; }
+    if (opts.confirmBackwards && isBackwardsTransition(lead.status, newStatus)) {
+      const ok = window.confirm(
+        `Move this lead back to "${LEAD_STATUS_LABELS[newStatus]}" from "${LEAD_STATUS_LABELS[lead.status]}"? This is an unusual transition.`,
+      );
+      if (!ok) return;
+    }
     const res = await fetch(`/api/leads/${leadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -56,8 +65,6 @@ export default function LeadDetailView({ leadId }: Props) {
     if (res.ok) {
       const d = await res.json();
       setLead(d.data);
-      // Prompt to log sale details when marked sold
-      if (newStatus === "sold") setLogSaleOpen(true);
     }
   }
 
@@ -155,47 +162,31 @@ export default function LeadDetailView({ leadId }: Props) {
         </div>
       </div>
 
-      {/* Status pipeline */}
-      <Card padding="md">
-        <p className="text-xs font-medium text-gray-500 mb-3">Pipeline Status</p>
-        <div className="flex items-center gap-1 flex-wrap">
-          {LEAD_STATUS_ORDER.filter((s) => s !== "closed_lost").map((s, i, arr) => {
-            const currentIdx = LEAD_STATUS_ORDER.indexOf(lead.status);
-            const stepIdx = LEAD_STATUS_ORDER.indexOf(s);
-            const done = stepIdx < currentIdx;
-            const active = s === lead.status;
-            return (
-              <div key={s} className="flex items-center gap-1">
-                <button
-                  onClick={() => updateStatus(s)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    active
-                      ? "bg-blue-600 text-white"
-                      : done
-                      ? "bg-blue-100 text-blue-600"
-                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                  }`}
-                >
-                  {LEAD_STATUS_LABELS[s]}
-                </button>
-                {i < arr.length - 1 && (
-                  <span className="text-gray-300 text-xs">→</span>
-                )}
-              </div>
-            );
-          })}
-          <button
-            onClick={() => updateStatus("closed_lost")}
-            className={`rounded-full px-3 py-1 text-xs font-medium ml-2 transition-colors ${
-              lead.status === "closed_lost"
-                ? "bg-red-600 text-white"
-                : "bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-600"
-            }`}
-          >
-            Closed / Lost
-          </button>
-        </div>
-      </Card>
+      {/* Action panel — replaces the always-clickable chip strip */}
+      <LeadActionPanel
+        lead={lead}
+        onTransition={(next) => updateStatus(next)}
+        onTransitionWithConfirm={(next) => updateStatus(next, { confirmBackwards: true })}
+        onLogSale={() => setLogSaleOpen(true)}
+        onJumpToTab={(t) => setTab(t)}
+      />
+      {logSaleOpen && lead && (
+        <LogSaleModal
+          leadId={lead.id}
+          address={lead.address}
+          onClose={() => setLogSaleOpen(false)}
+          onLogged={async () => {
+            setLogSaleOpen(false);
+            // Refresh lead + logs after atomic sale
+            const [leadData, logsData] = await Promise.all([
+              fetch(`/api/leads/${leadId}`).then((r) => r.json()),
+              fetch(`/api/logs?lead_id=${leadId}`).then((r) => r.json()),
+            ]);
+            setLead(leadData.data);
+            setLogs(logsData.data ?? []);
+          }}
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-100 gap-4">
@@ -307,22 +298,103 @@ export default function LeadDetailView({ leadId }: Props) {
         <LeadAIPanel lead={lead} lastNote={notes[0]?.body} />
       )}
 
-      {logSaleOpen && lead && (
-        <LogSaleModal
-          leadId={leadId}
-          address={lead.address}
-          onClose={() => setLogSaleOpen(false)}
-          onLogged={() => {
-            setLogSaleOpen(false);
-            // Refresh logs tab
-            fetch(`/api/logs?lead_id=${leadId}`)
-              .then((r) => r.json())
-              .then((d) => setLogs(d.data ?? []));
-          }}
-        />
-      )}
     </div>
   );
+}
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/*  Action panel — replaces the chip strip                                  */
+/* ════════════════════════════════════════════════════════════════════════ */
+
+function LeadActionPanel({
+  lead, onTransition, onTransitionWithConfirm, onLogSale, onJumpToTab,
+}: {
+  lead: Lead;
+  onTransition: (next: LeadStatus) => void;
+  onTransitionWithConfirm: (next: LeadStatus) => void;
+  onLogSale: () => void;
+  onJumpToTab: (t: Tab) => void;
+}) {
+  const elapsed = formatElapsed(lead.updated_at);
+
+  // Primary / secondary CTA per current status
+  const cta = (() => {
+    switch (lead.status) {
+      case "new":
+        return { primary: { label: "Mark attempted",    onClick: () => onTransition("attempted") },
+                 secondary: { label: "Mark interested", onClick: () => onTransition("interested") } };
+      case "attempted":
+        return { primary: { label: "Mark interested", onClick: () => onTransition("interested") },
+                 secondary: { label: "Mark lost",     onClick: () => onTransition("lost") } };
+      case "interested":
+        return { primary: { label: "Log a sale",      onClick: onLogSale },
+                 secondary: { label: "Set appointment", onClick: () => onTransition("appointment") } };
+      case "appointment":
+        return { primary: { label: "Log a sale", onClick: onLogSale },
+                 secondary: { label: "Mark lost", onClick: () => onTransition("lost") } };
+      case "sold":
+        return { primary: { label: "View activity log", onClick: () => onJumpToTab("log") } };
+      case "lost":
+        return { primary: { label: "Reopen as interested", onClick: () => onTransitionWithConfirm("interested") } };
+    }
+  })();
+
+  return (
+    <Card padding="md">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Badge label={LEAD_STATUS_LABELS[lead.status]} color={LEAD_STATUS_COLORS[lead.status]} dot />
+          <span className="text-xs text-gray-500">· {elapsed}</span>
+        </div>
+        <ChangeStatusDropdown current={lead.status} onChange={onTransitionWithConfirm} />
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button onClick={cta.primary.onClick}>
+          {cta.primary.label}
+        </Button>
+        {"secondary" in cta && cta.secondary && (
+          <Button variant="secondary" onClick={cta.secondary.onClick}>
+            {cta.secondary.label}
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ChangeStatusDropdown({
+  current, onChange,
+}: { current: LeadStatus; onChange: (next: LeadStatus) => void }) {
+  const ALL: LeadStatus[] = [...LEAD_STATUS_ORDER, "lost"];
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs text-gray-500">Change status</span>
+      <select
+        value={current}
+        onChange={(e) => {
+          const next = e.target.value as LeadStatus;
+          if (next !== current) onChange(next);
+        }}
+        className="rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+      >
+        {ALL.map((s) => (
+          <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function formatElapsed(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 60_000) return "just now";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 // ── Inline assign-rep field ───────────────────────────────────────────────────

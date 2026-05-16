@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Auto-pull logic (per rep per org):
  *   Week 1  (≥7 days old):  if worked_pct < 30% → pull completely untouched leads (status = 'new')
  *   Week 2  (≥14 days old): if worked_pct < 60% → pull untouched + barely-touched (status in 'new','attempted')
- *   Week 3+ (≥21 days old): pull ALL unworked leads (status in 'new','attempted','contacted')
+ *   Week 3+ (≥21 days old): pull ALL unworked leads (status in 'new','attempted','interested')
  *
  * "Worked" = status has moved past 'new'.
  * Pulled leads get a 6-month cooldown_until.
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     if (ageDays >= 21) {
       // 3+ weeks: pull all completely unworked and low-progress
-      pullStatuses = ["new", "attempted", "contacted"];
+      pullStatuses = ["new", "attempted", "interested"];
       reason = `Auto-pulled: ${ageDays}d old, ${workedPct.toFixed(0)}% worked (21-day threshold)`;
     } else if (ageDays >= 14 && workedPct < 60) {
       // 2 weeks, < 60% worked

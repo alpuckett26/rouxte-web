@@ -32,12 +32,10 @@ export const colors = {
 // Lead status palette — mirrors STATUS_HEX in app/components/map/MapboxMap.tsx.
 // Keep in sync with that file.
 export const STATUS_HEX: Record<string, string> = {
-  new:             '#94a3b8',
-  attempted:       '#eab308',
-  contacted:       '#3b82f6',
-  qualified:       '#a855f7',
-  appointment_set: '#f97316',
-  sold:            '#22c55e',
-  installed:       '#10b981',
-  closed_lost:     '#ef4444',
+  new:         '#94a3b8',
+  attempted:   '#f97316',
+  interested:  '#a855f7',
+  appointment: '#eab308',
+  sold:        '#22c55e',
+  lost:        '#ef4444',
 };

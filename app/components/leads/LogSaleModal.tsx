@@ -49,13 +49,14 @@ export default function LogSaleModal({ leadId, address, onClose, onLogged }: Pro
     setSaving(true);
 
     try {
-      const res = await fetch("/api/logs", {
+      // Atomic: this endpoint flips the lead to sold AND logs the activity
+      // in one server call. If the activity insert fails, the lead status
+      // is reverted server-side — no more half-saved sales.
+      const res = await fetch(`/api/leads/${leadId}/log-sale`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          event_type: "sale_submitted",
           summary: `Sale: ${selectedPkg?.name ?? "Package"} — ${customerName}`,
-          lead_id: leadId,
           metadata: {
             package_id: selectedPkgId,
             package_name: selectedPkg?.name,

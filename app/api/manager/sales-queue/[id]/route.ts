@@ -71,10 +71,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     is_incident: false,
   });
 
-  // Update lead status: verified → "sold", rejected → "closed_lost"
+  // Update lead status: verified → "sold", rejected → "lost"
   if (log.lead_id) {
     await admin.from("leads")
-      .update({ status: action === "sale_verified" ? "sold" : "closed_lost" })
+      .update({ status: action === "sale_verified" ? "sold" : "lost" })
       .eq("id", log.lead_id);
   }
 

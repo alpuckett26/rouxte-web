@@ -30,9 +30,9 @@ export async function GET() {
   const leads = leadsRes.data ?? [];
   const contacts = leads.filter((l) => !["new", "attempted"].includes(l.status)).length;
   const appointments = leads.filter((l) =>
-    ["appointment_set", "sold", "installed"].includes(l.status)
+    ["appointment", "sold"].includes(l.status)
   ).length;
-  const sales = leads.filter((l) => ["sold", "installed"].includes(l.status)).length;
+  const sales = leads.filter((l) => l.status === "sold").length;
   const doors_knocked = knockRes.count ?? leads.length;
   const conversion_pct = doors_knocked > 0 ? (sales / doors_knocked) * 100 : 0;
 
@@ -69,13 +69,13 @@ export async function GET() {
           .eq("assigned_to", m.user_id);
 
         const ml = mLeads ?? [];
-        const ms = ml.filter((l) => ["sold", "installed"].includes(l.status)).length;
+        const ms = ml.filter((l) => l.status === "sold").length;
         return {
           user_id: m.user_id,
           full_name: (m.user_profiles as unknown as { full_name: string } | null)?.full_name ?? "Unknown",
           doors_knocked: ml.length,
           contacts: ml.filter((l) => !["new", "attempted"].includes(l.status)).length,
-          appointments: ml.filter((l) => ["appointment_set", "sold", "installed"].includes(l.status)).length,
+          appointments: ml.filter((l) => ["appointment", "sold"].includes(l.status)).length,
           sales: ms,
           conversion_pct: ml.length > 0 ? (ms / ml.length) * 100 : 0,
         };

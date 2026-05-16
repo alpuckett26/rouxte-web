@@ -99,7 +99,7 @@ export default function LeadDetailScreen({ route }: Props) {
       <Card style={{ marginTop: 16 }}>
         <Text variant="caption" tone="dim" style={styles.section}>PIPELINE STATUS</Text>
         <View style={styles.pipelineRow}>
-          {LEAD_STATUS_ORDER.filter((s) => s !== 'closed_lost').map((s) => {
+          {LEAD_STATUS_ORDER.filter((s) => s !== 'lost').map((s) => {
             const currentIdx = LEAD_STATUS_ORDER.indexOf(lead.status);
             const stepIdx = LEAD_STATUS_ORDER.indexOf(s);
             const done = stepIdx < currentIdx;
@@ -125,15 +125,15 @@ export default function LeadDetailScreen({ route }: Props) {
             );
           })}
           <Pressable
-            onPress={() => updateStatus.mutate('closed_lost')}
+            onPress={() => updateStatus.mutate('lost')}
             style={[
               styles.pipelineChip,
               { borderColor: colors.danger + '66' },
-              lead.status === 'closed_lost' && { backgroundColor: colors.danger },
+              lead.status === 'lost' && { backgroundColor: colors.danger },
             ]}
           >
-            <Text variant="caption" weight="medium" style={{ color: lead.status === 'closed_lost' ? '#fff' : colors.danger }}>
-              Closed / Lost
+            <Text variant="caption" weight="medium" style={{ color: lead.status === 'lost' ? '#fff' : colors.danger }}>
+              Lost
             </Text>
           </Pressable>
         </View>

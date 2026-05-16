@@ -208,7 +208,7 @@ export default function MapScreen() {
     for (const l of todayStats.recent) {
       if (l.event_type === 'door_knock' && l.lead_id) knockedTodayIds.add(l.lead_id);
     }
-    const SKIP_STATUSES: LeadStatus[] = ['sold', 'installed', 'closed_lost'];
+    const SKIP_STATUSES: LeadStatus[] = ['sold', 'lost'];
     let best: { lead: Lead & { lat: number; lng: number }; dist: number } | null = null;
     for (const l of geolocatedLeads) {
       if (l.is_do_not_knock) continue;

@@ -40,7 +40,7 @@ export async function GET() {
       if (!lead.assigned_to) continue;
       if (!closeRateMap[lead.assigned_to]) closeRateMap[lead.assigned_to] = { assigned: 0, closed: 0 };
       closeRateMap[lead.assigned_to].assigned++;
-      if (lead.status === "sold" || lead.status === "installed") {
+      if (lead.status === "sold") {
         closeRateMap[lead.assigned_to].closed++;
       }
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Lead, LeadFilters } from "@/lib/types";
@@ -10,6 +10,22 @@ import Button from "@/components/ui/Button";
 import LeadFilterBar from "@/components/map/LeadFilterBar";
 import LeadImportModal from "@/components/leads/LeadImportModal";
 import { useProfile } from "@/lib/hooks/useProfile";
+
+type QuickFilter = null | "today" | "hot" | "stale" | "unassigned";
+
+const STALE_DAYS_HOT = 3;   // interested + no follow-up 3d+
+const STALE_DAYS_GEN = 7;   // any status, 7d+ since update
+
+function daysSince(iso: string): number {
+  return (Date.now() - new Date(iso).getTime()) / 86_400_000;
+}
+
+function isAppointmentToday(lead: Lead): boolean {
+  if (!lead.appointment_at) return lead.status === "appointment";
+  const d = new Date(lead.appointment_at);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
 
 interface Rep  { user_id: string; full_name: string; role: string; assigned_leads?: number }
 interface Team { id: string; name: string; member_count: number }
@@ -28,6 +44,7 @@ export default function LeadsListPage() {
     return assignedTo ? { assigned_to: assignedTo } : {};
   });
   const [importOpen, setImportOpen] = useState(false);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(null);
   const [reps, setReps]   = useState<Rep[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -112,12 +129,13 @@ export default function LeadsListPage() {
   }
 
   function togglePage() {
-    const allOnPage = leads.every((l) => selected.has(l.id));
+    const target = quickFilter ? visibleLeads : leads;
+    const allOnPage = target.every((l) => selected.has(l.id));
     if (allOnPage) {
       setSelected(new Set());
       setSelectMode("page");
     } else {
-      setSelected(new Set(leads.map((l) => l.id)));
+      setSelected(new Set(target.map((l) => l.id)));
     }
   }
 
@@ -127,6 +145,16 @@ export default function LeadsListPage() {
   };
 
   const repsList = reps.filter((r) => r.role === "sales_rep" || r.role === "team_lead");
+
+  // Quick-filter chip applies client-side over the loaded page
+  const visibleLeads = useMemo(() => {
+    if (!quickFilter) return leads;
+    if (quickFilter === "today")      return leads.filter(isAppointmentToday);
+    if (quickFilter === "unassigned") return leads.filter((l) => !l.assigned_to);
+    if (quickFilter === "stale")      return leads.filter((l) => daysSince(l.updated_at) >= STALE_DAYS_GEN && !["sold", "lost"].includes(l.status));
+    if (quickFilter === "hot")        return leads.filter((l) => l.status === "interested" && daysSince(l.updated_at) >= STALE_DAYS_HOT);
+    return leads;
+  }, [leads, quickFilter]);
 
   // Stats for bulk assignment preview
   const selectedLeads = leads.filter((l) => selected.has(l.id));
@@ -154,6 +182,14 @@ export default function LeadsListPage() {
         </div>
       </div>
 
+      {/* Quick filter chips — apply client-side over the loaded page */}
+      <div className="flex gap-2 overflow-x-auto -mx-1 px-1">
+        <FilterChip label="Today's appointments" active={quickFilter === "today"}      onClick={() => setQuickFilter(quickFilter === "today" ? null : "today")} />
+        <FilterChip label="Hot"                  active={quickFilter === "hot"}        onClick={() => setQuickFilter(quickFilter === "hot" ? null : "hot")} />
+        <FilterChip label="Stale 7d+"            active={quickFilter === "stale"}      onClick={() => setQuickFilter(quickFilter === "stale" ? null : "stale")} />
+        <FilterChip label="Unassigned"           active={quickFilter === "unassigned"} onClick={() => setQuickFilter(quickFilter === "unassigned" ? null : "unassigned")} />
+      </div>
+
       <LeadFilterBar filters={filters} onChange={setFilters} />
 
       {loading ? (
@@ -162,9 +198,11 @@ export default function LeadsListPage() {
             <div key={i} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
           ))}
         </div>
-      ) : !leads.length ? (
+      ) : !visibleLeads.length ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center">
-          <p className="text-gray-500">No leads yet.</p>
+          <p className="text-gray-500">
+            {quickFilter ? "No leads match this filter." : "No leads yet."}
+          </p>
           {isManager ? (
             <button onClick={() => setImportOpen(true)} className="mt-4 inline-block text-sm text-blue-600 hover:underline">
               Import from spreadsheet
@@ -225,7 +263,7 @@ export default function LeadsListPage() {
                     <th className="pl-4 py-3 w-8">
                       <input
                         type="checkbox"
-                        checked={leads.length > 0 && leads.every((l) => selected.has(l.id))}
+                        checked={visibleLeads.length > 0 && visibleLeads.every((l) => selected.has(l.id))}
                         onChange={togglePage}
                         className="rounded"
                       />
@@ -240,7 +278,7 @@ export default function LeadsListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {leads.map((lead) => (
+                {visibleLeads.map((lead) => (
                   <tr key={lead.id} className={`hover:bg-gray-50 transition-colors ${selected.has(lead.id) ? "bg-blue-50/50" : ""}`}>
                     {isManager && (
                       <td className="pl-4 py-3 w-8">
@@ -472,5 +510,22 @@ export default function LeadsListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+        active
+          ? "border-blue-500 bg-blue-50 text-blue-700"
+          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900",
+      ].join(" ")}
+    >
+      {label}
+    </button>
   );
 }

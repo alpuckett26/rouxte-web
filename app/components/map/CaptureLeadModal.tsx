@@ -20,9 +20,9 @@ interface Props {
 }
 
 const STATUS_OPTIONS = [
-  { value: "new", label: "New" },
-  { value: "attempted", label: "Attempted" },
-  { value: "contacted", label: "Contacted" },
+  { value: "new",        label: "New" },
+  { value: "attempted",  label: "Attempted" },
+  { value: "interested", label: "Interested" },
 ];
 
 export default function CaptureLeadModal({ info, onClose, onCreated }: Props) {
