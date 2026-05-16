@@ -39,6 +39,19 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ data, total: count, page, page_size: pageSize });
 }
 
+/** ~11m at the equator — close enough to consider two clicks the same address. */
+const DEDUPE_TOLERANCE_DEG = 0.0001;
+
+function normalizeAddress(s: string | null | undefined): string {
+  return (s ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    // strip trailing ", USA" / ", United States" etc to match across geocoder variants
+    .replace(/,\s*(usa|united states|us)\.?$/i, "")
+    .trim();
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -54,6 +67,62 @@ export async function POST(request: NextRequest) {
   if (!profile?.org_id) return NextResponse.json({ error: "Profile not found — complete onboarding first." }, { status: 400 });
 
   const body = await request.json();
+  const incomingAddress = typeof body.address === "string" ? body.address : null;
+  const incomingLat = typeof body.lat === "number" ? body.lat : null;
+  const incomingLng = typeof body.lng === "number" ? body.lng : null;
+  const hasCoords = incomingLat !== null && incomingLng !== null && (incomingLat !== 0 || incomingLng !== 0);
+
+  // ── Dedupe: return the existing lead if there's already one at this spot
+  //
+  // Match strategy (cheap-first):
+  //   1. If we have real coords, look for any lead in the org whose lat/lng
+  //      is within ~11m of the incoming coords (DEDUPE_TOLERANCE_DEG).
+  //   2. Otherwise (typed-in address, no coords), match on normalized address
+  //      exact.
+  //
+  // We do the row lookup over the admin client (RLS is org-scoped via the
+  // .eq("org_id") filter), and bias newest-first so re-captures of an old
+  // address return the most recent record.
+  let existing: { id: string; address: string; lat: number | null; lng: number | null } | null = null;
+
+  if (hasCoords) {
+    const { data: nearby } = await admin
+      .from("leads")
+      .select("id, address, lat, lng")
+      .eq("org_id", profile.org_id)
+      .gte("lat", incomingLat - DEDUPE_TOLERANCE_DEG)
+      .lte("lat", incomingLat + DEDUPE_TOLERANCE_DEG)
+      .gte("lng", incomingLng - DEDUPE_TOLERANCE_DEG)
+      .lte("lng", incomingLng + DEDUPE_TOLERANCE_DEG)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    existing = nearby?.[0] ?? null;
+  }
+
+  if (!existing && incomingAddress) {
+    const normalized = normalizeAddress(incomingAddress);
+    if (normalized.length > 0) {
+      const { data: byAddress } = await admin
+        .from("leads")
+        .select("id, address, lat, lng")
+        .eq("org_id", profile.org_id)
+        // ilike with no wildcards = case-insensitive equality, cheap
+        .ilike("address", incomingAddress.trim())
+        .order("created_at", { ascending: false })
+        .limit(5);
+      existing = (byAddress ?? []).find((l) => normalizeAddress(l.address) === normalized) ?? null;
+    }
+  }
+
+  if (existing) {
+    // Return 200 (not 201) with the existing row + a `deduplicated` flag.
+    // CaptureLeadModal can use this to show "this address already exists —
+    // open the existing lead" instead of pretending we made a new one.
+    return NextResponse.json(
+      { data: existing, deduplicated: true },
+      { status: 200 },
+    );
+  }
 
   const { data, error } = await admin
     .from("leads")

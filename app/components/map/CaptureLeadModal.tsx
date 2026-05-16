@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -26,6 +27,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function CaptureLeadModal({ info, onClose, onCreated }: Props) {
+  const router = useRouter();
   const [address, setAddress] = useState(info.address ?? "");
   const [status, setStatus] = useState("new");
   // Pre-fill from FCC BDC data if available; rep can still override
@@ -34,6 +36,7 @@ export default function CaptureLeadModal({ info, onClose, onCreated }: Props) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [duplicate, setDuplicate] = useState<{ id: string; address: string } | null>(null);
 
   async function handleCreate() {
     if (!address.trim()) {
@@ -41,6 +44,7 @@ export default function CaptureLeadModal({ info, onClose, onCreated }: Props) {
       return;
     }
     setError("");
+    setDuplicate(null);
     setSaving(true);
 
     try {
@@ -63,9 +67,15 @@ export default function CaptureLeadModal({ info, onClose, onCreated }: Props) {
         }),
       });
 
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error ?? "Failed to create lead.");
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to create lead.");
+
+      // Server side flagged this as a duplicate of an existing lead.
+      // Show an inline notice with a one-tap "open it" rather than
+      // silently pretending we created a new row.
+      if (d.deduplicated) {
+        setDuplicate({ id: d.data.id, address: d.data.address });
+        return;
       }
 
       onCreated();
@@ -145,10 +155,35 @@ export default function CaptureLeadModal({ info, onClose, onCreated }: Props) {
           </p>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button loading={saving} onClick={handleCreate}>Save Lead</Button>
-        </div>
+        {duplicate && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-3">
+            <p className="text-sm font-semibold text-amber-900">
+              This address already exists in your org.
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5 truncate">{duplicate.address}</p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  router.push(`/leads/${duplicate.id}`);
+                  onClose();
+                }}
+              >
+                Open existing lead →
+              </Button>
+              <Button size="sm" variant="secondary" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!duplicate && (
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button loading={saving} onClick={handleCreate}>Save Lead</Button>
+          </div>
+        )}
       </div>
     </Modal>
   );
