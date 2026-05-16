@@ -51,6 +51,10 @@ export default function MapboxMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  // Pending temp marker for the right-click / long-press capture flow.
+  // Tracked in a ref so we can remove the previous pin before dropping a new
+  // one, and clean it up on modal close.
+  const captureMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const selectionCanvasRef = useRef<HTMLCanvasElement>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const dragCurrent = useRef<{ x: number; y: number } | null>(null);
@@ -987,6 +991,11 @@ export default function MapboxMap({
 
   // ── Right-click → reverse geocode + FCC check → capture modal ───────────
   async function handleMapClick(lat: number, lng: number, map: mapboxgl.Map) {
+    // Re-entrancy guard — ignore further right-clicks while we're already
+    // geocoding the previous one or while the capture modal is open. Without
+    // this, repeated right-clicks stack duplicate modals + duplicate leads.
+    if (geocoding || captureInfo) return;
+
     setGeocoding(true);
 
     // Run reverse geocode and FCC availability check in parallel
@@ -1020,8 +1029,9 @@ export default function MapboxMap({
     setGeocoding(false);
     setCaptureInfo({ lat, lng, address, attAvailable });
 
-    // Add temporary marker
-    new mapboxgl.Marker({ color: "#3b82f6" })
+    // Drop a single temp marker — replace prior if it survived somehow
+    captureMarkerRef.current?.remove();
+    captureMarkerRef.current = new mapboxgl.Marker({ color: "#3b82f6" })
       .setLngLat([lng, lat])
       .addTo(map);
   }
@@ -1272,9 +1282,15 @@ export default function MapboxMap({
       {captureInfo && (
         <CaptureLeadModal
           info={captureInfo}
-          onClose={() => setCaptureInfo(null)}
+          onClose={() => {
+            setCaptureInfo(null);
+            captureMarkerRef.current?.remove();
+            captureMarkerRef.current = null;
+          }}
           onCreated={() => {
             setCaptureInfo(null);
+            captureMarkerRef.current?.remove();
+            captureMarkerRef.current = null;
             fetchAndSyncLeads().then(syncLeadsToMap);
             onLeadCreated?.();
           }}
