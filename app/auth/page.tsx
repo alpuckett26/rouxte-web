@@ -69,6 +69,23 @@ function AuthForm() {
     }
   }
 
+  async function handleDemo() {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/demo", { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "Demo unavailable");
+      router.refresh();
+      router.push(json.redirect ?? "/dashboard");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Demo sign-in failed.");
+      setLoading(false);
+    }
+  }
+
+  const demoEnabled = process.env.NEXT_PUBLIC_ENABLE_DEMO === "true";
+
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-white flex items-center justify-center px-4 overflow-hidden">
 
@@ -120,6 +137,17 @@ function AuthForm() {
             )}
             Continue with GitHub
           </button>
+
+          {demoEnabled && (
+            <button
+              onClick={handleDemo}
+              disabled={loading || !!oauthLoading}
+              className="mt-1 flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-sm font-medium text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50 transition-colors"
+            >
+              {loading ? <Spinner /> : null}
+              Try the demo
+            </button>
+          )}
         </div>
 
         {/* Divider */}

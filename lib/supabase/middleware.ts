@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/offline") ||
     pathname.startsWith("/r/") ||
     pathname.startsWith("/api/") ||
+    pathname.startsWith("/demo") ||
     pathname === "/";
 
   if (!user && !isPublicPath) {

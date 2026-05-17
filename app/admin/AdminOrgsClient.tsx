@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface OrgSummary {
@@ -20,9 +21,28 @@ interface OrgSummary {
 }
 
 export default function AdminOrgsClient() {
+  const router = useRouter();
   const [orgs, setOrgs] = useState<OrgSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [opening, setOpening] = useState<string | null>(null);
+
+  async function handleOpen(orgId: string) {
+    setOpening(orgId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/impersonate?org_id=${encodeURIComponent(orgId)}`, {
+        method: "POST",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Open failed");
+      router.refresh();
+      router.push(json.redirect ?? "/dashboard");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Open failed");
+      setOpening(null);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/admin/orgs")
@@ -77,24 +97,39 @@ export default function AdminOrgsClient() {
                   <th className="text-right px-4 py-3">Users</th>
                   <th className="text-right px-4 py-3">Leads</th>
                   <th className="text-left px-4 py-3">Created</th>
+                  <th className="text-right px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered?.map((o) => (
-                  <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <Link href={`/admin/orgs/${o.id}`} className="font-semibold text-blue-700 hover:underline">
-                        {o.name || <span className="text-gray-400 italic">unnamed</span>}
-                      </Link>
-                      <div className="text-[10px] text-gray-400 font-mono">{o.id.slice(0, 8)}…</div>
-                    </td>
-                    <td className="px-4 py-3"><SubBadge sub={o.subscription} /></td>
-                    <td className="px-4 py-3 text-gray-700">{o.shape ?? <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">{o.user_count}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">{o.lead_count}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))}
+                {filtered?.map((o) => {
+                  const isDemo = (o.name ?? "").startsWith("[DEMO");
+                  return (
+                    <tr key={o.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <Link href={`/admin/orgs/${o.id}`} className="font-semibold text-blue-700 hover:underline">
+                          {o.name || <span className="text-gray-400 italic">unnamed</span>}
+                        </Link>
+                        <div className="text-[10px] text-gray-400 font-mono">{o.id.slice(0, 8)}…</div>
+                      </td>
+                      <td className="px-4 py-3"><SubBadge sub={o.subscription} /></td>
+                      <td className="px-4 py-3 text-gray-700">{o.shape ?? <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums">{o.user_count}</td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums">{o.lead_count}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-right">
+                        {isDemo && (
+                          <button
+                            onClick={() => handleOpen(o.id)}
+                            disabled={opening !== null}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                          >
+                            {opening === o.id ? "Opening…" : "Open"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -10,6 +10,13 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import {
+  DEMO_PASSWORD,
+  pickName,
+  rand,
+  randomDateInLastDays,
+  wipeOrgsByPrefix,
+} from "./lib/seed-helpers";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -24,7 +31,6 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const DEMO_PREFIX = "[DEMO]";
-const DEMO_PASSWORD = "rouxte-demo";
 
 type Role = "admin" | "sales_manager" | "team_lead" | "sales_rep";
 type SubStatus = "trialing" | "active" | "past_due";
@@ -166,69 +172,8 @@ const ORG_SPECS: OrgSpec[] = [
   },
 ];
 
-// ── Name generation ──────────────────────────────────────────────────────────
-
-const FIRST_NAMES = [
-  "Alex", "Jordan", "Sam", "Taylor", "Casey", "Morgan", "Riley", "Quinn",
-  "Cameron", "Avery", "Hayden", "Skyler", "Parker", "Rowan", "Sage", "Drew",
-  "Devon", "Reese", "Jamie", "Kennedy", "Logan", "Charlie", "Robin", "Frankie",
-];
-const LAST_NAMES = [
-  "Carter", "Reed", "Bennett", "Foster", "Hayes", "Ward", "Lane", "Price",
-  "Brooks", "Knox", "Pierce", "Walsh", "Stone", "Cole", "Murphy", "Hunt",
-  "Bailey", "Hayes", "Morgan", "Ellis", "Tate", "Quinn", "Webb", "Russo",
-];
-
-function pickName(seed: number): { first: string; last: string; full: string } {
-  const first = FIRST_NAMES[seed % FIRST_NAMES.length];
-  const last  = LAST_NAMES[(seed * 7) % LAST_NAMES.length];
-  return { first, last, full: `${first} ${last}` };
-}
-
-function rand(min: number, max: number): number {
-  return min + Math.floor(Math.random() * (max - min + 1));
-}
-
-function randomDateInLastDays(days: number): Date {
-  const ms = Math.random() * days * 24 * 60 * 60 * 1000;
-  return new Date(Date.now() - ms);
-}
-
 const SPEEDS = [300, 500, 1000, 2000];
 const CATEGORIES = ["new", "migration", "mobility", "insurance"] as const;
-
-// ── Cleanup ──────────────────────────────────────────────────────────────────
-
-async function wipeDemoOrgs() {
-  console.log("Wiping existing demo orgs...");
-  const { data: existing } = await supabase
-    .from("orgs")
-    .select("id, name")
-    .ilike("name", `${DEMO_PREFIX}%`);
-
-  if (!existing?.length) {
-    console.log("  no existing demo orgs to wipe.");
-    return;
-  }
-
-  for (const org of existing) {
-    console.log(`  wiping ${org.name}...`);
-
-    // Find all auth users in this org via user_profiles, delete them
-    const { data: profiles } = await supabase
-      .from("user_profiles")
-      .select("user_id")
-      .eq("org_id", org.id);
-
-    for (const p of profiles ?? []) {
-      await supabase.auth.admin.deleteUser(p.user_id).catch(() => {});
-    }
-
-    // Cascade should clear teams, comp_plans, leads, activity, profiles, subscriptions, billing_charges
-    await supabase.from("orgs").delete().eq("id", org.id);
-  }
-  console.log(`  wiped ${existing.length} org(s).`);
-}
 
 // ── Per-org seed ─────────────────────────────────────────────────────────────
 
@@ -442,7 +387,7 @@ async function seedOrg(spec: OrgSpec, nameSeedBase: number): Promise<void> {
 async function main() {
   console.log("Seed: demo orgs");
   console.log("================");
-  await wipeDemoOrgs();
+  await wipeOrgsByPrefix(supabase, DEMO_PREFIX);
 
   let nameSeed = 0;
   for (const spec of ORG_SPECS) {
