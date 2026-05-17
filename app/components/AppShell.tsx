@@ -214,13 +214,16 @@ export default function AppShell({
       <IdleTimeout />
       <BillingGate email={profile?.email} name={profile?.full_name ?? undefined} />
       {header}
-      {/* pb-16 md:pb-0 keeps content above the fixed mobile nav */}
-      <main className="relative z-10 mx-auto max-w-6xl px-4 py-6 pb-20 md:pb-6">
+      {/* Bottom padding clears the fixed mobile nav PLUS iOS safe-area
+          (home indicator). Without the safe-area term, content near the
+          bottom of the page is hidden behind the nav on devices with
+          rounded bezels/notches. */}
+      <main className="relative z-10 mx-auto max-w-6xl px-4 py-6 md:pb-6 pb-[calc(env(safe-area-inset-bottom,0px)+6rem)]">
         {children}
       </main>
-      {/* Fixed bottom nav for normal pages */}
+      {/* Fixed bottom nav for normal pages — also respects safe-area */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/90 backdrop-blur-sm"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white/90 backdrop-blur-sm pb-[env(safe-area-inset-bottom,0px)]"
         style={{ display: "grid", gridTemplateColumns: `repeat(${navItems.length}, 1fr)` }}
       >
         {navItems.map((item) => {
