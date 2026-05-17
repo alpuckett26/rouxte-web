@@ -36,9 +36,13 @@ const ROLE_LABELS: Record<UserRole, string> = {
   sales_rep: "Rep",
 };
 
-interface Props { callerRole: UserRole }
+interface Props {
+  callerRole: UserRole;
+  /** When set, fetch this team instead of the caller's own. Admin/manager only. */
+  teamIdOverride?: string;
+}
 
-export default function TeamLeadPanel({ callerRole }: Props) {
+export default function TeamLeadPanel({ callerRole, teamIdOverride }: Props) {
   const [data, setData] = useState<TeamData | null>(null);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,15 +50,18 @@ export default function TeamLeadPanel({ callerRole }: Props) {
   const [newInvite, setNewInvite] = useState<{ token: string; email: string } | null>(null);
 
   const fetchData = useCallback(async () => {
+    const teamUrl = teamIdOverride
+      ? `/api/manager/my-team?team_id=${encodeURIComponent(teamIdOverride)}`
+      : "/api/manager/my-team";
     const [teamRes, invitesRes] = await Promise.all([
-      fetch("/api/manager/my-team"),
+      fetch(teamUrl),
       fetch("/api/invites"),
     ]);
     const [teamJson, invitesJson] = await Promise.all([teamRes.json(), invitesRes.json()]);
     setData(teamJson.data ?? null);
     setInvites(invitesJson.data ?? []);
     setLoading(false);
-  }, []);
+  }, [teamIdOverride]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

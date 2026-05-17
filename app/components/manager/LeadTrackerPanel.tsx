@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import Card from "@/components/ui/Card";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -186,7 +187,11 @@ function WeeklyTab({ data }: { data: WeeklyData | null }) {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Teams</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {teams.map((team) => (
-              <div key={team.team_id} className="rounded-2xl border border-gray-100 bg-white px-4 py-3">
+              <Link
+                key={team.team_id}
+                href={`/manager/teams/${team.team_id}`}
+                className="block rounded-2xl border border-gray-100 bg-white px-4 py-3 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+              >
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm font-semibold text-gray-900">{team.team_name}</p>
                   <TrendIcon trend={team.trend} />
@@ -204,7 +209,7 @@ function WeeklyTab({ data }: { data: WeeklyData | null }) {
                     <span className="ml-1 font-medium text-gray-600">{team.last_week_activity}</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -225,9 +230,10 @@ function WeeklyTab({ data }: { data: WeeklyData | null }) {
 
         <div className="space-y-1">
           {sorted.map((rep) => (
-            <div
+            <Link
               key={rep.user_id}
-              className="grid grid-cols-[1fr_repeat(4,48px)_24px] gap-2 items-center px-3 py-2 rounded-xl hover:bg-gray-50"
+              href={`/manager/reps/${rep.user_id}`}
+              className="grid grid-cols-[1fr_repeat(4,48px)_24px] gap-2 items-center px-3 py-2 rounded-xl hover:bg-blue-50 transition-colors cursor-pointer"
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{rep.full_name}</p>
@@ -248,7 +254,7 @@ function WeeklyTab({ data }: { data: WeeklyData | null }) {
                 </span>
               ))}
               <TrendIcon trend={rep.trend} />
-            </div>
+            </Link>
           ))}
         </div>
 
@@ -282,7 +288,11 @@ function ActivityTab({ reps }: { reps: RepActivity[] }) {
       </div>
 
       {sorted.map((rep) => (
-        <Card key={rep.user_id} padding="sm">
+        <Link
+          key={rep.user_id}
+          href={`/manager/reps/${rep.user_id}`}
+          className="block rounded-2xl border border-gray-200 bg-white px-4 py-2.5 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+        >
           <div className="grid grid-cols-[1fr_40px_90px_60px] gap-3 items-center">
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{rep.full_name}</p>
@@ -294,7 +304,7 @@ function ActivityTab({ reps }: { reps: RepActivity[] }) {
               <AgeChip days={rep.oldest_age_days} />
             </div>
           </div>
-        </Card>
+        </Link>
       ))}
 
       <div className="flex gap-4 pt-1 px-1">

@@ -6,7 +6,7 @@ async function requireManager(userId: string) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("user_profiles")
-    .select("org_id, role")
+    .select("org_id, role, team_id")
     .eq("user_id", userId)
     .maybeSingle();
   if (!data || !["admin", "sales_manager"].includes(data.role)) return null;
@@ -27,12 +27,21 @@ export async function GET() {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  // Fetch teams
-  const { data: teams, error } = await admin
+  // Scope: admins see all teams in the org; sales_managers see only their
+  // own team (one-team-per-user model — multi-team-per-manager is a future
+  // schema enhancement).
+  let teamsQuery = admin
     .from("teams")
     .select("id, name, tier, created_at")
     .eq("org_id", profile.org_id)
     .order("name");
+  if (profile.role === "sales_manager") {
+    if (!profile.team_id) {
+      return NextResponse.json({ data: [] });
+    }
+    teamsQuery = teamsQuery.eq("id", profile.team_id);
+  }
+  const { data: teams, error } = await teamsQuery;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

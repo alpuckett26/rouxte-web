@@ -17,13 +17,14 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Fetch sale_submitted events that have no verification signoff yet
+  // Fetch sale_submitted events that have no verification signoff yet.
+  // sales_activity_log has `ts` and `actor_id` (not created_at / user_id).
   const { data: logs } = await admin
     .from("sales_activity_log")
     .select("*, signoffs:sales_activity_signoffs(*)")
     .eq("org_id", profile.org_id)
     .eq("event_type", "sale_submitted")
-    .order("created_at", { ascending: false });
+    .order("ts", { ascending: false });
 
   // Pending = no signoff of type sale_verified or sale_rejected
   const pending = (logs ?? []).filter((log) => {
@@ -44,7 +45,7 @@ export async function GET() {
   });
 
   // Enrich with rep names and lead addresses
-  const userIds  = [...new Set((logs ?? []).map((l) => l.user_id).filter(Boolean))];
+  const userIds  = [...new Set((logs ?? []).map((l) => l.actor_id).filter(Boolean))];
   const leadIds  = [...new Set((logs ?? []).map((l) => l.lead_id).filter(Boolean))];
 
   const [{ data: profiles }, { data: leads }] = await Promise.all([
@@ -58,9 +59,13 @@ export async function GET() {
   const leadMap: Record<string, { address: string; customer_name: string | null }> = {};
   for (const l of leads ?? []) leadMap[l.id] = { address: l.address, customer_name: l.customer_name };
 
+  // Alias ts→created_at and actor_id→user_id so the existing UI keeps working
+  // without a separate frontend patch.
   const enrich = (arr: typeof logs) => (arr ?? []).map((log) => ({
     ...log,
-    rep_name: nameMap[log.user_id] ?? "Unknown",
+    created_at: log.ts,
+    user_id: log.actor_id,
+    rep_name: nameMap[log.actor_id] ?? "Unknown",
     lead_address: log.lead_id ? leadMap[log.lead_id]?.address ?? null : null,
     customer_name: log.lead_id ? leadMap[log.lead_id]?.customer_name ?? null : null,
   }));

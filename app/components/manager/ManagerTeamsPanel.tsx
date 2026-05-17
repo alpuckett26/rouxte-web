@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Card from "@/components/ui/Card";
+import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
@@ -79,7 +79,11 @@ export default function ManagerTeamsPanel() {
       ) : (
         <div className="flex flex-col gap-3">
           {teams.map((team) => (
-            <Card key={team.id} padding="md">
+            <Link
+              key={team.id}
+              href={`/manager/teams/${team.id}`}
+              className="block rounded-2xl border border-gray-200 bg-white px-4 py-4 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-medium text-gray-900">{team.name}</p>
@@ -102,7 +106,7 @@ export default function ManagerTeamsPanel() {
                   </div>
                 </div>
               </div>
-            </Card>
+            </Link>
           ))}
         </div>
       )}
