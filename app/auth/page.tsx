@@ -19,9 +19,10 @@ function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/onboarding/check";
+  const initialMode: Mode = searchParams.get("mode") === "signup" ? "signup" : "login";
   const supabase = createClient();
 
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

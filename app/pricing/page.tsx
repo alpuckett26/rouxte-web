@@ -61,10 +61,10 @@ export default function PricingPage() {
             <img src="/logo.svg" alt="Rouxte" className="h-7" />
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+            <Link href="/auth" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Sign in
             </Link>
-            <Link href="/auth/signup" className="text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
+            <Link href="/auth?mode=signup" className="text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700">
               Start free trial
             </Link>
           </div>
@@ -162,7 +162,7 @@ export default function PricingPage() {
         <h2 className="text-3xl font-bold text-gray-900">See why dealers are switching to Rouxte.</h2>
         <p className="mt-3 text-gray-600">Start your free trial in under two minutes. Card required, no charge during trial.</p>
         <Link
-          href="/auth/signup"
+          href="/auth?mode=signup"
           className="mt-6 inline-flex items-center bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl hover:bg-blue-700"
         >
           Start your free trial →
@@ -201,7 +201,7 @@ function TierCard({ tier }: { tier: Tier }) {
 
   const href = enterprise
     ? "mailto:sales@rouxte.com?subject=Enterprise%20%E2%80%94%20Master%20Dealer%20Inquiry"
-    : "/auth/signup";
+    : "/auth?mode=signup";
 
   return (
     <div className={["relative rounded-2xl border bg-white p-6 sm:p-7 flex flex-col", ring].join(" ")}>
