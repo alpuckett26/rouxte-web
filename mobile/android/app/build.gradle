@@ -14,9 +14,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.rouxteapp"
+    namespace "com.rouxte.app"
     defaultConfig {
-        applicationId "com.rouxteapp"
+        applicationId "com.rouxte.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -29,13 +29,27 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Release signing reads from gradle properties for local builds; CI
+        // overrides via android.injected.signing.* (set by fastlane).
+        release {
+            if (project.hasProperty('ROUXTE_RELEASE_STORE_FILE')) {
+                storeFile     file(project.property('ROUXTE_RELEASE_STORE_FILE'))
+                storePassword project.findProperty('ROUXTE_RELEASE_STORE_PASSWORD')
+                keyAlias      project.findProperty('ROUXTE_RELEASE_KEY_ALIAS')
+                keyPassword   project.findProperty('ROUXTE_RELEASE_KEY_PASSWORD')
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig signingConfigs.debug
+            // android.injected.signing.* from CI (fastlane) takes precedence
+            // over this. Locally, fails with "no signing config" if the
+            // ROUXTE_RELEASE_* properties aren't set — intentional, prevents
+            // an accidental debug-signed release.
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
