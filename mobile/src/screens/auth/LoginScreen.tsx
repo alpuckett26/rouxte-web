@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { AppleButton } from '@invertase/react-native-apple-authentication';
 import { useAuth } from '@/hooks/useAuth';
 import { Screen, Text, Button, Input } from '@/components/ui';
 import { colors } from '@/lib/colors';
@@ -10,12 +11,13 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 type OAuthProvider = 'google' | 'github';
 
 export default function LoginScreen({ navigation }: Props) {
-  const { signIn, signInWithOAuth } = useAuth();
+  const { signIn, signInWithOAuth, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
+  const [appleBusy, setAppleBusy] = useState(false);
 
   async function onSubmit() {
     setError(null);
@@ -38,6 +40,15 @@ export default function LoginScreen({ navigation }: Props) {
     setTimeout(() => setOauthBusy(null), 30_000);
   }
 
+  async function onApple() {
+    setError(null);
+    setAppleBusy(true);
+    const err = await signInWithApple();
+    setAppleBusy(false);
+    // User-canceled errors from the Apple sheet shouldn't show as an error.
+    if (err && !/cancel/i.test(err.message)) setError(err.message);
+  }
+
   return (
     <Screen>
       <View style={styles.center}>
@@ -45,9 +56,24 @@ export default function LoginScreen({ navigation }: Props) {
         <Text variant="body" tone="dim" style={styles.sub}>Sign in to continue</Text>
 
         {/* OAuth buttons */}
+        {Platform.OS === 'ios' && (
+          appleBusy ? (
+            <View style={[styles.oauthBtn, { backgroundColor: '#000' }]}>
+              <ActivityIndicator color="#fff" />
+            </View>
+          ) : (
+            <AppleButton
+              buttonStyle={AppleButton.Style.BLACK}
+              buttonType={AppleButton.Type.SIGN_IN}
+              cornerRadius={10}
+              style={styles.appleBtn}
+              onPress={onApple}
+            />
+          )
+        )}
         <Pressable
           onPress={() => onOAuth('google')}
-          disabled={!!oauthBusy || busy}
+          disabled={!!oauthBusy || busy || appleBusy}
           style={({ pressed }) => [styles.oauthBtn, pressed && { opacity: 0.7 }, !!oauthBusy && { opacity: 0.5 }]}
         >
           {oauthBusy === 'google' ? <ActivityIndicator color={colors.text} /> : (
@@ -56,7 +82,7 @@ export default function LoginScreen({ navigation }: Props) {
         </Pressable>
         <Pressable
           onPress={() => onOAuth('github')}
-          disabled={!!oauthBusy || busy}
+          disabled={!!oauthBusy || busy || appleBusy}
           style={({ pressed }) => [styles.oauthBtn, pressed && { opacity: 0.7 }, !!oauthBusy && { opacity: 0.5 }]}
         >
           {oauthBusy === 'github' ? <ActivityIndicator color={colors.text} /> : (
@@ -119,6 +145,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     minHeight: 50,
   },
+  appleBtn:     { width: '100%', height: 50, marginBottom: 10 },
   divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 18 },
   dividerLine:  { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   forgot:       { alignSelf: 'center', marginTop: 18 },

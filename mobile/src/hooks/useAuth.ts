@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { Session, User } from '@supabase/supabase-js';
+import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { supabase } from '@/lib/supabase';
 
 const AUTH_REDIRECT_URL = 'rouxteapp://auth-callback';
@@ -56,6 +57,40 @@ export function useAuth() {
   }
 
   /**
+   * Sign in with Apple — iOS only. Uses the native Apple Sign In sheet,
+   * exchanges the resulting identity token with Supabase via signInWithIdToken.
+   *
+   * Apple Review Guideline 4.8 requires this on iOS if the app offers other
+   * third-party social sign-in (Google, GitHub).
+   *
+   * Requires Supabase Apple provider to be enabled (Dashboard → Auth →
+   * Providers → Apple) with the Services ID, Team ID, Key ID, and .p8 secret.
+   */
+  async function signInWithApple() {
+    if (Platform.OS !== 'ios') {
+      return new Error('Apple sign-in is only available on iOS');
+    }
+    try {
+      const response = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      });
+      const { identityToken } = response;
+      if (!identityToken) {
+        return new Error('Apple did not return an identity token');
+      }
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: identityToken,
+      });
+      return error;
+    } catch (e: unknown) {
+      if (e instanceof Error) return e;
+      return new Error('Apple sign-in failed');
+    }
+  }
+
+  /**
    * Defensive sign-out — always clears local state, even if the network
    * call to invalidate the refresh token on Supabase's auth server fails.
    *
@@ -76,5 +111,5 @@ export function useAuth() {
     qc.clear();
   }
 
-  return { session, user, loading, signIn, signInWithOAuth, signOut };
+  return { session, user, loading, signIn, signInWithOAuth, signInWithApple, signOut };
 }
