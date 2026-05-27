@@ -172,7 +172,9 @@ export default function PricingPage() {
       <footer className="border-t border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
           <div>© {new Date().getFullYear()} Rouxte. All rights reserved.</div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
+            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
+            <Link href="/terms" className="hover:text-gray-700">Terms</Link>
             <a href="mailto:sales@rouxte.com" className="hover:text-gray-700">sales@rouxte.com</a>
             <a href="mailto:support@rouxte.com" className="hover:text-gray-700">support@rouxte.com</a>
           </div>

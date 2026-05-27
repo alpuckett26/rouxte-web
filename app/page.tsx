@@ -242,6 +242,8 @@ export default function Home() {
           </div>
           <div className="flex flex-wrap justify-center gap-6">
             <Link href="/pricing" className="hover:text-white/70">Pricing</Link>
+            <Link href="/privacy" className="hover:text-white/70">Privacy</Link>
+            <Link href="/terms" className="hover:text-white/70">Terms</Link>
             <a href="mailto:sales@rouxte.com" className="hover:text-white/70">Sales</a>
             <a href="mailto:support@rouxte.com" className="hover:text-white/70">Support</a>
           </div>
