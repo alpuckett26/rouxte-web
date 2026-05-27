@@ -31,6 +31,22 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Write .env.production from secrets
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          API_BASE_URL:      ${{ secrets.API_BASE_URL }}
+          MAPBOX_TOKEN:      ${{ secrets.MAPBOX_TOKEN }}
+          SENTRY_DSN:        ${{ secrets.SENTRY_DSN }}
+        run: |
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+            echo "API_BASE_URL=$API_BASE_URL"
+            echo "MAPBOX_TOKEN=$MAPBOX_TOKEN"
+            echo "SENTRY_DSN=$SENTRY_DSN"
+          } > .env.production
+
       - name: Configure Mapbox SDK download token
         run: |
           echo "machine api.mapbox.com" >> ~/.netrc
@@ -80,6 +96,22 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci
+
+      - name: Write .env.production from secrets
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          API_BASE_URL:      ${{ secrets.API_BASE_URL }}
+          MAPBOX_TOKEN:      ${{ secrets.MAPBOX_TOKEN }}
+          SENTRY_DSN:        ${{ secrets.SENTRY_DSN }}
+        run: |
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+            echo "API_BASE_URL=$API_BASE_URL"
+            echo "MAPBOX_TOKEN=$MAPBOX_TOKEN"
+            echo "SENTRY_DSN=$SENTRY_DSN"
+          } > .env.production
 
       - name: Decrypt keystore
         env:
