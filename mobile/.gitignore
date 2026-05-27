@@ -28,7 +28,13 @@ android/app/.cxx/
 android/build/
 android/.gradle/
 android/local.properties
+# Signing keystores — never commit. Master copies live in 1Password,
+# base64'd into ANDROID_KEYSTORE_BASE64 secret for CI.
 android/app/release.keystore
+android/app/*.keystore
+android/app/*.jks
+# Apple Sign In / App Store Connect API keys
+*.p8
 *.iml
 
 # Node / Metro
