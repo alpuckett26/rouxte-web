@@ -159,14 +159,20 @@ async function generateAndroid() {
   await writeFile(path.join(resDir, "mipmap-anydpi-v26/ic_launcher.xml"), adaptiveXml);
   await writeFile(path.join(resDir, "mipmap-anydpi-v26/ic_launcher_round.xml"), adaptiveXml);
 
-  // Background color resource
+  // Background color resource — write to the canonical colors.xml.
+  // Writing to a separate ic_launcher_background.xml duplicates the
+  // resource and Gradle's mergeReleaseResources fails.
+  const colorsXmlPath = path.join(resDir, "values/colors.xml");
   const colorsXml = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Adaptive icon background — Rouxte brand blue.
+         Must match the SQUARE_SVG fill in this script so adaptive
+         (Android 8+) and legacy (Android 7-) icons render the same. -->
     <color name="ic_launcher_background">${BLUE}</color>
 </resources>
 `;
-  await mkdir(path.join(resDir, "values"), { recursive: true });
-  await writeFile(path.join(resDir, "values/ic_launcher_background.xml"), colorsXml);
+  await mkdir(path.dirname(colorsXmlPath), { recursive: true });
+  await writeFile(colorsXmlPath, colorsXml);
 
   console.log(`✓ Android: 5 densities × (launcher + round + adaptive fg) + adaptive XML + background color`);
 }

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Adaptive icon background (Rouxte brand dark navy). -->
-    <color name="ic_launcher_background">#0a0f1e</color>
+    <!-- Adaptive icon background — Rouxte brand blue.
+         Must match the SQUARE_SVG fill color in
+         scripts/generate-mobile-icons.ts so adaptive (Android 8+) and
+         legacy (Android 7-) icons render with the same background. -->
+    <color name="ic_launcher_background">#1BAEE1</color>
 </resources>
