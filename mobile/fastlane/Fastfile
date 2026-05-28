@@ -83,6 +83,18 @@ platform :android do
       },
     )
 
+    # SKIP_PLAY_UPLOAD=true skips the Play Console upload step. Use this
+    # while waiting on Play Developer identity verification (which gates the
+    # API access page where the service account is granted). The signed AAB
+    # is still produced at android/app/build/outputs/bundle/release/app-release.aab
+    # and the CI workflow uploads it as an artifact for manual upload via
+    # the Play Console web UI. Remove the SKIP_PLAY_UPLOAD env in the
+    # workflow once Play Console API access is granted.
+    if ENV["SKIP_PLAY_UPLOAD"] == "true"
+      UI.message "SKIP_PLAY_UPLOAD=true — skipping upload_to_play_store. AAB ready at android/app/build/outputs/bundle/release/app-release.aab"
+      next
+    end
+
     upload_to_play_store(
       package_name: APP_IDENTIFIER,
       track: "internal",
