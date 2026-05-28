@@ -52,7 +52,9 @@ yarn-error.log
 .env.local
 .env.development
 .env.production
-src/lib/config.ts
+# Note: src/lib/config.ts used to be ignored when it held hardcoded
+# values; it's now a generic file that reads from @env, so it's safe
+# (and required) to commit.
 
 # Sentry
 .sentryclirc
