@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
   let repQuery = admin
     .from("user_profiles")
     .select("user_id, full_name, team_id, avatar_url, role")
-    .eq("org_id", profile.org_id);
+    .eq("org_id", profile.org_id)
+    .is("deleted_at", null);
 
   if (teamId) repQuery = repQuery.eq("team_id", teamId);
 

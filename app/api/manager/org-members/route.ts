@@ -25,6 +25,7 @@ export async function GET() {
     .from("user_profiles")
     .select("user_id, full_name, role")
     .eq("org_id", profile.org_id)
+    .is("deleted_at", null)
     .order("full_name");
 
   return NextResponse.json({ data: members ?? [] });

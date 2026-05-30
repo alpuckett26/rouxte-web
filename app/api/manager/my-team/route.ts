@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
     .from("user_profiles")
     .select("user_id, full_name, role, created_at")
     .eq("team_id", resolvedTeamId)
+    .is("deleted_at", null)
     .order("full_name");
 
   const monthStart = new Date();

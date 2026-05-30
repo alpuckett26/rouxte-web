@@ -31,6 +31,7 @@ export async function GET() {
     .select("user_id, full_name, role, team_id")
     .eq("org_id", profile.org_id)
     .in("role", ["sales_rep", "team_lead"])
+    .is("deleted_at", null)
     .order("full_name");
 
   if (profile.role === "team_lead") {
