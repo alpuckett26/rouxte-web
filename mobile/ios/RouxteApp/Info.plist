@@ -33,18 +33,15 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!--
+	  Camera, Photo Library, Microphone, Speech Recognition, and Contacts usage
+	  strings were removed: no feature in the shipping build uses those APIs (no
+	  camera/image-picker/contacts libs; VoiceInput is a text-input stub). Apple
+	  rejects apps that declare a permission string without corresponding
+	  functionality — re-add each string alongside the feature that needs it.
+	-->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Rouxte uses your location to show your position on the map and to record where you knock or set appointments.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Rouxte uses the camera so you can attach photos to leads (e.g., a no-solicit sign) and customize your store badge.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Rouxte uses your photo library so you can attach photos to leads and upload to the resource library.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Rouxte uses the microphone for AI Coach voice mode, in-app meetings, and dictating notes.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Rouxte uses speech recognition so you can dictate notes, log summaries, and quote notes hands-free.</string>
-	<key>NSContactsUsageDescription</key>
-	<string>Rouxte uses contacts so you can quickly fill in customer info on SmartPitch.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Rouxte uses Face ID to keep your account secure.</string>
 	<key>CFBundleURLTypes</key>

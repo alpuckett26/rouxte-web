@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { meApi } from '@/api/me';
+import { accountApi } from '@/api/account';
 import { compensationApi } from '@/api/compensation';
 import { api, apiBaseUrl, ApiError } from '@/api/client';
 import { getAccessToken } from '@/lib/supabase';
@@ -16,6 +17,7 @@ export default function SettingsScreen() {
   const { profile, isLoading, error: profileError, refetch } = useProfile();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [debug, setDebug] = useState<string | null>(null);
 
   const phoneQ = useQuery({
@@ -63,6 +65,41 @@ export default function SettingsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: handleSignOut },
     ]);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      await accountApi.delete();
+      // Account is anonymized + login revoked server-side; clear the local
+      // session. The useAuth listener handles navigation back to sign-in.
+      await signOut();
+    } catch (e) {
+      setDeleting(false);
+      Alert.alert('Deletion failed', (e as Error).message);
+    }
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      'Delete account?',
+      'This permanently removes your name, photo, phone, email, and sign-in. ' +
+        'You will not be able to log back in. Records we are legally required to ' +
+        'keep (commission/tax, compliance logs) are retained with your personal ' +
+        'identifiers removed. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert('Are you sure?', 'This action is permanent.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: handleDeleteAccount },
+            ]),
+        },
+      ],
+    );
   }
 
   async function dumpDebug() {
@@ -198,6 +235,21 @@ export default function SettingsScreen() {
         <Button title="Sign out" onPress={confirmSignOut} variant="danger" loading={signingOut} />
       </View>
 
+      {/* Delete account */}
+      <Text variant="caption" tone="dim" style={styles.section}>ACCOUNT</Text>
+      <Card>
+        <Text variant="caption" tone="mute" style={{ marginBottom: 8 }}>
+          Permanently delete your account and personal information. Records we are
+          legally required to keep are retained de-identified. This cannot be undone.
+        </Text>
+        <Button
+          title={deleting ? 'Deleting…' : 'Delete account'}
+          onPress={confirmDeleteAccount}
+          variant="danger"
+          loading={deleting}
+        />
+      </Card>
+
       {/* Debug */}
       <Text variant="caption" tone="dim" style={styles.section}>DEBUG</Text>
       <Card>
@@ -214,7 +266,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Text tone="mute" variant="caption" style={{ textAlign: 'center', marginTop: 40 }}>
-        Rouxte Mobile · v0.0.1
+        Rouxte Mobile · v1.0.0
       </Text>
     </Screen>
   );

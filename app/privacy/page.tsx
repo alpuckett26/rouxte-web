@@ -144,13 +144,18 @@ export default function PrivacyPolicyPage() {
           <li>Lead activity logs are append-only and retained for the life of the org for compliance and dispute resolution.</li>
           <li>Crash reports are retained for 90 days.</li>
           <li>Server logs are retained for 30 days.</li>
-          <li>On account deletion request, we delete your profile and personal identifiers within 30 days, except for records we are legally required to retain (commission and tax records).</li>
+          <li>You can delete your account at any time — in the mobile app under <strong>Settings &rarr; Delete account</strong>, or on the web at <a href="/delete-account">rouxte.com/delete-account</a>. Deletion immediately removes your name, profile photo, phone, email, and sign-in credentials and revokes your access. Records we are legally required to retain (commission and tax records) and append-only compliance logs are kept with your personal identifiers removed, then purged on the schedule above.</li>
         </ul>
 
         <h2>6. Your choices and rights</h2>
         <ul>
           <li>
-            <strong>Access, correction, deletion:</strong> contact{" "}
+            <strong>Account deletion:</strong> delete your account yourself in the mobile app
+            (<strong>Settings &rarr; Delete account</strong>) or on the web at{" "}
+            <a href="/delete-account">rouxte.com/delete-account</a>. It takes effect immediately.
+          </li>
+          <li>
+            <strong>Access &amp; correction:</strong> contact{" "}
             <a href="mailto:privacy@rouxte.com">privacy@rouxte.com</a>. We respond within 30 days.
           </li>
           <li>

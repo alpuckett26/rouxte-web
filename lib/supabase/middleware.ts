@@ -39,6 +39,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/r/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/demo") ||
+    pathname.startsWith("/delete-account") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms") ||
     pathname === "/";
 
   if (!user && !isPublicPath) {
