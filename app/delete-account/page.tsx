@@ -16,14 +16,17 @@ export default function DeleteAccountPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setEmail(user.email ?? null);
         setPhase("ready");
       } else {
         setPhase("signed-out");
       }
-    });
+    })();
   }, [supabase]);
 
   async function handleDelete() {
