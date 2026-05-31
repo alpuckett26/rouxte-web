@@ -52,7 +52,8 @@ interface Target {
 }
 const TARGETS: Target[] = [
   { name: "play", width: 1080, height: 1920 }, // Google Play phone
-  { name: "ios67", width: 1290, height: 2796 }, // Apple 6.7" iPhone
+  { name: "ios69", width: 1320, height: 2868 }, // Apple 6.9" iPhone (required)
+  { name: "ipad13", width: 2064, height: 2752 }, // Apple 13" iPad (required, portrait)
 ];
 
 function escapeXml(s: string): string {

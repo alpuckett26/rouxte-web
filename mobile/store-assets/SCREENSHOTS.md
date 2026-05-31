@@ -26,7 +26,9 @@ below, open it in the app and take a screenshot (Android: Power + Volume-Down).
 | 06 | `training` | Training list or AI Coach chat | Coaching in your pocket |
 
 Pick the 4–6 strongest. Play requires **2–8**, Apple requires **at least 3**
-(at the 6.7" size; App Store Connect can scale these to other sizes for you).
+at the 6.9" iPhone size (and 3 at the 13" iPad size if the app is universal).
+App Store Connect scales your largest provided size down to smaller slots.
+Capture iPad shots in **portrait**.
 
 ## 3. Drop them in and name them
 
@@ -51,9 +53,16 @@ npx tsx scripts/generate-store-screenshots.ts
 Output:
 
 ```
-mobile/store-assets/screenshots/play/NN-slug-1080x1920.png    → Google Play
-mobile/store-assets/screenshots/ios67/NN-slug-1290x2796.png   → App Store (6.7")
+mobile/store-assets/screenshots/play/NN-slug-1080x1920.png     → Google Play
+mobile/store-assets/screenshots/ios69/NN-slug-1320x2868.png    → App Store iPhone 6.9"
+mobile/store-assets/screenshots/ipad13/NN-slug-2064x2752.png   → App Store iPad 13"
 ```
+
+App Store Connect currently requires the **6.9" iPhone** and **13" iPad**
+sizes; it auto-scales those down to smaller display slots. Capture the iPad
+shots in **portrait** so they composite onto the portrait canvas. If the app
+is iPhone-only (not marketed for iPad), the iPad set isn't required — but ASC
+is asking for it, so the app is configured as universal.
 
 Each output is the brand-blue gradient canvas with a white caption headline on
 top and your screenshot framed (rounded corners, centered) below.
