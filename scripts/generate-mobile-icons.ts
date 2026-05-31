@@ -1,9 +1,15 @@
 /**
  * Generates iOS + Android launch icons + Play Store assets from inline SVGs.
  *
- * Placeholder design: brand-blue square with the green Rouxte "X" element.
- * Submission-acceptable; swap in a real designed icon when ready by editing
- * SQUARE_SVG, ADAPTIVE_FG_SVG, and FEATURE_GRAPHIC_SVG below and rerunning.
+ * Design: a white map pin with a knocked-out "R" on the Rouxte brand-blue
+ * tile. The R is filled with the exact tile/background color so it reads as a
+ * cutout (works on both the flat square icon and the Android adaptive layers,
+ * whose background color resource is the same blue).
+ *
+ * Note: the mark uses the "Arial Black" system font for the R, so run this on
+ * a machine that has it (Windows/macOS do). The generated PNGs are committed,
+ * so CI never re-runs this. To restyle, edit SQUARE_SVG / ADAPTIVE_FG_SVG /
+ * FEATURE_GRAPHIC_SVG below and rerun.
  *
  * Usage: npx tsx scripts/generate-mobile-icons.ts
  */
@@ -17,44 +23,53 @@ const REPO = path.resolve(__dirname, "..");
 const MOBILE = path.join(REPO, "mobile");
 
 const BLUE = "#1BAEE1";
-const GREEN = "#72C41A";
 
-// Full-bleed square icon: green X strokes on brand blue.
+// The mark: a white map-pin teardrop with an "R" knocked out of its head.
+// The R is filled with `cutColor` so it matches whatever sits behind the pin
+// (the flat blue tile, or the Android adaptive blue background layer) and
+// therefore reads as a cutout. `scale` shrinks the pin about the canvas center
+// — smaller for the adaptive foreground so the mark stays inside the ~66% safe
+// zone that survives circular / squircle masks.
+function markGroup(scale: number, cutColor: string): string {
+  return `<g transform="translate(512 512) scale(${scale}) translate(-512 -512)">
+    <path d="M512 884 C 372 660 256 536 256 398 A 256 256 0 1 1 768 398 C 768 536 652 660 512 884 Z" fill="#FFFFFF"/>
+    <text x="512" y="524" font-family="Arial Black, Impact, Helvetica, sans-serif" font-weight="900" font-size="360" fill="${cutColor}" text-anchor="middle">R</text>
+  </g>`;
+}
+
+// Full-bleed square icon: white pin + cutout R on the flat brand-blue tile.
 const SQUARE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <rect width="1024" height="1024" fill="${BLUE}"/>
-  <g stroke="${GREEN}" stroke-width="180" stroke-linecap="round">
-    <line x1="256" y1="256" x2="768" y2="768"/>
-    <line x1="768" y1="256" x2="256" y2="768"/>
-  </g>
+  ${markGroup(0.74, BLUE)}
 </svg>`;
 
-// Adaptive-icon foreground: transparent bg, X kept inside the safe zone
-// (66% of canvas) so it survives circular / squircle / rounded-square masks.
+// Adaptive-icon foreground: transparent bg, mark scaled into the safe zone.
+// The R is cut with the same BLUE as the adaptive background color resource,
+// so the composited icon matches the square one.
 const ADAPTIVE_FG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <g stroke="${GREEN}" stroke-width="180" stroke-linecap="round">
-    <line x1="340" y1="340" x2="684" y2="684"/>
-    <line x1="684" y1="340" x2="340" y2="684"/>
-  </g>
+  ${markGroup(0.6, BLUE)}
 </svg>`;
 
-// Play Store feature graphic — 1024×500. Wordmark over a brand-gradient strip.
+// Play Store feature graphic — 1024×500. Mark + wordmark over a brand gradient.
 const FEATURE_GRAPHIC_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="500" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#0A4D6E"/>
       <stop offset="100%" stop-color="${BLUE}"/>
     </linearGradient>
+    <linearGradient id="rcut" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0A4D6E"/>
+      <stop offset="100%" stop-color="${BLUE}"/>
+    </linearGradient>
   </defs>
   <rect width="1024" height="500" fill="url(#bg)"/>
-  <g transform="translate(190 145)">
-    <g stroke="${GREEN}" stroke-width="42" stroke-linecap="round">
-      <line x1="48" y1="48" x2="160" y2="160"/>
-      <line x1="160" y1="48" x2="48" y2="160"/>
-    </g>
+  <g transform="translate(95 35) scale(0.42)">
+    <path d="M512 884 C 372 660 256 536 256 398 A 256 256 0 1 1 768 398 C 768 536 652 660 512 884 Z" fill="#FFFFFF"/>
+    <text x="512" y="524" font-family="Arial Black, Impact, Helvetica, sans-serif" font-weight="900" font-size="360" fill="url(#rcut)" text-anchor="middle">R</text>
   </g>
-  <g transform="translate(440 195)" fill="#ffffff">
-    <text font-family="Arial Black, Impact, Helvetica, sans-serif" font-weight="900" font-size="84" letter-spacing="-2">ROUXTE</text>
-    <text y="60" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="28" opacity="0.8">Door-to-door fiber, without SPOTIO pricing.</text>
+  <g transform="translate(430 200)" fill="#ffffff">
+    <text font-family="Arial Black, Impact, Helvetica, sans-serif" font-weight="900" font-size="92" letter-spacing="-2">ROUXTE</text>
+    <text y="58" font-family="Arial, Helvetica, sans-serif" font-weight="500" font-size="29" opacity="0.85">Field sales for door-to-door internet teams.</text>
   </g>
 </svg>`;
 
