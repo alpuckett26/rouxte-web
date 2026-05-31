@@ -58,3 +58,9 @@ yarn-error.log
 
 # Sentry
 .sentryclirc
+
+# Store screenshots — raw device captures + generated store-sized assets.
+# The generator script (scripts/generate-store-screenshots.ts) and the
+# SCREENSHOTS.md guide are committed; the images themselves are not.
+store-assets/raw-screens/
+store-assets/screenshots/
