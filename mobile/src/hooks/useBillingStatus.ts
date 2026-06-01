@@ -18,11 +18,16 @@ export function useBillingStatus() {
   });
 
   const sub: BillingStatus | null | undefined = q.data?.data;
+  // Prefer the top-level mirror (present even when sub is null); fall back to
+  // the value inside the subscription row.
+  const viewerIsAdmin = q.data?.viewer_is_admin ?? sub?.viewer_is_admin ?? false;
 
   return {
     isLoading: q.isLoading,
     error:     q.error,
     sub:       sub ?? null,
+    /** Whether the current user can act on billing. Reps never can. */
+    viewerIsAdmin,
     /** No subscription row at all OR explicitly canceled. App should block. */
     needsSignup: !q.isLoading && !sub,
     /** Subscription was suspended after 7 failed renewal attempts. App should block. */

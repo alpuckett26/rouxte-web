@@ -18,5 +18,10 @@ export interface BillingStatus {
 }
 
 export const billingApi = {
-  status: () => api.get<{ data: BillingStatus | null }>('/api/billing/status'),
+  // viewer_is_admin is mirrored at the top level so the gate knows the
+  // viewer's role even when `data` is null (org has no subscription row).
+  status: () =>
+    api.get<{ data: BillingStatus | null; viewer_is_admin?: boolean }>(
+      '/api/billing/status',
+    ),
 };

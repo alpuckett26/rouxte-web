@@ -42,6 +42,10 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/delete-account") ||
     pathname.startsWith("/privacy") ||
     pathname.startsWith("/terms") ||
+    // Mobile billing bridge: plants the Supabase session from URL-fragment
+    // tokens (client-side) before redirecting to /billing, so the mobile
+    // WebView arrives authenticated. Must be reachable without a cookie.
+    pathname.startsWith("/billing/bridge") ||
     pathname === "/";
 
   if (!user && !isPublicPath) {

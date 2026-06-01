@@ -27,13 +27,19 @@ export async function GET() {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
+  // Surfaced at the top level (not just inside `data`) so callers can make
+  // role-aware decisions — e.g. the mobile BillingGate must know whether the
+  // viewer is an admin even when there's NO subscription row at all, since
+  // only admins can act on billing and reps should never see a purchase CTA.
+  const viewer_is_admin = profile.role === "admin";
+
   const { data: sub } = await admin
     .from("org_subscriptions")
     .select("*")
     .eq("org_id", profile.org_id)
     .maybeSingle();
 
-  if (!sub) return NextResponse.json({ data: null });
+  if (!sub) return NextResponse.json({ data: null, viewer_is_admin });
 
   const now = Date.now();
   const trialEnds = new Date(sub.trial_ends_at).getTime();
@@ -43,6 +49,9 @@ export async function GET() {
   const needs_payment = sub.status === "trialing" && !sub.square_card_id;
 
   return NextResponse.json({
+    // Top-level mirror so callers don't have to reach into `data` (and so it's
+    // consistent with the no-subscription response above).
+    viewer_is_admin,
     data: {
       ...sub,
       days_left,
@@ -50,7 +59,7 @@ export async function GET() {
       has_active_access,
       needs_payment,
       // surfaces whether *this* viewer can modify billing
-      viewer_is_admin: profile.role === "admin",
+      viewer_is_admin,
     },
   });
 }
