@@ -9,6 +9,15 @@ react {
 def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// versionCode auto-derives from the CI run number so every uploaded AAB gets a
+// unique, monotonically increasing code (Play rejects a reused code). Internal
+// release #1 used code 1; CI runs are now #5+, so the next upload clears it.
+// Local/dev builds (no GITHUB_RUN_NUMBER) fall back to 1. Computed here as a
+// plain int — do NOT inline this expression into the `versionCode` DSL setter,
+// as `versionCode (expr).toInteger()` parses as versionCode(expr).toInteger()
+// and fails configuration with "Value is null".
+def computedVersionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -19,11 +28,7 @@ android {
         applicationId "com.rouxte.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // versionCode auto-derives from the CI run number so every uploaded AAB
-        // gets a unique, monotonically increasing code (Play rejects a reused
-        // code). Internal release #1 used code 1; CI runs are now #5+, so the
-        // next upload clears it. Local/dev builds fall back to 1.
-        versionCode (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+        versionCode computedVersionCode
         versionName "1.0.0"
     }
     signingConfigs {
