@@ -64,3 +64,5 @@ yarn-error.log
 # SCREENSHOTS.md guide are committed; the images themselves are not.
 store-assets/raw-screens/
 store-assets/screenshots/
+# Downloaded CI build artifacts (AABs) — never commit; pull fresh from the run.
+store-assets/aab/
