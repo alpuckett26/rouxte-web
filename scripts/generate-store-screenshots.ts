@@ -41,6 +41,7 @@ const CAPTIONS: Record<string, string> = {
   quotes: "Quote on the doorstep",
   quote: "Quote on the doorstep",
   dashboard: "Watch your numbers climb",
+  smartpitch: "Turn every conversation into a lead",
   leaderboard: "Compete with your team",
   training: "Coaching in your pocket",
   settings: "You're in control of your data",
