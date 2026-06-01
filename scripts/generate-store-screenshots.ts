@@ -36,7 +36,9 @@ const WHITE = "#FFFFFF";
 // slug (filename without the NN- prefix and .png) -> caption shown in the band.
 const CAPTIONS: Record<string, string> = {
   map: "Your whole territory, at a glance",
+  leads: "Every door, organized",
   lead: "Know before you knock",
+  quotes: "Quote on the doorstep",
   quote: "Quote on the doorstep",
   dashboard: "Watch your numbers climb",
   leaderboard: "Compete with your team",
