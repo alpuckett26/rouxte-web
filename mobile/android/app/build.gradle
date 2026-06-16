@@ -1,6 +1,9 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+// Must be applied after the Android + React plugins. Reads google-services.json
+// (FCM config). @react-native-firebase native modules are added by autolinking.
+apply plugin: "com.google.gms.google-services"
 
 react {
     autolinkLibrariesWithApp()

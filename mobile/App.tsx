@@ -8,6 +8,7 @@ import { config } from '@/lib/config';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { IdleTimeout } from '@/components/IdleTimeout';
 import { supabase } from '@/lib/supabase';
+import { usePushRegistration } from '@/lib/push';
 import RootNavigator from '@/navigation';
 
 if (config.sentry.dsn) {
@@ -81,6 +82,16 @@ function useOAuthDeepLink() {
   }, []);
 }
 
+/** Lives inside QueryProvider so push registration can touch the query cache. */
+function AppContent() {
+  usePushRegistration();
+  return (
+    <IdleTimeout>
+      <RootNavigator />
+    </IdleTimeout>
+  );
+}
+
 function App() {
   useOAuthDeepLink();
   return (
@@ -88,9 +99,7 @@ function App() {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor="#0a0f1e" />
         <QueryProvider>
-          <IdleTimeout>
-            <RootNavigator />
-          </IdleTimeout>
+          <AppContent />
         </QueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

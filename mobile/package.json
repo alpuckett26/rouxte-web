@@ -14,6 +14,8 @@
   "dependencies": {
     "@invertase/react-native-apple-authentication": "^2.5.1",
     "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-firebase/app": "^24.1.0",
+    "@react-native-firebase/messaging": "^24.1.0",
     "@react-native-community/netinfo": "^12.0.1",
     "@react-navigation/bottom-tabs": "^7.3.13",
     "@react-navigation/native": "^7.1.10",

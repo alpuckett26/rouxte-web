@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, FROM } from "@/lib/email/resend";
 import { leadAssignedEmail } from "@/lib/email/templates";
+import { pushToUser } from "@/lib/push/fcm";
 
 interface LeadAssignOpts {
   orgId: string;
@@ -56,6 +57,22 @@ export async function notifyLeadAssigned(opts: LeadAssignOpts): Promise<void> {
   }).then(({ error }) => {
     if (error) console.error("[notify] insert failed:", error.message);
   });
+
+  // Push notification (fire-and-forget — non-fatal, no-op if FCM unconfigured).
+  // Gated on notification_prefs.push_lead_assigned (opt-out, default on).
+  pushToUser(
+    opts.recipientId,
+    {
+      title,
+      body,
+      data: {
+        type:         "lead_assigned",
+        lead_count:   opts.leadCount,
+        lead_address: opts.leadAddress ?? null,
+      },
+    },
+    { orgId: opts.orgId, prefKey: "push_lead_assigned" },
+  ).catch((e) => console.error("[notify] push failed:", e));
 
   // Email — respect notification_prefs (opt-out with prefs.email_lead_assigned === false)
   const prefs = (recipient.notification_prefs ?? {}) as Record<string, boolean>;

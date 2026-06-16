@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scoreQuiz, QuizAnswers } from "@/lib/smartpitch/scoring";
+import { pushToUser } from "@/lib/push/fcm";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -91,6 +92,18 @@ export async function POST(request: NextRequest) {
   }).then(({ error }) => {
     if (error) console.error("[smartpitch] notify failed:", error.message);
   });
+
+  // Push notification (fire-and-forget — non-fatal, no-op if FCM unconfigured).
+  // Gated on notification_prefs.push_smartpitch_lead (opt-out, default on).
+  pushToUser(
+    funnel.rep_id,
+    {
+      title: "New SmartPitch lead!",
+      body:  `${answers.customer_name.trim()} submitted your funnel — ${temperature.toUpperCase()} lead (${score}/100)`,
+      data:  { type: "smartpitch_lead", lead_id: leadId, score, temperature, funnel_id: funnel.id },
+    },
+    { orgId: funnel.org_id, prefKey: "push_smartpitch_lead" },
+  ).catch((e) => console.error("[smartpitch] push failed:", e));
 
   return NextResponse.json({ ok: true, score, temperature });
 }

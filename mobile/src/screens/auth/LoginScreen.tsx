@@ -10,6 +10,13 @@ import type { AuthStackParamList } from '@/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 type OAuthProvider = 'google' | 'github';
 
+// Pre-seeded showcase admin (active subscription) — lets App Store / Play
+// reviewers and prospects explore the full app without an invite. Matches the
+// web "Try the demo" entry point and the credentials in store REVIEW_NOTES.md.
+// Not a secret: read-only-ish demo org that is periodically wiped/reseeded.
+const DEMO_ADMIN_EMAIL = 'demo-admin@rouxte-pro.test';
+const DEMO_PASSWORD = 'rouxte-demo';
+
 export default function LoginScreen({ navigation }: Props) {
   const { signIn, signInWithOAuth, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
@@ -18,6 +25,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [busy, setBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
   const [appleBusy, setAppleBusy] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
 
   async function onSubmit() {
     setError(null);
@@ -38,6 +46,14 @@ export default function LoginScreen({ navigation }: Props) {
     // If no error, the browser opens; user comes back via deep link.
     // Reset busy state in 30s in case they cancel.
     setTimeout(() => setOauthBusy(null), 30_000);
+  }
+
+  async function onDemo() {
+    setError(null);
+    setDemoBusy(true);
+    const err = await signIn(DEMO_ADMIN_EMAIL, DEMO_PASSWORD);
+    setDemoBusy(false);
+    if (err) setError('Demo is unavailable right now. Please try again later.');
   }
 
   async function onApple() {
@@ -119,10 +135,22 @@ export default function LoginScreen({ navigation }: Props) {
           error={error}
         />
 
-        <Button title="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password || !!oauthBusy} />
+        <Button title="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password || !!oauthBusy || demoBusy} />
 
         <Pressable onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgot}>
           <Text variant="caption" tone="brand">Forgot password?</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={onDemo}
+          disabled={busy || !!oauthBusy || appleBusy || demoBusy}
+          style={({ pressed }) => [styles.demo, pressed && { opacity: 0.7 }]}
+        >
+          {demoBusy ? (
+            <ActivityIndicator color={colors.textDim} />
+          ) : (
+            <Text variant="caption" tone="dim">Just looking? <Text variant="caption" tone="brand">Try the demo</Text></Text>
+          )}
         </Pressable>
       </View>
     </Screen>
@@ -149,4 +177,5 @@ const styles = StyleSheet.create({
   divider:      { flexDirection: 'row', alignItems: 'center', marginVertical: 18 },
   dividerLine:  { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   forgot:       { alignSelf: 'center', marginTop: 18 },
+  demo:         { alignSelf: 'center', marginTop: 24, minHeight: 20, justifyContent: 'center' },
 });
