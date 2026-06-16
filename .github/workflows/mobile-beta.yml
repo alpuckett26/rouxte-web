@@ -133,9 +133,6 @@ jobs:
           KEY_PASSWORD:               ${{ secrets.ANDROID_KEY_PASSWORD }}
           PLAY_SERVICE_ACCOUNT_JSON:  ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           SENTRY_AUTH_TOKEN:          ${{ secrets.SENTRY_AUTH_TOKEN }}
-          # Remove SKIP_PLAY_UPLOAD once Play Console API access is granted
-          # (after Google clears developer identity verification).
-          SKIP_PLAY_UPLOAD:           'true'
         run: bundle exec fastlane android beta
 
       - name: Upload AAB as workflow artifact
