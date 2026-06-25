@@ -159,7 +159,6 @@ where noted:
 | Address | Yes | Required for a lead | Homeowner property addresses entered by reps |
 | Approximate location | Yes | Optional | Map / territory |
 | Precise location | Yes | Optional | Field-mode last-seen position |
-| Photos | Yes | Optional | Photos a rep attaches to a lead |
 | App interactions | Yes | Required | Activity logging; also **Analytics** |
 | Crash logs | Yes | Required | Sentry — **Analytics** / diagnostics |
 | Diagnostics | Yes | Required | Performance — **Analytics** |
@@ -168,6 +167,11 @@ where noted:
 
 > Do **not** declare "Payment info / Credit card number" — Square tokenizes it;
 > Rouxte never receives raw card data.
+>
+> Do **not** declare "Photos" — the mobile app has no camera/image-picker and
+> no photo-attach or document-upload flow (those are web-only; the onboarding
+> Documents step explicitly defers to web). The profile `avatar_url` is a
+> read-only display field set on the web, not collected by the app.
 
 ---
 
