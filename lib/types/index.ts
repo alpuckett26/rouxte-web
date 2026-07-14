@@ -112,6 +112,8 @@ export interface Lead {
   customer_name: string | null;
   phone: string | null;
   source: string;
+  external_source: string | null;
+  external_ref: string | null;
   // Pull tracking
   pulled_at: string | null;
   pulled_by: string | null;

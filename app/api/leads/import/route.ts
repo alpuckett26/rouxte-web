@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/api";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { geocodeBatch } from "@/lib/geocode";
 
 interface ImportRow {
   address: string;
@@ -9,6 +10,9 @@ interface ImportRow {
   notes?: string;
   lat?: number | null;
   lng?: number | null;
+  source?: string;
+  external_source?: string;
+  external_ref?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -34,6 +38,13 @@ export async function POST(request: NextRequest) {
   if (!rows.length) return NextResponse.json({ error: "No rows provided" }, { status: 400 });
   if (rows.length > 5000) return NextResponse.json({ error: "Max 5000 rows per import" }, { status: 400 });
 
+  // Optionally assign every imported lead to the importer (e.g. a manager
+  // loading their own pipeline). Bulk import intentionally skips per-lead
+  // assignment activity logs.
+  const assignFields = body.assign_to_me
+    ? { assigned_to: user.id, assigned_at: new Date().toISOString() }
+    : {};
+
   const inserts = rows.map((row) => ({
     org_id: profile.org_id,
     created_by: user.id,
@@ -44,25 +55,71 @@ export async function POST(request: NextRequest) {
     lng: row.lng ?? null,
     carrier_availability: {},
     status: "new" as const,
-    source: "import",
+    source: row.source?.trim() || "import",
+    external_source: row.external_source?.trim() || null,
+    external_ref: row.external_ref?.trim() || null,
+    ...assignFields,
   }));
 
-  // Upsert so that re-importing the same area doesn't fail on duplicate addresses.
-  // ignoreDuplicates silently skips rows whose (org_id, address) already exist.
-  const { data, error } = await admin
-    .from("leads")
-    .upsert(inserts, { onConflict: "org_id,address", ignoreDuplicates: true })
-    .select("id");
+  // Geocode rows missing coordinates so imported leads land on the map.
+  // Best-effort and capped — rows that fail to geocode still import.
+  const missingCoords = inserts
+    .map((row, index) => ({ index, address: row.address }))
+    .filter(({ index }) => inserts[index].lat == null || inserts[index].lng == null);
+  if (missingCoords.length) {
+    const geocoded = await geocodeBatch(missingCoords);
+    for (const [index, coords] of geocoded) {
+      inserts[index].lat = coords.lat;
+      inserts[index].lng = coords.lng;
+    }
+  }
 
-  let savedData: { id: string }[] = data ?? [];
-  if (error) {
-    // Constraint may not exist in all environments — fall back to plain insert
-    const { data: insertData, error: insertError } = await admin
+  // Rows carrying an external_ref (cross-system sync) dedupe on
+  // (org_id, external_source, external_ref); everything else keeps the
+  // (org_id, address) upsert for organic imports.
+  const refInserts = inserts.filter((r) => r.external_ref != null);
+  const plainInserts = inserts.filter((r) => r.external_ref == null);
+
+  let savedData: { id: string; lat: number | null; lng: number | null }[] = [];
+
+  if (plainInserts.length) {
+    // Upsert so that re-importing the same area doesn't fail on duplicate addresses.
+    // ignoreDuplicates silently skips rows whose (org_id, address) already exist.
+    const { data, error } = await admin
       .from("leads")
-      .insert(inserts)
-      .select("id");
+      .upsert(plainInserts, { onConflict: "org_id,address", ignoreDuplicates: true })
+      .select("id, lat, lng");
+
+    if (error) {
+      // Constraint may not exist in all environments — fall back to plain insert
+      const { data: insertData, error: insertError } = await admin
+        .from("leads")
+        .insert(plainInserts)
+        .select("id, lat, lng");
+      if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+      savedData = insertData ?? [];
+    } else {
+      savedData = data ?? [];
+    }
+  }
+
+  for (const row of refInserts) {
+    const { data: existing } = await admin
+      .from("leads")
+      .select("id, lat, lng")
+      .eq("org_id", row.org_id)
+      .eq("external_source", row.external_source!)
+      .eq("external_ref", row.external_ref!)
+      .maybeSingle();
+    if (existing) continue; // already synced — skip, same as ignoreDuplicates
+
+    const { data: inserted, error: insertError } = await admin
+      .from("leads")
+      .insert(row)
+      .select("id, lat, lng")
+      .single();
     if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
-    savedData = insertData ?? [];
+    if (inserted) savedData.push(inserted);
   }
 
   // Log notes as lead notes if provided
@@ -78,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   // Batch-check AT&T fiber availability for leads with coordinates
   const coordPairs = savedData
-    .map((row, i) => ({ id: row.id, lat: inserts[i]?.lat, lng: inserts[i]?.lng }))
+    .map((row) => ({ id: row.id, lat: row.lat, lng: row.lng }))
     .filter((r): r is { id: string; lat: number; lng: number } => r.lat != null && r.lng != null);
 
   if (coordPairs.length) {

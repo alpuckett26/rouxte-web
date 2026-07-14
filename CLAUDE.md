@@ -129,6 +129,10 @@ Rouxte-branded merch (badges, swag) — designed in-app, checked out via Square 
 
 In-app video via Daily.co. Room provisioning + tokens via `/api/meetings/*`.
 
+### Anseur (Answers) pipeline sync
+
+Rouxte is the sales layer for the Anseur flagship (repo `alpuckett26/restaurant-ai-ordering`; internal/technical name stays "answers" — only rep-facing copy says Anseur). Leads join on `leads.external_ref` = Answers `restaurant_id` with `external_source = 'answers'` (migration 038). `/api/cron/answers-sync` (every 15 min, `CRON_SECRET`) pulls `GET /admin/restaurants/pipeline` and upserts leads — Answers wins on status only while a lead is still `new`; reps are authoritative after that. Status changes in `PATCH /api/leads/[id]` push back (`sold → onboarding`, `interested/appointment → pitched`) via `lib/answers/client.ts`, best-effort with cron reconciliation. Contract: `PIPELINE-ROLES.md` in the Answers repo.
+
 ### Data model key points
 
 - `leads.carrier_availability` — JSONB: `{ att: bool, competitors: string[], max_down_mbps, max_up_mbps, tech_codes, fcc_block_id }`
@@ -155,7 +159,12 @@ ANTHROPIC_API_KEY              # AI Coach (Rex)
 RESEND_API_KEY                 # transactional email
 RESEND_FROM                    # e.g. "Rouxte <noreply@rouxte.com>"
 DAILY_API_KEY                  # Daily.co meetings
-CRON_SECRET                    # /api/cron/lead-expiry auth
+CRON_SECRET                    # cron route auth (/api/cron/lead-expiry, /api/cron/answers-sync, …)
+ANSWERS_API_URL                # Anseur (Answers) flagship API base URL — lead pipeline sync
+ANSWERS_INTERNAL_SECRET        # X-Internal-Secret service lane for Answers API (preferred)
+ANSWERS_ADMIN_TOKEN            # fallback: admin JWT for Answers API (until service lane exists)
+ANSWERS_TARGET_ORG_ID          # Rouxte org that receives synced Answers leads
+MAPBOX_GEOCODE_TOKEN           # optional: server-side geocoding token (falls back to NEXT_PUBLIC_MAPBOX_TOKEN)
 SQUARE_ACCESS_TOKEN            # Square store payments
 SQUARE_ENVIRONMENT             # "production" | "sandbox"
 SQUARE_LOCATION_ID
