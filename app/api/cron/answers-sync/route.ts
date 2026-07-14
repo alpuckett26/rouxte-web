@@ -87,6 +87,24 @@ export async function GET(request: NextRequest) {
           .limit(1)
           .maybeSingle();
         adopted = byAddress ?? null;
+
+        // Formats drift between systems ("… Baton Rouge 70805" vs
+        // "… Baton Rouge, LA 70805") — fall back to the street line, which is
+        // unique enough within a single org's territory.
+        if (!adopted) {
+          const streetLine = r.address.split(",")[0].trim();
+          if (streetLine.length >= 8) {
+            const { data: byStreet } = await admin
+              .from("leads")
+              .select("id, status, lat, lng, assigned_to")
+              .eq("org_id", orgId)
+              .is("external_ref", null)
+              .ilike("address", `${streetLine}%`)
+              .limit(1)
+              .maybeSingle();
+            adopted = byStreet ?? null;
+          }
+        }
       }
 
       const target = existing ?? adopted;
