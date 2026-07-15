@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/api";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ANSWERS_SOURCE, mapRouxteStatusToLifecycle, pushAnswersLifecycle } from "@/lib/answers/client";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -67,6 +70,31 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       metadata: { from: current.status, to: body.status },
       is_incident: false,
     });
+
+    // Push rep milestones back to the Anseur (Answers) pipeline. Best-effort
+    // after the response — the sync cron reconciles any drift.
+    const lifecycle = mapRouxteStatusToLifecycle(body.status);
+    if (
+      lifecycle &&
+      process.env.ANSWERS_API_URL &&
+      data.external_source === ANSWERS_SOURCE &&
+      data.external_ref
+    ) {
+      const externalRef = data.external_ref as string;
+      const assignedTo = data.assigned_to as string | null;
+      after(async () => {
+        let repName: string | null = null;
+        if (assignedTo) {
+          const { data: rep } = await createAdminClient()
+            .from("user_profiles")
+            .select("full_name")
+            .eq("user_id", assignedTo)
+            .maybeSingle();
+          repName = rep?.full_name ?? null;
+        }
+        await pushAnswersLifecycle(externalRef, lifecycle, repName);
+      });
+    }
   }
 
   return NextResponse.json({ data });

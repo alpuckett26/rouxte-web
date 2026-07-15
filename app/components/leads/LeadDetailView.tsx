@@ -150,6 +150,9 @@ export default function LeadDetailView({ leadId }: Props) {
             {lead.carrier_availability?.att && (
               <Badge label="AT&T Available" color="green" />
             )}
+            {(lead.external_source === "answers" || lead.source === "answers") && (
+              <Badge label="Anseur Pipeline" color="blue" />
+            )}
           </div>
         </div>
 
