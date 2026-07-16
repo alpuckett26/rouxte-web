@@ -72,6 +72,18 @@ platform :android do
   lane :beta do
     keystore_path = File.expand_path("../android/app/release.keystore", __dir__)
 
+    # PLAY_SERVICE_ACCOUNT_JSON may be stored as raw JSON or base64 of it.
+    require "json"
+    require "base64"
+    play_key = ENV["PLAY_SERVICE_ACCOUNT_JSON"].to_s
+    begin
+      JSON.parse(play_key)
+    rescue JSON::ParserError
+      decoded = Base64.decode64(play_key)
+      JSON.parse(decoded) # raise here if neither format parses
+      play_key = decoded
+    end
+
     gradle(
       task: "clean bundleRelease",
       project_dir: "android",
@@ -87,7 +99,7 @@ platform :android do
       package_name: APP_IDENTIFIER,
       track: "production",
       release_status: "draft",
-      json_key_data: ENV["PLAY_SERVICE_ACCOUNT_JSON"],
+      json_key_data: play_key,
       aab: "android/app/build/outputs/bundle/release/app-release.aab",
       skip_upload_metadata: true,
       skip_upload_changelogs: true,
