@@ -207,3 +207,11 @@ npm install
 npx pod-install ios            # macOS only
 npm run ios                    # or npm run android
 ```
+
+## Your role in the Anseur stack
+
+Read `PIPELINE-ROLES.md` in this repo FIRST — it is your standing role
+card: who's in the group, your duties, and the trigger that starts your
+work. The canonical cross-repo contract lives in
+`alpuckett26/restaurant-ai-ordering` → `PIPELINE-ROLES.md`; coordination
+between repos happens via GitHub issues.
