@@ -86,6 +86,27 @@ export async function fetchAnswersPipeline(): Promise<AnswersPipelineRestaurant[
 }
 
 /**
+ * One-shot backfill feed (rouxte-web#7): leads already sourced on the spine,
+ * from GET /internal/provision/leads?since=<iso>. Returns raw records —
+ * callers normalize with normalizeAnswersLeadPayload (the endpoint's item
+ * shape may be either the pipeline shape or the push-rail profile shape).
+ */
+export async function fetchProvisionLeads(since?: string): Promise<unknown[]> {
+  const qs = since ? `?since=${encodeURIComponent(since)}` : "";
+  const res = await fetch(`${baseUrl()}/internal/provision/leads${qs}`, {
+    headers: authHeaders(),
+    signal: AbortSignal.timeout(15000),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Answers provision leads fetch failed: ${res.status} ${await res.text().catch(() => "")}`);
+  }
+  const data = await res.json();
+  if (Array.isArray(data)) return data;
+  return data.leads ?? data.data ?? [];
+}
+
+/**
  * Push a lifecycle stage (and optionally the owning rep) back to the Answers
  * restaurant record. Best-effort: callers should treat failure as non-fatal —
  * the sync cron reconciles drift.
