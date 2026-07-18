@@ -131,7 +131,7 @@ In-app video via Daily.co. Room provisioning + tokens via `/api/meetings/*`.
 
 ### Anseur (Answers) pipeline sync
 
-Rouxte is the sales layer for the Anseur flagship (repo `alpuckett26/restaurant-ai-ordering`; internal/technical name stays "answers" — only rep-facing copy says Anseur). Leads join on `leads.external_ref` = Answers `restaurant_id` with `external_source = 'answers'` (migration 038). `/api/cron/answers-sync` (every 15 min, `CRON_SECRET`) pulls `GET /admin/restaurants/pipeline` and upserts leads — Answers wins on status only while a lead is still `new`; reps are authoritative after that. Status changes in `PATCH /api/leads/[id]` push back (`sold → onboarding`, `interested/appointment → pitched`) via `lib/answers/client.ts`, best-effort with cron reconciliation. Contract: `PIPELINE-ROLES.md` in the Answers repo.
+Rouxte is the sales layer for the Anseur flagship (repo `alpuckett26/restaurant-ai-ordering`; internal/technical name stays "answers" — only rep-facing copy says Anseur). Leads join on `leads.external_ref` = Answers `restaurant_id` with `external_source = 'answers'` (migration 038). `/api/cron/answers-sync` (every 15 min, `CRON_SECRET`) pulls `GET /admin/restaurants/pipeline` and upserts leads — Answers wins on status only while a lead is still `new`; reps are authoritative after that. The spine also PUSHES each newly sourced lead to `POST /api/answers/load` (the lead-drop rail, `X-Answers-Secret` = `ANSWERS_BUILD_SECRET`); `POST /api/answers/backfill?since=<iso>` (Bearer `CRON_SECRET`) is a one-shot idempotent loader from `GET /internal/provision/leads`. All three share the upsert rules in `lib/answers/upsertLead.ts`; the cron reconciles any push the rail misses. Status changes in `PATCH /api/leads/[id]` push back (`sold → onboarding`, `interested/appointment → pitched`) via `lib/answers/client.ts`, best-effort with cron reconciliation. Contract: `PIPELINE-ROLES.md` in the Answers repo.
 
 ### Data model key points
 
@@ -162,6 +162,7 @@ DAILY_API_KEY                  # Daily.co meetings
 CRON_SECRET                    # cron route auth (/api/cron/lead-expiry, /api/cron/answers-sync, …)
 ANSWERS_API_URL                # Anseur (Answers) flagship API base URL — lead pipeline sync
 ANSWERS_INTERNAL_SECRET        # X-Internal-Secret service lane for Answers API (preferred)
+ANSWERS_BUILD_SECRET           # inbound X-Answers-Secret auth on /api/answers/load (push rail)
 ANSWERS_ADMIN_TOKEN            # fallback: admin JWT for Answers API (until service lane exists)
 ANSWERS_TARGET_ORG_ID          # Rouxte org that receives synced Answers leads
 MAPBOX_GEOCODE_TOKEN           # optional: server-side geocoding token (falls back to NEXT_PUBLIC_MAPBOX_TOKEN)
