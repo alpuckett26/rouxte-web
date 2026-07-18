@@ -40,6 +40,12 @@ repo's `CLAUDE.md` § "Anseur (Answers) pipeline sync"; code in
   upserts leads (name/address/phone/lifecycle_status), geocoding anything
   without coords. Pre-existing leads are adopted by address match and
   stamped with their `external_ref`.
+- **Push-in (lead-drop rail, rouxte-web#7 / PR #8):** the spine pushes each
+  newly sourced lead to `POST /api/answers/load` the moment it exists
+  (`X-Answers-Secret` = `ANSWERS_BUILD_SECRET`); the pull cron reconciles
+  any push the rail misses. One-shot backfill:
+  `POST /api/answers/backfill?since=<iso>` (Bearer `CRON_SECRET`). All
+  three paths share the upsert rules in `lib/answers/upsertLead.ts`.
 - **Status authority:** Answers wins only while a lead is still `new`;
   once a rep works it, Rouxte is authoritative until sold.
 - **Push-back:** rep status changes at `PATCH /api/leads/[id]` map
@@ -73,6 +79,7 @@ repo's `CLAUDE.md` § "Anseur (Answers) pipeline sync"; code in
 ## Trigger
 
 Packet/pipeline flow is **event-driven**: GroBigga sourcing a lead onto
-the spine is the trigger. The lead reaches Rouxte automatically via the
-15-min pull sync — no manual entry. The issues bus is runtime-READ-ONLY:
+the spine is the trigger. The lead reaches Rouxte automatically — pushed
+instantly via the lead-drop rail, with the 15-min pull sync as the
+reconciliation net — no manual entry. The issues bus is runtime-READ-ONLY:
 no service writes issues; coordination stays session-to-session.
