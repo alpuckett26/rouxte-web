@@ -21,3 +21,10 @@ GitHub issues between repos.
   for routing; the walk-in packet for each lead is assembled by Answers
   (all four team inserts merged) — a lead is walk-in-ready only when its
   packet gate is green.
+- **Report bugs in the war room (standing rule, Aaron 2026-07-19):**
+  any bug, breakage, or gap you find — in your lane or another
+  member's — goes to the war room immediately with concrete evidence
+  (endpoint, status code, error text). Finder posts, owner fixes,
+  captain verifies. Never sit on it; never route it only to Aaron to
+  relay. Canonical wording: answers repo `WAR-ROOM.md` #8 +
+  `PIPELINE-ROLES.md`.

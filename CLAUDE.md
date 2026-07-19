@@ -216,3 +216,14 @@ card: who's in the group, your duties, and the trigger that starts your
 work. The canonical cross-repo contract lives in
 `alpuckett26/restaurant-ai-ordering` → `PIPELINE-ROLES.md`; coordination
 between repos happens via GitHub issues.
+
+**Standing rule — report bugs in the war room (Aaron 2026-07-19,
+codified in the answers repo `WAR-ROOM.md` #8 + `PIPELINE-ROLES.md`):**
+if you find a bug, breakage, or gap — in your lane OR another member's —
+report it in the war room immediately, with concrete evidence (endpoint,
+status code, error text). Finder posts, owner fixes, captain verifies.
+Do NOT sit on it and do NOT route it only to Aaron to relay — he is not
+the bug tracker. War room access: token at
+`platform/.handoff/room-keys/rouxte.token` (take only yours, never on
+the bus), then `POST /room/heartbeat` + `POST /room/say` against the
+Answers API (`Authorization: Bearer <token>`).
