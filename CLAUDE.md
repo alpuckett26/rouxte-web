@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Read first — your role and the platform laws
+
+Rouxte is the sales layer of a four-product stack around the Anseur
+(internal name "answers") flagship. Before doing any work:
+
+1. Read `PIPELINE-ROLES.md` in this repo — Rouxte's standing role card:
+   the stack, the binding platform laws (dark zone, pull-based bus, proof,
+   secrets handoff), and the shipped two-way sync.
+2. The full law book is the platform workspace `../CLAUDE.md`; the
+   canonical cross-repo contract is `PIPELINE-ROLES.md` in
+   `alpuckett26/restaurant-ai-ordering` (canonical wins on conflicts).
+3. Check the bus: `gh issue list --repo alpuckett26/rouxte-web --state open`
+   at session start and between work blocks — cross-repo coordination
+   happens only via GitHub issues, and mail you don't read is coordination
+   that didn't happen.
+4. **Report bugs in the war room (standing rule, Aaron 2026-07-19,
+   codified in the answers repo `WAR-ROOM.md` #8 + `PIPELINE-ROLES.md`):**
+   any bug, breakage, or gap you find — in your lane or another member's —
+   goes to the war room immediately with concrete evidence (endpoint,
+   status code, error text). Finder posts, owner fixes, captain verifies.
+   Never sit on it; never route it only to Aaron to relay — he is not the
+   bug tracker. War room access: token at
+   `platform/.handoff/room-keys/rouxte.token` (take only yours, never on
+   the bus), then `POST /room/heartbeat` + `POST /room/say` against the
+   Answers API (`Authorization: Bearer <token>`).
+
 ## Commands
 
 ```bash
@@ -36,7 +62,7 @@ There is no test suite — verify behavior by running the dev server (web) or `n
 - `lib/hooks/useProfile.ts` — the single hook for current user identity (web)
 - `lib/quoting/` — server-only fiber + wireless quote pricing engines
 - `lib/email/` — Resend templates + send helpers
-- `supabase/migrations/` — numbered SQL migrations `000`–`037`
+- `supabase/migrations/` — numbered SQL migrations `000`–`038`
 - `mobile/` — React Native workspace (separate package.json; excluded from Next.js tsc)
 
 ### Supabase client pattern
@@ -208,22 +234,3 @@ npm install
 npx pod-install ios            # macOS only
 npm run ios                    # or npm run android
 ```
-
-## Your role in the Anseur stack
-
-Read `PIPELINE-ROLES.md` in this repo FIRST — it is your standing role
-card: who's in the group, your duties, and the trigger that starts your
-work. The canonical cross-repo contract lives in
-`alpuckett26/restaurant-ai-ordering` → `PIPELINE-ROLES.md`; coordination
-between repos happens via GitHub issues.
-
-**Standing rule — report bugs in the war room (Aaron 2026-07-19,
-codified in the answers repo `WAR-ROOM.md` #8 + `PIPELINE-ROLES.md`):**
-if you find a bug, breakage, or gap — in your lane OR another member's —
-report it in the war room immediately, with concrete evidence (endpoint,
-status code, error text). Finder posts, owner fixes, captain verifies.
-Do NOT sit on it and do NOT route it only to Aaron to relay — he is not
-the bug tracker. War room access: token at
-`platform/.handoff/room-keys/rouxte.token` (take only yours, never on
-the bus), then `POST /room/heartbeat` + `POST /room/say` against the
-Answers API (`Authorization: Bearer <token>`).
