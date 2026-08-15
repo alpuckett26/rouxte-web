@@ -47,8 +47,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const summary = { created: 0, updated: 0, adopted: 0, geocoded: 0, status_changed: 0, skipped: 0 };
+  const summary = { created: 0, updated: 0, adopted: 0, geocoded: 0, status_changed: 0, skipped: 0, refused: 0 };
   const errors: string[] = [];
+  // Same split as the cron (/api/cron/answers-sync): refusals are the gate
+  // working, not the rail failing, so they ride their own list. This route is
+  // the one the bulk insert pass actually runs on, so a refusal here must be
+  // legible per-lead — a count alone would tell an operator that some rows did
+  // not land without telling them which, or why.
+  const refusals: string[] = [];
 
   for (const item of items) {
     const lead = normalizeAnswersLeadPayload(item);
@@ -64,6 +70,9 @@ export async function POST(request: NextRequest) {
       if (res.action === "skipped") {
         summary.skipped++;
         if (res.reason) errors.push(`${lead.id} (${lead.name}): ${res.reason}`);
+      } else if (res.action === "refused") {
+        summary.refused++;
+        refusals.push(`${lead.id} (${lead.name}): ${res.reason ?? "refused"}`);
       } else {
         summary[res.action]++;
       }
@@ -76,12 +85,27 @@ export async function POST(request: NextRequest) {
   // A pull of zero is not a success — it's the shape the silent zero took the
   // first time (rouxte-web#16). Say so out loud rather than returning a clean
   // ok:true that loaded nothing.
+  //
+  // The same shape has a second form now that the gate can refuse: a run that
+  // pulls 29 and lands none of them is just as green-looking as one that
+  // pulled none, and it is the likelier outcome of a bad adopt gate. Both are
+  // reported as a warning, so "nothing changed" can never be read as "done".
+  const landed = summary.created + summary.updated + summary.adopted;
   const warning =
     items.length === 0
       ? "spine returned 0 records — nothing was loaded; check ANSWERS_API_URL and the provision feed before reading this as done"
-      : undefined;
+      : landed === 0
+        ? `pulled ${items.length} records but landed 0 (refused ${summary.refused}, skipped ${summary.skipped}) — nothing was written; read the refusals before treating this as done`
+        : undefined;
 
-  const result = { ok: errors.length === 0, pulled: items.length, ...summary, errors, ...(warning ? { warning } : {}) };
+  const result = {
+    ok: errors.length === 0,
+    pulled: items.length,
+    ...summary,
+    errors,
+    refusals,
+    ...(warning ? { warning } : {}),
+  };
   console.log("[answers-backfill]", JSON.stringify(result));
   return NextResponse.json(result);
 }

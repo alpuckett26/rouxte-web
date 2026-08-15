@@ -1,8 +1,9 @@
 // Shared Answers → Rouxte lead upsert. One implementation of the sync rules
 // (rouxte-web#1 / rouxte-web#2), used by both the 15-min pull cron
 // (/api/cron/answers-sync) and the push rail (/api/answers/load, rouxte-web#7):
-//  - Match on (org, external_source='answers', external_ref) first; else adopt
-//    an existing address-matched lead that has no external_ref yet; else insert.
+//  - Match on (org, external_source='answers', external_ref) first; else run
+//    the adopt gate over every stored lead at that street address
+//    (lib/answers/addressIdentity.ts) — adopt / create / refuse; else insert.
 //  - New leads are created only for lifecycle lead/audited/pitched.
 //  - Answers wins on status only while the Rouxte lead is untouched
 //    (status='new'); once a rep works it, Rouxte is authoritative until sold.
@@ -16,13 +17,39 @@ import {
   mapLifecycleToRouxteStatus,
   type AnswersPipelineRestaurant,
 } from "@/lib/answers/client";
+import {
+  candidatePrefix,
+  decideAdoption,
+  type CandidateLead,
+} from "@/lib/answers/addressIdentity";
 
 export interface UpsertAnswersLeadResult {
-  action: "created" | "updated" | "adopted" | "skipped";
+  /**
+   * "refused" is a deliberate outcome, not an error: the sync could not be
+   * certain which stored lead this place is, so it wrote nothing. It is
+   * reported rather than thrown because a refusal is information for the room,
+   * not a failure of the rail — but it must never be silent, which is why the
+   * routes surface it.
+   */
+  action: "created" | "updated" | "adopted" | "skipped" | "refused";
   leadId?: string;
   statusChanged: boolean;
   geocoded: boolean;
   reason?: string;
+  /** Rows that caused a refusal, or that a create landed alongside. */
+  conflicts?: { leadId: string; externalRef: string | null; name: string | null }[];
+}
+
+export interface UpsertAnswersLeadOptions {
+  /**
+   * Override a duplicate_external_ref refusal and create the second lead
+   * anyway — the caller asserting these really are two businesses. Mirrors the
+   * spine's allow_duplicate opt-in, and like it, the override is RECORDED
+   * (result.conflicts names what was overridden) rather than merely permitted.
+   * It cannot force an ambiguous_address adopt: no assertion from a caller
+   * tells us WHICH of two rows to pick.
+   */
+  allowDuplicate?: boolean;
 }
 
 /**
@@ -78,51 +105,111 @@ export async function upsertAnswersLead(
   orgId: string,
   createdBy: string,
   r: AnswersPipelineRestaurant,
+  options: UpsertAnswersLeadOptions = {},
 ): Promise<UpsertAnswersLeadResult> {
   const result: UpsertAnswersLeadResult = { action: "skipped", statusChanged: false, geocoded: false };
+  const CANDIDATE_COLUMNS =
+    "id, status, lat, lng, assigned_to, address, customer_name, external_ref, external_source";
+  /**
+   * Cap on the house-number candidate scan. Sized to be unreachable in normal
+   * data (it would take 200 stored leads whose address starts with the same
+   * house number, inside one org) so that hitting it is a signal, not a
+   * routine truncation — see the saturation check below.
+   */
+  const CANDIDATE_SCAN_LIMIT = 200;
 
   // 1. Match on external_ref
   const { data: existing } = await admin
     .from("leads")
-    .select("id, status, lat, lng, assigned_to")
+    .select(CANDIDATE_COLUMNS)
     .eq("org_id", orgId)
     .eq("external_source", ANSWERS_SOURCE)
     .eq("external_ref", r.id)
     .maybeSingle();
 
-  // 2. Adopt an address-matched lead that predates the sync
-  let adopted: { id: string; status: string; lat: number | null; lng: number | null; assigned_to: string | null } | null = null;
+  // 2. The adopt gate. Pull every stored lead that could be at this street
+  //    address — a house-number prefix, which is a cheap SUPERSET — and let
+  //    decideAdoption do the exact filtering. The query is deliberately dumb:
+  //    the old one was clever (a street-line prefix with limit(1)) and that is
+  //    precisely how it adopted the wrong row, because a query that returns one
+  //    row cannot tell "the only match" from "one of several."
+  //
+  //    Note the scan is NOT filtered to external_ref IS NULL any more. That
+  //    filter made already-synced leads invisible here, so a second spine row
+  //    for a place we already hold fell straight through to the insert and gave
+  //    the rep two pins. We need to SEE those rows in order to refuse.
+  let adopted: CandidateLead | null = null;
   if (!existing && r.address) {
-    const { data: byAddress } = await admin
-      .from("leads")
-      .select("id, status, lat, lng, assigned_to")
-      .eq("org_id", orgId)
-      .is("external_ref", null)
-      .ilike("address", r.address.trim())
-      .limit(1)
-      .maybeSingle();
-    adopted = byAddress ?? null;
+    const prefix = candidatePrefix(r.address);
+    if (prefix) {
+      const { data: candidates } = await admin
+        .from("leads")
+        .select(CANDIDATE_COLUMNS)
+        .eq("org_id", orgId)
+        .ilike("address", `${prefix}%`)
+        .limit(CANDIDATE_SCAN_LIMIT);
 
-    // Formats drift between systems ("… Baton Rouge 70805" vs
-    // "… Baton Rouge, LA 70805") — fall back to the street line, which is
-    // unique enough within a single org's territory.
-    if (!adopted) {
-      const streetLine = r.address.split(",")[0].trim();
-      if (streetLine.length >= 8) {
-        const { data: byStreet } = await admin
-          .from("leads")
-          .select("id, status, lat, lng, assigned_to")
-          .eq("org_id", orgId)
-          .is("external_ref", null)
-          .ilike("address", `${streetLine}%`)
-          .limit(1)
-          .maybeSingle();
-        adopted = byStreet ?? null;
+      const rows = (candidates ?? []) as CandidateLead[];
+
+      // A SATURATED SCAN IS NOT A RESULT. The prefix is only a house number, so
+      // "100%" also pulls 1000, 10012, 100th — in a dense org this can hit the
+      // limit, and a truncated superset breaks decideAdoption's one premise:
+      // that it was handed EVERY row that could be this place. The row it never
+      // saw is exactly the one that would have made an adopt ambiguous.
+      //
+      // This is the silent-zero shape again — a query returning a plausible
+      // answer that is quietly incomplete — so it gets the same treatment:
+      // refuse, out loud, naming the cap. It is rare by construction, and a
+      // refusal costs a pin that a human can add; a wrong adopt costs a rep's
+      // worked lead and cannot be undone.
+      if (rows.length >= CANDIDATE_SCAN_LIMIT) {
+        result.action = "refused";
+        result.reason =
+          `ambiguous_address: the candidate scan for house number "${prefix}" hit its ` +
+          `${CANDIDATE_SCAN_LIMIT}-row cap, so the address decision was made on a truncated set. ` +
+          `Refusing rather than adopting against rows we could not see.`;
+        result.conflicts = rows
+          .slice(0, 5)
+          .map((c) => ({ leadId: c.id, externalRef: c.external_ref, name: c.customer_name }));
+        return result;
+      }
+
+      const decision = decideAdoption(
+        { externalRef: r.id, name: r.name ?? null, address: r.address },
+        rows,
+      );
+
+      const describe = (rows: CandidateLead[]) =>
+        rows.map((c) => ({ leadId: c.id, externalRef: c.external_ref, name: c.customer_name }));
+
+      if (decision.verdict === "refuse") {
+        const overridable = decision.reason === "duplicate_external_ref" && options.allowDuplicate === true;
+        if (!overridable) {
+          result.action = "refused";
+          result.reason =
+            decision.reason === "duplicate_external_ref"
+              ? `duplicate_external_ref: this address already holds "${decision.neighbours[0].customer_name}" ` +
+                `under external_ref ${decision.neighbours[0].external_ref} (lead ${decision.neighbours[0].id}). ` +
+                `Neither creating a second pin nor re-pointing that ref is safe; pass allowDuplicate to force a create.`
+              : `ambiguous_address: ${decision.neighbours.length} stored leads could be this place ` +
+                `(${decision.neighbours.map((c) => c.id).join(", ")}). Refusing rather than picking one.`;
+          result.conflicts = describe(decision.neighbours);
+          return result;
+        }
+        // Overridden: fall through to insert, but keep what was overridden.
+        result.conflicts = describe(decision.neighbours);
+        result.reason = `allowDuplicate: created alongside ${decision.neighbours.map((c) => c.id).join(", ")}`;
+      } else if (decision.verdict === "adopt") {
+        adopted = decision.lead;
+      } else if (decision.alongside.length > 0) {
+        // Same address, different business — correct to create, but say so.
+        result.conflicts = describe(decision.alongside);
+        result.reason = `same address as ${decision.alongside.map((c) => `"${c.customer_name}"`).join(", ")}, different name — created separately`;
       }
     }
   }
 
-  const target = existing ?? adopted;
+  const target = (existing as CandidateLead | null) ?? adopted;
   const mappedStatus = mapLifecycleToRouxteStatus(r.lifecycle_status);
 
   if (target) {
@@ -140,8 +227,11 @@ export async function upsertAnswersLead(
     const channel = cleanSourceChannel(r.source_channel);
     if (channel) patch.source_channel = channel;
 
-    // Answers wins on status only for untouched leads
-    const statusChanging = target.status === "new" && mappedStatus !== "new" && mappedStatus !== target.status;
+    // Answers wins on status only for untouched leads. (The old third clause
+    // `mappedStatus !== target.status` was unreachable — target.status is
+    // already known to be "new" here and mappedStatus is already known not to
+    // be.)
+    const statusChanging = target.status === "new" && mappedStatus !== "new";
     if (statusChanging) patch.status = mappedStatus;
 
     // Backfill coords if the stored lead never got any
