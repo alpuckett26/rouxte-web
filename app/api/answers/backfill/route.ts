@@ -73,7 +73,15 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const result = { ok: errors.length === 0, pulled: items.length, ...summary, errors };
+  // A pull of zero is not a success — it's the shape the silent zero took the
+  // first time (rouxte-web#16). Say so out loud rather than returning a clean
+  // ok:true that loaded nothing.
+  const warning =
+    items.length === 0
+      ? "spine returned 0 records — nothing was loaded; check ANSWERS_API_URL and the provision feed before reading this as done"
+      : undefined;
+
+  const result = { ok: errors.length === 0, pulled: items.length, ...summary, errors, ...(warning ? { warning } : {}) };
   console.log("[answers-backfill]", JSON.stringify(result));
   return NextResponse.json(result);
 }

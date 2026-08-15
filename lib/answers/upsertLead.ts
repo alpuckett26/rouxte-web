@@ -52,8 +52,24 @@ export function normalizeAnswersLeadPayload(raw: unknown): AnswersPipelineRestau
     created_at: str(body.created_at) ?? new Date().toISOString(),
     assigned_to: str(body.assigned_to),
     address: str(profile.address) ?? str(body.address),
-    phone_number: str(profile.phone) ?? str(body.phone_number),
+    // MEASURED 2026-08-14 (rouxte-web#16): /internal/provision/leads emits the
+    // key `phone`, not `phone_number` and not `profile.phone` — so every lead
+    // the backfill pulled was landing with phone = null. A phoneless lead in a
+    // door-knock CRM is a rep who can't call ahead.
+    phone_number: str(profile.phone) ?? str(body.phone_number) ?? str(body.phone),
+    source_channel: str(body.src) ?? str(body.source_channel),
   };
+}
+
+/**
+ * Attribution token, validated to the charset the print lane ruled
+ * (alnum, 4–32). Anything else is dropped rather than stored — a junk token in
+ * the column is worse than a null, because it reads as real attribution.
+ */
+function cleanSourceChannel(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const token = value.trim();
+  return /^[A-Za-z0-9]{4,32}$/.test(token) ? token : null;
 }
 
 /** Upsert one Answers restaurant into the org's leads. Throws on DB errors. */
@@ -118,6 +134,11 @@ export async function upsertAnswersLead(
       updated_at: new Date().toISOString(),
     };
     if (r.address) patch.address = r.address.trim();
+    // Only written when the payload actually carries a token — so this stays a
+    // no-op until the spine forwards `src`, and never overwrites a known
+    // channel with a null on a later sync.
+    const channel = cleanSourceChannel(r.source_channel);
+    if (channel) patch.source_channel = channel;
 
     // Answers wins on status only for untouched leads
     const statusChanging = target.status === "new" && mappedStatus !== "new" && mappedStatus !== target.status;
@@ -172,6 +193,8 @@ export async function upsertAnswersLead(
   const coords = await geocodeAddress(r.address);
   if (coords) result.geocoded = true;
 
+  const insertChannel = cleanSourceChannel(r.source_channel);
+
   const { data: inserted, error: insertErr } = await admin
     .from("leads")
     .insert({
@@ -187,6 +210,7 @@ export async function upsertAnswersLead(
       source: ANSWERS_SOURCE,
       external_source: ANSWERS_SOURCE,
       external_ref: r.id,
+      ...(insertChannel ? { source_channel: insertChannel } : {}),
     })
     .select("id")
     .single();
