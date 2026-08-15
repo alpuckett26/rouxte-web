@@ -15,9 +15,15 @@
  * that manifest, so that "a name is never a selector" can be asserted against
  * real names without a single one entering rouxte-web's gate source.
  *
- * MOVE-NOTHING TEST: run this before an upstream rename and after it. The
- * MEMBERSHIP block must be byte-identical. Necessary but not sufficient —
- * which is why the negatives run in the same pass.
+ * MOVE-NOTHING TEST: section 7 performs the rename ITSELF, in memory, and
+ * asserts nothing moved. It used to say "run this before an upstream rename and
+ * after it" — and GroBigga handed that rename back on 2026-08-14 (GroBigga#52:
+ * the scout host is Anseur's Render service, so renaming a file it serves is a
+ * write to another product's production, and Gro has no write path to it
+ * anyway). A proof whose trigger is another seat's scheduling reads as blocked
+ * when it is merely untriggered, so the trigger is now ours. It is also the
+ * stronger test: we can rename adversarially, which nobody was going to do
+ * upstream on purpose.
  *
  * Exits non-zero if any assertion fails.
  */
@@ -176,6 +182,99 @@ for (const [label, set] of [
   assert(!anyAccepted, `${label} rejects all six`);
 }
 
+// --- 7. The rename, performed here, adversarially ---------------------------
+
+/** The membership artifact, as one comparable string. */
+function fingerprint(): string {
+  return createHash("sha256").update(c3Membership().join("\n")).digest("hex");
+}
+
+/**
+ * A name-keyed gate — what C3 would be if someone had written the obvious
+ * thing. Present ONLY as the counterfactual: it is what makes section 7 a test
+ * rather than a tautology. Without it, "C3 did not move" is unfalsifiable,
+ * because a gate that reads nothing also never moves. This one moves, in the
+ * same pass, on the same rename, and admits the pan.
+ *
+ * It pins its allowed NAMES at audit time, which is the whole point and is not
+ * a strawman — it is the same pinning discipline C3 applies to hashes, and it
+ * is what any name-keyed gate must do to be deterministic. The difference is
+ * only in what is pinned: a hash names the bytes, a filename names a slot that
+ * upstream can refill. (Written the other way first — re-reading names from the
+ * renamed manifest — it reported no flip and this harness failed it, which is
+ * the section doing its job on its own author.)
+ */
+const PINNED_NAMES_AT_AUDIT = new Set(manifest.allowlist.map((e) => e.file));
+const nameKeyedGate = (entry: ManifestEntry): boolean => PINNED_NAMES_AT_AUDIT.has(entry.file);
+
+/**
+ * Rename every file, and SWAP the name of an admitted plate with the name of
+ * the excluded prep pan — the exact pair the room has been discussing
+ * (`1aecabf0`, the pan, whose slug already reads as a plated dish). A rename
+ * that merely appends a suffix is not much of a test; a rename that hands a
+ * banned photo the name of a shipping one is the whole threat model.
+ */
+function renamedManifest(m: Manifest): { manifest: Manifest; swapped: [ManifestEntry, ManifestEntry] } {
+  const copy: Manifest = JSON.parse(JSON.stringify(m));
+  copy.allowlist.forEach((e, i) => (e.file = `renamed-a${i}.jpg`));
+  copy.exclusions.forEach((e, i) => (e.file = `renamed-x${i}.jpg`));
+  // The swap, applied last so it survives the blanket rename.
+  const plate = copy.allowlist[2];
+  const pan = copy.exclusions[0];
+  plate.file = m.exclusions[0].file; // the shipping plate now wears the pan's name
+  pan.file = m.allowlist[2].file; // and the pan wears the plate's
+  return { manifest: copy, swapped: [pan, plate] };
+}
+
+function proveRename() {
+  section("7. RENAME — performed here, not awaited from upstream");
+  const before = fingerprint();
+  const { manifest: renamed, swapped } = renamedManifest(manifest);
+  const [pan, plate] = swapped;
+
+  assert(
+    renamed.allowlist.every((e, i) => e.file !== manifest.allowlist[i].file) &&
+      renamed.exclusions.every((e, i) => e.file !== manifest.exclusions[i].file),
+    `the rename actually renamed every row (${renamed.allowlist.length + renamed.exclusions.length} files)`,
+  );
+  assert(
+    pan.md5.startsWith("1aecabf0") && pan.file === manifest.allowlist[2].file,
+    `the excluded pan now wears an admitted plate's name`,
+    `${pan.md5.slice(0, 8)} → "${pan.file}"`,
+  );
+
+  // The counterfactual moves...
+  const panBefore = nameKeyedGate(manifest.exclusions[0]);
+  const panAfter = nameKeyedGate(pan);
+  assert(
+    panBefore === false && panAfter === true,
+    "a name-keyed gate FLIPS on this rename and admits the pan",
+    `before=${panBefore} after=${panAfter} (this is the bug C3 exists to not have)`,
+  );
+  const plateAfter = nameKeyedGate(plate);
+  assert(
+    plateAfter === false,
+    "and the same gate DROPS the shipping plate it was renamed off",
+    `after=${plateAfter} (the rename costs a photo in both directions, not just one)`,
+  );
+
+  // ...and C3 does not.
+  assert(!isAllowedPhotoHash(pan.md5), "C3 still rejects the pan under its new name", pan.md5);
+  assert(isAllowedPhotoHash(plate.md5), "C3 still accepts the plate under its new name", plate.md5);
+  for (const e of renamed.allowlist) assert(isAllowedPhotoHash(e.md5), `still accepts ${e.md5}`);
+  for (const e of renamed.exclusions) assert(!isAllowedPhotoHash(e.md5), `still rejects ${e.md5}`);
+
+  // And no new name became readable to the gate in the process.
+  const renamedNames = [...renamed.allowlist, ...renamed.exclusions].map((e) => e.file);
+  assert(
+    renamedNames.every((n) => !gateSource.includes(n)),
+    "no post-rename filename appears in the gate source either",
+  );
+
+  const after = fingerprint();
+  assert(before === after, "membership fingerprint is byte-identical across the rename", after);
+}
+
 // --- 6. Bytes (optional) ----------------------------------------------------
 async function proveBytes() {
   if (!FETCH_BYTES) {
@@ -208,6 +307,8 @@ async function proveBytes() {
 }
 
 proveBytes().then(() => {
+  proveRename();
+
   // --- MEMBERSHIP: the move-nothing artifact --------------------------------
   const membership = c3Membership();
   const fingerprint = createHash("sha256").update(membership.join("\n")).digest("hex");

@@ -1,0 +1,377 @@
+{
+  "$provenance": {
+    "endpoint": "GET /internal/provision/leads?since=2026-01-01",
+    "host": "the Anseur (answers) spine API",
+    "pulled_at": "2026-08-15T02:00:00Z",
+    "pulled_by": "rouxte work seat, rouxte-web#16",
+    "note": "Verbatim response body, stored so the dry run is reproducible by anyone without a spine credential. Read-only capture: nothing here was written back to the spine.",
+    "rows": 29
+  },
+  "leads": [
+    {
+      "restaurant_id": "2451156b-7daf-4dba-91b7-ded56359f1c3",
+      "name": "Dominique's Stockyard Cafe",
+      "slug": "dominiques-stockyard-cafe",
+      "address": "1462 Airline Hwy, Baton Rouge, LA 70805",
+      "phone": "+12253576511",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://dominiques.wrepo.app",
+      "created_at": "2026-07-13T04:02:31.839Z"
+    },
+    {
+      "restaurant_id": "85ff17eb-7e87-403c-94ce-8f816d14a9ed",
+      "name": "Pappa's Soul Food",
+      "slug": "pappas-soul-food",
+      "address": "8386 Airline Hwy, Baton Rouge, LA 70815",
+      "phone": "+12252011048",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://pappas.wrepo.app",
+      "created_at": "2026-07-13T04:02:32.509Z"
+    },
+    {
+      "restaurant_id": "7c4b0ff5-8992-4fae-ad3f-75caf2072b8a",
+      "name": "Lillie's Kitchen",
+      "slug": "lillies-kitchen",
+      "address": "5735 Silverleaf Ave, Baton Rouge, LA 70812",
+      "phone": "+12253599555",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://lillies.wrepo.app",
+      "created_at": "2026-07-13T04:02:32.885Z"
+    },
+    {
+      "restaurant_id": "7cc46d4e-8e86-4905-a21a-f34bd434b281",
+      "name": "Ethel's Snack Shack",
+      "slug": "ethels-snack-shack",
+      "address": "1553 Fairchild St, Baton Rouge, LA 70807",
+      "phone": "+12254654512",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://ethels.wrepo.app",
+      "created_at": "2026-07-13T04:02:33.363Z"
+    },
+    {
+      "restaurant_id": "733375eb-c009-4444-a2ba-ca6d96367f1f",
+      "name": "N & Out Soul Food and Catering",
+      "slug": "n-out-soul-food",
+      "address": "9836 Florida Blvd, Baton Rouge, LA 70815",
+      "phone": "+12252312362",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://n-out.wrepo.app",
+      "created_at": "2026-07-13T04:02:33.795Z"
+    },
+    {
+      "restaurant_id": "47dcec96-2c6c-43b0-9a3e-d7189ece5dee",
+      "name": "Dorothy's Soul Food Kitchen",
+      "slug": "dorothys-soul-food-kitchen",
+      "address": "1221 Gardere Ln Ste M, Baton Rouge, LA 70820",
+      "phone": "+12257571146",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://dorothys.wrepo.app",
+      "created_at": "2026-07-13T04:02:34.199Z"
+    },
+    {
+      "restaurant_id": "641c49c3-c902-4b16-bf7c-5f88be12e097",
+      "name": "Mr PO-Boy",
+      "slug": "mr-po-boy",
+      "address": "6888 Airline Hwy, Baton Rouge, LA 70805",
+      "phone": "+12253540220",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://mr-po-boy.wrepo.app",
+      "created_at": "2026-07-13T17:51:05.636Z"
+    },
+    {
+      "restaurant_id": "47697ee6-f0c0-4999-949d-3805f5269527",
+      "name": "Jazz Daddy's Poboys",
+      "slug": "jazz-daddys-poboys",
+      "address": "17221 Jefferson Hwy, Baton Rouge, LA 70817",
+      "phone": "+12257512215",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://jazz-daddys.wrepo.app",
+      "created_at": "2026-07-13T17:51:06.265Z"
+    },
+    {
+      "restaurant_id": "855367ca-d1bb-4f12-bf97-18871f5840b8",
+      "name": "Linda's Chicken & Fish",
+      "slug": "lindas-chicken-fish",
+      "address": "34790 Hwy 16 N, Denham Springs, LA 70706",
+      "phone": "+12256658604",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://lindas.wrepo.app",
+      "created_at": "2026-07-13T17:51:06.653Z"
+    },
+    {
+      "restaurant_id": "e644e8b0-e149-4756-8254-472227a874f2",
+      "name": "Wings N Things",
+      "slug": "wings-n-things",
+      "address": "990 W Lee Dr Ste D, Baton Rouge, LA 70820",
+      "phone": "+12254421244",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://wings-n-things.wrepo.app",
+      "created_at": "2026-07-13T17:51:07.063Z"
+    },
+    {
+      "restaurant_id": "dd412d62-1f0f-4a05-a3df-e6e91db032ca",
+      "name": "Cafe Express | Soul Food",
+      "slug": "cafe-express-soul-food",
+      "address": "2451 North St, Baton Rouge, LA 70802, USA",
+      "phone": "(225) 383-3282",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCuwFrK9drCW8UShsl3S_HV-xAfHWFw2k6kLxVv3VXnOqOuQZSqdN5Wy_9p4M2yhcZM7dl8cQVOnMiG-VmdUBMxQXCBdNMa2IIHlbIZNwtmv9lkFfn7zjBxyVpxKDPWnvBn2wB6sepB8yEMCfg=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://cafe-express-soul-food.wrepo.app",
+      "created_at": "2026-07-18T04:21:34.964Z"
+    },
+    {
+      "restaurant_id": "827a5b69-e901-4990-a605-8346ec344528",
+      "name": "D's Soul Food Cafe",
+      "slug": "ds-soul-food-cafe",
+      "address": "23440 Railroad Ave, Plaquemine, LA 70764, USA",
+      "phone": "(225) 238-5044",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAFN1E6vL1Ne_0h-GKLz9uIPBeOZnCaSXdKnzEsy-FMnWu6Elf4vkc0StGXdoGfeUL-f7GxZ4xciYa9XKJwE9sg0cjXHh-KwijDgL-n9po5UQFwlLkWXwpO8fZCSttRqpmD1IVN5jQd0Uhwug=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://ds-soul-food-cafe.wrepo.app",
+      "created_at": "2026-07-18T04:21:38.693Z"
+    },
+    {
+      "restaurant_id": "d8b91e18-f1c4-458e-8544-21d66a43495d",
+      "name": "Sisters Soul Food Cafe",
+      "slug": "sisters-soul-food-cafe",
+      "address": "859 N Alexander Ave, Port Allen, LA 70767, USA",
+      "phone": "(225) 960-1255",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjALOWrCKmnJcybLt0r9Szc0mwVt8rNZ6W3gSjzoRIZVPkfbN5XRFYT4SyFnK2Fs5HDxI2inVlVo0_0va7wr3pLWeViDuXKBpcV2fwrUhfc20fzdf9EFtdvg4wbofAxrT3K32WxGSbcD37fojQttY-Cl=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://sisters-soul-food-cafe.wrepo.app",
+      "created_at": "2026-07-18T04:21:41.921Z"
+    },
+    {
+      "restaurant_id": "4e7e02a1-5878-41b0-8dbf-844e2333ab53",
+      "name": "Great Taste Cafe",
+      "slug": "great-taste-cafe",
+      "address": "13787 Old Hammond Hwy Ste B, Baton Rouge, LA 70816, USA",
+      "phone": "(225) 726-7377",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDSEX3TS7pQG9_GyDTJucXGd20IOQAexvRn-NEMIHEmqN7vAANaM7ooMjJTPpzZZkwmZwEz1IHwkHLLjJrnaRLV8ZEL0hIq2CaT3JXGnE-FG65kJL6MzMudEbrRJuqsN6HU9Yul78N-AoprBgY=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://great-taste-cafe.wrepo.app",
+      "created_at": "2026-07-18T10:01:12.449Z"
+    },
+    {
+      "restaurant_id": "db9e09f4-a23e-4890-85da-c75b699f2f74",
+      "name": "PoBoy USA",
+      "slug": "poboy-usa",
+      "address": "7214 Florida Blvd, Baton Rouge, LA 70806, USA",
+      "phone": "(225) 924-6882",
+      "brand": {
+        "logo_url": "https://static.xx.fbcdn.net/rsrc.php/y1/r/ay1hV6OlegS.ico",
+        "accent_color": "#77a7ff",
+        "primary_color": "#1d85fc"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://poboy-usa.wrepo.app",
+      "created_at": "2026-07-18T10:01:16.947Z"
+    },
+    {
+      "restaurant_id": "770719b5-43d4-48b4-841d-07b8afc87e00",
+      "name": "Dempsey's Poboys",
+      "slug": "dempseys-poboys",
+      "address": "13580 Coursey Blvd, Baton Rouge, LA 70817, USA",
+      "phone": "(225) 752-1199",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBZfM8getDkVPDSbtQiPbpsWjDFc54GlMbCBDj4AJoemTbsWLbgbuDxi0DQEHol6NNjLpivlu_QNDPF2dcFNRtidBdQ3w0qdin9S1ryVFhtYj-tVXSdXbaYWthnG3EGSODCWdBw1KPlvx6j2dM=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://dempseys-poboys.wrepo.app",
+      "created_at": "2026-07-18T10:01:19.692Z"
+    },
+    {
+      "restaurant_id": "2950512b-ad09-46a9-b36a-a4eb99e6840f",
+      "name": "Old School BBQ & Smokehouse",
+      "slug": "old-school-bbq-smokehouse",
+      "address": "10655 Coursey Blvd W, Baton Rouge, LA 70816, USA",
+      "phone": "(225) 831-9336",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDG4GIKKs_EDn8kH1U0DF2JreDNQVDKnokNqtzBn1TQyR5Jpcj0a5qIflkpMKLuBFzhY0Lz5Gotpir_x-m248XyVxlYqNMQAa3nC9N5rJmA-oW8FBH_ASi3ZXnbF283vuJN_Xsq0uW9tt8Zdw=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://old-school-bbq-smokehouse.wrepo.app",
+      "created_at": "2026-07-18T14:23:35.738Z"
+    },
+    {
+      "restaurant_id": "8d0bd566-84ef-4564-b942-593432161f25",
+      "name": "Vivian's Rotisserie & Grill",
+      "slug": "vivians-rotisserie-grill",
+      "address": "501 Main St, Baton Rouge, LA 70801, USA",
+      "phone": "(225) 266-0830",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAW2svnYVkrQUvgiP5wvN5nCjsv66O_Nx1bJbNRRE1IUp7YQGCYk9506V4eG1azBo4EXcHxmmSk5GopS2JPi9kgwq1mJlQ3V9xpLORIHrGgkMLOeYOTHLTCywByFHneK4wRfZguBdvQPjViriNgqVy7AA=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://vivians-rotisserie-grill.wrepo.app",
+      "created_at": "2026-07-18T14:23:39.271Z"
+    },
+    {
+      "restaurant_id": "0359c806-499e-438e-9847-2da6a776f055",
+      "name": "Dig N's",
+      "slug": "dig-ns",
+      "address": "3721 Keokuk St, Baton Rouge, LA 70805, USA",
+      "phone": "(225) 500-4544",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCyLRRBFr1uAcwUbWOC6_AQcmJSUojHJPA1-XcFjb-urNLvJQmY7YFCrlyKIhhigv11tLF7a891SV8XP8WEB8B1YtsZ_oiY0BOpJMw5NwS2RoQflaqYuHFUfIJgiARGfU0obfQEOYmWa_OYzQ=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://dig-ns.wrepo.app",
+      "created_at": "2026-07-18T14:23:41.709Z"
+    },
+    {
+      "restaurant_id": "470b192e-1c00-45f6-804f-39f83c029f2a",
+      "name": "Baton Rouge Poboy",
+      "slug": "baton-rouge-poboy",
+      "address": "3655 O'Neal Ln #1a, Baton Rouge, LA 70816, USA",
+      "phone": "(225) 218-6184",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBcWIUSiDZv8pRlV-GHa35kF7Xk0QcFcqaAzGAL_VmUQH8vJ_tajLzT2SZkLv98AQF4k9dmtgtvyQYIfKvHLfji129jf00y1AN52-6ecUY1zYDXDvE39t3O9iuBqP-5DqlxUo2lI-YDEHXztQ=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://baton-rouge-poboy.wrepo.app",
+      "created_at": "2026-07-19T06:27:55.932Z"
+    },
+    {
+      "restaurant_id": "24171dee-5841-4598-ae3a-1f59134ba521",
+      "name": "Little Kitchen",
+      "slug": "little-kitchen",
+      "address": "940 O'Neal Ln, Baton Rouge, LA 70816, USA",
+      "phone": "(225) 329-4678",
+      "brand": {
+        "logo_url": "https://scontent-iad3-1.xx.fbcdn.net/v/t39.30808-1/448034072_404892709212399_3126893632885016936_n.jpg?stp=dst-jpg_tt6&cstp=mx1732x1732&ctp=s720x720&_nc_cat=110&ccb=1-7&_nc_sid=3ab345&_nc_ohc=Ckf9CIz0h7oQ7kNvwFkmU47&_nc_oc=Adp4bwJGS6sqn94WM3VEi6DiCaDlyTqtv-wtZWIlfFFxn07SxREL8W3Oalb_y9WSqxQ&_nc_zt=24&_nc_ht=scontent-iad3-1.xx&_nc_gid=WsuV50GOyXpyi76oZVzHrQ&_nc_ss=7c180&oh=00_AQDeYBPfz9ZdbBcQ5cnLJWCefABCNALaQlcHNjWeubawbA&oe=6A625A79",
+        "accent_color": "#77a7ff",
+        "primary_color": "#1d85fc"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://little-kitchen.wrepo.app",
+      "created_at": "2026-07-19T10:00:25.447Z"
+    },
+    {
+      "restaurant_id": "78cb1e27-bb34-4fbb-96f0-2346cec0dfc1",
+      "name": "Golden Wings",
+      "slug": "golden-wings",
+      "address": "1718 N Foster Dr, Baton Rouge, LA 70806, USA",
+      "phone": "(225) 928-8588",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBR3uVq4mZHe6V-2-Du6cQJ_sZy5_Jj63MDPCjDmkicRWiUfaYUNN18uVaQLtr_LPJV8hdltAXOEKXUtVKBV6MzM3N6S-1_3ICwjqAkhCfiw9yWtaILisPYnnZFxol1UHFMZfRj9KDIcJyVOA=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://golden-wings.wrepo.app",
+      "created_at": "2026-07-20T10:00:19.563Z"
+    },
+    {
+      "restaurant_id": "04feac62-6a49-41c8-a7c5-24ea48065e7e",
+      "name": "T.J'S Cafe and Grill LLC",
+      "slug": "t-js-cafe-and-grill-llc",
+      "address": "6378 Flag St, Baton Rouge, LA 70812, USA",
+      "phone": "(225) 239-3358",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDIDCIilRzmn5AKCo3cGm_WMEwDp9m-6FUth-_-d_xCyMiPlkG2o20YiCQOGxgGmOCSXS-JxyZXAjv8s8-BDuDoUmQVXs6k_lQ2gzsZZQgfakOJk5_qoda4JuGMdSaxMzJIeUOjiKxAVac3-lvMNpFgQA=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://t-js-cafe-and-grill-llc.wrepo.app",
+      "created_at": "2026-07-21T10:00:59.812Z"
+    },
+    {
+      "restaurant_id": "f4005058-b84d-4a56-b636-f6ca2c7d5766",
+      "name": "Tre's Street Kitchen",
+      "slug": "tres-street-kitchen",
+      "address": "201 Community College Dr, Baton Rouge, LA 70806, USA",
+      "phone": "(225) 205-9203",
+      "brand": {
+        "logo_url": "https://images.squarespace-cdn.com/content/v1/6298f0d2f5d05e6eecb9f29d/39a28c89-c5e1-4b21-b17f-60f24a51aa03/TresStreetKitchen-TextOnly-Logo.png?format=1500w"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://tres-street-kitchen.wrepo.app",
+      "created_at": "2026-07-22T10:01:56.645Z"
+    },
+    {
+      "restaurant_id": "302a2687-cbab-4c50-91ac-7b3ad1923d4a",
+      "name": "The Cove Hawaiian Grill",
+      "slug": "the-cove-hawaiian-grill",
+      "address": "9618 Jefferson Hwy Ste e, Baton Rouge, LA 70809, USA",
+      "phone": "(225) 300-8520",
+      "brand": null,
+      "assigned_to": "Aaron",
+      "site_url": "https://the-cove-hawaiian-grill.wrepo.app",
+      "created_at": "2026-07-23T05:00:57.366Z"
+    },
+    {
+      "restaurant_id": "0721ac6a-278a-42ad-8cf6-ce28d20c2d92",
+      "name": "Lizzie's Restaurant | Breakfast • Lunch",
+      "slug": "lizzies-restaurant-breakfast-lunch",
+      "address": "8436 Tom Dr, Baton Rouge, LA 70815, USA",
+      "phone": "(225) 300-8825",
+      "brand": {
+        "tagline": "Baton Rouge,LA",
+        "logo_url": "https://lizzies.top/img/icon/81.png",
+        "accent_color": "#b1525a",
+        "primary_color": "#4caf50"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://lizzies-restaurant-breakfast-lunch.wrepo.app",
+      "created_at": "2026-07-23T10:01:55.374Z"
+    },
+    {
+      "restaurant_id": "7ee0c956-44a6-4bd9-8a7d-c0de317601ff",
+      "name": "The Poboy House",
+      "slug": "the-poboy-house",
+      "address": "170 6th St, Port Allen, LA 70767, USA",
+      "phone": "(225) 343-9305",
+      "brand": {
+        "logo_url": "https://assets.squarespace.com/universal/default-favicon.ico"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://the-poboy-house.wrepo.app",
+      "created_at": "2026-07-24T10:01:00.258Z"
+    },
+    {
+      "restaurant_id": "5b6f2947-a315-40af-9bd3-23fba3028fd0",
+      "name": "Fork N Spoon",
+      "slug": "fork-n-spoon",
+      "address": "1750 Brightside Dr Ste F, Baton Rouge, LA 70820, USA",
+      "phone": "(225) 256-5408",
+      "brand": {
+        "tagline": "All-Day Breakfast",
+        "logo_url": "https://static.wixstatic.com/media/543af6_3adf1c5e353643a7916691f396770351~mv2.png/v1/fill/w_1640,h_624,al_c/543af6_3adf1c5e353643a7916691f396770351~mv2.png",
+        "accent_color": "#a55ea5",
+        "primary_color": "#f6f6da"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://fork-n-spoon.wrepo.app",
+      "created_at": "2026-07-25T10:01:54.536Z"
+    },
+    {
+      "restaurant_id": "966273f6-d43d-4f3a-9572-32d986a05395",
+      "name": "Offset Smoker BBQ",
+      "slug": "offset-smoker-bbq",
+      "address": "5335 Government St, Baton Rouge, LA 70806, USA",
+      "phone": "(225) 256-2272",
+      "brand": {
+        "logo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjByhrPWoemZNDrYFrx-7yEKHlFZjGz0Ws-vi2vyZNYva6mNpEeVR3grmVDwaNBTZft08MXCk9gY6ogzu-GiPow8iMvP1U5pE3K_o0s9AK3zFuP90O-zkJ26bhc615OEvoZnzDIsYtOnTNtnZQ=s4800-w512"
+      },
+      "assigned_to": "Aaron",
+      "site_url": "https://offset-smoker-bbq.wrepo.app",
+      "created_at": "2026-07-28T10:00:39.652Z"
+    }
+  ]
+}
