@@ -36,14 +36,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   documentation: "Documentation",
   training:      "Training",
   field_setup:   "Field Setup",
+  handoff:       "Customer Handoff",
   general:       "General",
 };
-const CATEGORY_ORDER = ["appearance", "documentation", "training", "field_setup", "general"];
+// Items in a category missing from this list render nowhere — keep it in sync
+// with the categories seeded by supabase/migrations.
+const CATEGORY_ORDER = ["appearance", "documentation", "training", "field_setup", "handoff", "general"];
 const CATEGORIES = [
   { value: "appearance", label: "Appearance" },
   { value: "documentation", label: "Documentation" },
   { value: "training", label: "Training" },
   { value: "field_setup", label: "Field Setup" },
+  { value: "handoff", label: "Customer Handoff" },
   { value: "general", label: "General" },
 ];
 
