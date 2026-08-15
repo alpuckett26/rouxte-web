@@ -44,8 +44,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
-  const summary = { created: 0, updated: 0, adopted: 0, geocoded: 0, status_changed: 0, skipped: 0 };
+  const summary = { created: 0, updated: 0, adopted: 0, geocoded: 0, status_changed: 0, skipped: 0, refused: 0 };
   const errors: string[] = [];
+  // Refusals are not errors — the gate declining to guess is it working. They
+  // ride their own list so a refused lead can never be read as a synced one,
+  // and so a run that refuses everything cannot report ok:true and look clean.
+  const refusals: string[] = [];
 
   for (const r of pipeline) {
     try {
@@ -56,6 +60,9 @@ export async function GET(request: NextRequest) {
       if (res.action === "skipped") {
         summary.skipped++;
         if (res.reason) errors.push(`${r.id} (${r.name}): ${res.reason}`);
+      } else if (res.action === "refused") {
+        summary.refused++;
+        refusals.push(`${r.id} (${r.name}): ${res.reason ?? "refused"}`);
       } else {
         summary[res.action]++;
       }
@@ -65,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const result = { ok: errors.length === 0, pulled: pipeline.length, ...summary, errors };
+  const result = { ok: errors.length === 0, pulled: pipeline.length, ...summary, errors, refusals };
   console.log("[answers-sync]", JSON.stringify(result));
   return NextResponse.json(result);
 }

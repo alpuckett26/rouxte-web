@@ -7,6 +7,9 @@ import type { LeadStatus } from "@/lib/types";
 
 export const ANSWERS_SOURCE = "answers";
 
+/** "Everything the spine has" — see fetchProvisionLeads. */
+const EPOCH_ISO = "1970-01-01T00:00:00.000Z";
+
 export interface AnswersPipelineRestaurant {
   id: string;
   name: string;
@@ -17,6 +20,8 @@ export interface AnswersPipelineRestaurant {
   assigned_to: string | null;
   address: string | null;
   phone_number: string | null;
+  /** Attribution token if the spine forwards one (see migration 040). */
+  source_channel?: string | null;
 }
 
 /**
@@ -92,7 +97,14 @@ export async function fetchAnswersPipeline(): Promise<AnswersPipelineRestaurant[
  * shape may be either the pipeline shape or the push-rail profile shape).
  */
 export async function fetchProvisionLeads(since?: string): Promise<unknown[]> {
-  const qs = since ? `?since=${encodeURIComponent(since)}` : "";
+  // MEASURED 2026-08-14 (rouxte-web#16): omitting `since` does NOT mean "all".
+  // GET /internal/provision/leads with no query returns `[]` at HTTP 200,
+  // while ?since=2026-01-01T00:00:00Z returns the full 29. An operator running
+  // the backfill the obvious way (no ?since=) therefore got a green
+  // {"ok":true,"pulled":0} that loaded nothing — a silent zero, and the direct
+  // cause of the 0-row insert pass. Default to the epoch so "no since" means
+  // what every caller reads it to mean.
+  const qs = `?since=${encodeURIComponent(since ?? EPOCH_ISO)}`;
   const res = await fetch(`${baseUrl()}/internal/provision/leads${qs}`, {
     headers: authHeaders(),
     signal: AbortSignal.timeout(15000),

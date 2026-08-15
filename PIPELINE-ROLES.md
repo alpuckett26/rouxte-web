@@ -65,6 +65,15 @@ repo's `CLAUDE.md` § "Anseur (Answers) pipeline sync"; code in
   canonical "Who owes what" table, Rouxte does not owe an insert). A lead
   is walk-in-ready only when its packet gate is green; don't route reps to
   a lead whose packet isn't locked/printed.
+- **Owner-photo handoff on no-website accounts (room-ratified; built
+  2026-08-14, rouxte-web#16 item 2):** a lead with no website has zero food
+  photos anywhere in the stack, and the rep on the signing visit is the only
+  one who can collect them. Codified as `handoff`-category items on the rep
+  readiness checklist (`supabase/migrations/039_owner_photo_handoff.sql`).
+  Photos are handed off against the account record — never a personal device.
+  Reps must not promise an owner that a specific shot will appear: every photo
+  is hash-gated by C3 (`lib/photos/c3.ts`) before it can front a
+  customer-facing surface.
 - **Report bugs in the war room (standing rule, Aaron 2026-07-19):**
   any bug, breakage, or gap you find — in your lane or another
   member's — goes to the war room immediately with concrete evidence

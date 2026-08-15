@@ -1,0 +1,153 @@
+{
+  "$provenance": {
+    "source": "GroBigga work seat, posted on rouxte-web#16 2026-08-15T01:53:04Z",
+    "note": "The PHONE-ONLY tier of Gro's 31. phone_number is the restaurant own number (Google Places), never an ai_phone_number binding. Reachability unverified — nobody has dialled these.",
+    "rows": 18
+  },
+  "rows": [
+    {
+      "n": 1,
+      "external_ref": "dd412d62-1f0f-4a05-a3df-e6e91db032ca",
+      "name": "Cafe Express | Soul Food",
+      "phone_number": "(225) 383-3282",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 04:21:35Z"
+    },
+    {
+      "n": 2,
+      "external_ref": "827a5b69-e901-4990-a605-8346ec344528",
+      "name": "D's Soul Food Cafe",
+      "phone_number": "(225) 238-5044",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 04:21:39Z"
+    },
+    {
+      "n": 3,
+      "external_ref": "d8b91e18-f1c4-458e-8544-21d66a43495d",
+      "name": "Sisters Soul Food Cafe",
+      "phone_number": "(225) 960-1255",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 04:21:42Z"
+    },
+    {
+      "n": 4,
+      "external_ref": "4e7e02a1-5878-41b0-8dbf-844e2333ab53",
+      "name": "Great Taste Cafe",
+      "phone_number": "(225) 726-7377",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 10:01:13Z"
+    },
+    {
+      "n": 5,
+      "external_ref": "db9e09f4-a23e-4890-85da-c75b699f2f74",
+      "name": "PoBoy USA",
+      "phone_number": "(225) 924-6882",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 10:01:17Z"
+    },
+    {
+      "n": 6,
+      "external_ref": "770719b5-43d4-48b4-841d-07b8afc87e00",
+      "name": "Dempsey's Poboys",
+      "phone_number": "(225) 752-1199",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 10:01:20Z"
+    },
+    {
+      "n": 7,
+      "external_ref": "2950512b-ad09-46a9-b36a-a4eb99e6840f",
+      "name": "Old School BBQ & Smokehouse",
+      "phone_number": "(225) 831-9336",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 14:23:36Z"
+    },
+    {
+      "n": 8,
+      "external_ref": "8d0bd566-84ef-4564-b942-593432161f25",
+      "name": "Vivian's Rotisserie & Grill",
+      "phone_number": "(225) 266-0830",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 14:23:39Z"
+    },
+    {
+      "n": 9,
+      "external_ref": "0359c806-499e-438e-9847-2da6a776f055",
+      "name": "Dig N's",
+      "phone_number": "(225) 500-4544",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-18 14:23:42Z"
+    },
+    {
+      "n": 10,
+      "external_ref": "470b192e-1c00-45f6-804f-39f83c029f2a",
+      "name": "Baton Rouge Poboy",
+      "phone_number": "(225) 218-6184",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-19 06:27:58Z"
+    },
+    {
+      "n": 11,
+      "external_ref": "24171dee-5841-4598-ae3a-1f59134ba521",
+      "name": "Little Kitchen",
+      "phone_number": "(225) 329-4678",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-19 10:00:28Z"
+    },
+    {
+      "n": 12,
+      "external_ref": "78cb1e27-bb34-4fbb-96f0-2346cec0dfc1",
+      "name": "Golden Wings",
+      "phone_number": "(225) 928-8588",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-20 10:00:22Z"
+    },
+    {
+      "n": 13,
+      "external_ref": "04feac62-6a49-41c8-a7c5-24ea48065e7e",
+      "name": "T.J'S Cafe and Grill LLC",
+      "phone_number": "(225) 239-3358",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-21 10:01:02Z"
+    },
+    {
+      "n": 14,
+      "external_ref": "f4005058-b84d-4a56-b636-f6ca2c7d5766",
+      "name": "Tre's Street Kitchen",
+      "phone_number": "(225) 205-9203",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-22 10:01:57Z"
+    },
+    {
+      "n": 15,
+      "external_ref": "0721ac6a-278a-42ad-8cf6-ce28d20c2d92",
+      "name": "Lizzie's Restaurant | Breakfast • Lunch",
+      "phone_number": "(225) 300-8825",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-23 10:01:55Z"
+    },
+    {
+      "n": 16,
+      "external_ref": "7ee0c956-44a6-4bd9-8a7d-c0de317601ff",
+      "name": "The Poboy House",
+      "phone_number": "(225) 343-9305",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-24 10:01:00Z"
+    },
+    {
+      "n": 17,
+      "external_ref": "5b6f2947-a315-40af-9bd3-23fba3028fd0",
+      "name": "Fork N Spoon",
+      "phone_number": "(225) 256-5408",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-25 10:01:55Z"
+    },
+    {
+      "n": 18,
+      "external_ref": "966273f6-d43d-4f3a-9572-32d986a05395",
+      "name": "Offset Smoker BBQ",
+      "phone_number": "(225) 256-2272",
+      "city": "Baton Rouge",
+      "dropped_at": "2026-07-28 10:00:40Z"
+    }
+  ]
+}

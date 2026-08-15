@@ -114,6 +114,8 @@ export interface Lead {
   source: string;
   external_source: string | null;
   external_ref: string | null;
+  /** Attribution token for the surface that produced the lead (migration 040). */
+  source_channel: string | null;
   // Pull tracking
   pulled_at: string | null;
   pulled_by: string | null;
