@@ -15,8 +15,11 @@ import { geocodeAddress } from "@/lib/geocode";
 import {
   ANSWERS_SOURCE,
   mapLifecycleToRouxteStatus,
+  type AnswersContact,
   type AnswersPipelineRestaurant,
+  type AnswersSignals,
 } from "@/lib/answers/client";
+import { syncMayClearSuppression } from "@/lib/outreach/suppression";
 import {
   candidatePrefix,
   decideAdoption,
@@ -85,7 +88,57 @@ export function normalizeAnswersLeadPayload(raw: unknown): AnswersPipelineRestau
     // door-knock CRM is a rep who can't call ahead.
     phone_number: str(profile.phone) ?? str(body.phone_number) ?? str(body.phone),
     source_channel: str(body.src) ?? str(body.source_channel),
+    // rouxte-web#18. Until now this function read neither key, so the two
+    // contacts the spine DOES serve were being dropped here — Rouxte's half of
+    // the same hole the spine just closed on its side.
+    contact: (body.contact ?? profile.contact ?? null) as AnswersContact | null,
+    signals: (body.signals ?? profile.signals ?? null) as AnswersSignals | null,
   };
+}
+
+/**
+ * Flatten a spine contact into the lead's contact_* columns (migration 041).
+ *
+ * Returns only the keys the payload actually carries. That matters: a later
+ * sync whose contact is null must not blank a contact an earlier sync landed,
+ * and a spine that omits `role` must not null out a role a rep typed in.
+ *
+ * `do_not_contact` is asymmetric on purpose. TRUE is always honoured. FALSE or
+ * ABSENT never clears on its own — see syncMayClearSuppression: an unsubscribe
+ * that a 15-minute cron can undo is not an unsubscribe.
+ */
+export function normalizeAnswersContact(
+  contact: AnswersContact | null | undefined,
+  currentSuppressionSource: string | null | undefined,
+  now: string,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (!contact || typeof contact !== "object") return patch;
+
+  const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const set = (col: string, v: string | null) => {
+    if (v !== null) patch[col] = v;
+  };
+
+  set("contact_name", str(contact.name));
+  set("contact_role", str(contact.role));
+  set("contact_email", str(contact.email));
+  set("contact_phone", str(contact.phone));
+  set("contact_source", str(contact.source));
+  set("contact_sourced_at", str(contact.sourced_at));
+  if (typeof contact.verified === "boolean") patch.contact_verified = contact.verified;
+
+  if (contact.do_not_contact === true) {
+    patch.do_not_contact = true;
+    patch.do_not_contact_at = now;
+    patch.do_not_contact_source = "spine";
+  } else if (contact.do_not_contact === false && syncMayClearSuppression(currentSuppressionSource)) {
+    patch.do_not_contact = false;
+    patch.do_not_contact_at = null;
+    patch.do_not_contact_source = null;
+  }
+
+  return patch;
 }
 
 /**
@@ -109,7 +162,10 @@ export async function upsertAnswersLead(
 ): Promise<UpsertAnswersLeadResult> {
   const result: UpsertAnswersLeadResult = { action: "skipped", statusChanged: false, geocoded: false };
   const CANDIDATE_COLUMNS =
-    "id, status, lat, lng, assigned_to, address, customer_name, external_ref, external_source";
+    "id, status, lat, lng, assigned_to, address, customer_name, external_ref, external_source, " +
+    // Needed to decide whether the spine is allowed to clear a suppression —
+    // it may only retract a flag it set itself (rouxte-web#18).
+    "do_not_contact_source";
   /**
    * Cap on the house-number candidate scan. Sized to be unreachable in normal
    * data (it would take 200 stored leads whose address starts with the same
@@ -149,7 +205,13 @@ export async function upsertAnswersLead(
         .ilike("address", `${prefix}%`)
         .limit(CANDIDATE_SCAN_LIMIT);
 
-      const rows = (candidates ?? []) as CandidateLead[];
+      // Double cast on purpose. `do_not_contact_source` arrives with migration
+      // 041, which ships in this same branch and is therefore NOT yet in the
+      // checked-in Supabase generated types; the client sees an unknown column
+      // in the select string and widens the row to its error type, so a single
+      // cast is rejected for insufficient overlap. Collapse this back to a
+      // plain cast once the types are regenerated against an org that has 041.
+      const rows = (candidates ?? []) as unknown as CandidateLead[];
 
       // A SATURATED SCAN IS NOT A RESULT. The prefix is only a house number, so
       // "100%" also pulls 1000, 10012, 100th — in a dense org this can hit the
@@ -211,6 +273,7 @@ export async function upsertAnswersLead(
 
   const target = (existing as CandidateLead | null) ?? adopted;
   const mappedStatus = mapLifecycleToRouxteStatus(r.lifecycle_status);
+  const nowIso = new Date().toISOString();
 
   if (target) {
     const patch: Record<string, unknown> = {
@@ -218,8 +281,18 @@ export async function upsertAnswersLead(
       external_ref: r.id,
       customer_name: r.name ?? null,
       phone: r.phone_number ?? null,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
+      ...normalizeAnswersContact(
+        r.contact,
+        (target as { do_not_contact_source?: string | null }).do_not_contact_source,
+        nowIso,
+      ),
     };
+    // Signals are a mirror of the spine's, so a non-empty payload replaces
+    // wholesale. An absent or empty `signals` is left alone rather than written
+    // as {} — the spine omitting the key means it did not say, not that the
+    // record has no signals.
+    if (r.signals && Object.keys(r.signals).length > 0) patch.signals = r.signals;
     if (r.address) patch.address = r.address.trim();
     // Only written when the payload actually carries a token — so this stays a
     // no-op until the spine forwards `src`, and never overwrites a known
@@ -301,6 +374,10 @@ export async function upsertAnswersLead(
       external_source: ANSWERS_SOURCE,
       external_ref: r.id,
       ...(insertChannel ? { source_channel: insertChannel } : {}),
+      // No stored suppression can exist on a row that does not exist yet, so
+      // the "may the spine clear this" question has one answer here.
+      ...normalizeAnswersContact(r.contact, "spine", nowIso),
+      ...(r.signals && Object.keys(r.signals).length > 0 ? { signals: r.signals } : {}),
     })
     .select("id")
     .single();
