@@ -67,7 +67,9 @@ export class FakeDb {
     return full;
   }
 
-  from(table: string) {
+  // An arrow property, not a method, so every nested closure below inherits
+  // `this` lexically and the double has no `const db = this` in it.
+  from = (table: string) => {
     const db = this;
     return {
       select() {

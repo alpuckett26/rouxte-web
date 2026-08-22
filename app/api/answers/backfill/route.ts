@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchProvisionLeads } from "@/lib/answers/client";
+import { fetchProvisionLeads, type ProvisionFeedMeta } from "@/lib/answers/client";
 import {
   normalizeAnswersLeadPayload,
   resolveOrgAdmin,
@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
   const since = request.nextUrl.searchParams.get("since") ?? undefined;
 
   let items: unknown[];
+  let feed: ProvisionFeedMeta;
   try {
-    items = await fetchProvisionLeads(since);
+    ({ leads: items, meta: feed } = await fetchProvisionLeads(since));
   } catch (err) {
     const message = err instanceof Error ? err.message : "provision leads fetch failed";
     console.error("[answers-backfill]", message);
@@ -91,20 +92,37 @@ export async function POST(request: NextRequest) {
   // pulled none, and it is the likelier outcome of a bad adopt gate. Both are
   // reported as a warning, so "nothing changed" can never be read as "done".
   const landed = summary.created + summary.updated + summary.adopted;
-  const warning =
-    items.length === 0
-      ? "spine returned 0 records — nothing was loaded; check ANSWERS_API_URL and the provision feed before reading this as done"
-      : landed === 0
-        ? `pulled ${items.length} records but landed 0 (refused ${summary.refused}, skipped ${summary.skipped}) — nothing was written; read the refusals before treating this as done`
-        : undefined;
+  const warnings: string[] = [];
+  if (items.length === 0) {
+    warnings.push(
+      "spine returned 0 records — nothing was loaded; check ANSWERS_API_URL and the provision feed before reading this as done",
+    );
+  } else if (landed === 0) {
+    warnings.push(
+      `pulled ${items.length} records but landed 0 (refused ${summary.refused}, skipped ${summary.skipped}) — nothing was written; read the refusals before treating this as done`,
+    );
+  }
+  // A TRUNCATED FEED IS NOT A COMPLETE ONE, and a backfill is exactly the
+  // caller that reads "I loaded them all" off a full page. The spine started
+  // reporting this on 2026-08-15; a deploy that does not send the header leaves
+  // `truncated` null, which is UNKNOWN and gets no claim either way.
+  if (feed.truncated === true) {
+    warnings.push(
+      `the spine reported this feed page as TRUNCATED (count ${feed.count ?? "?"} of limit ${feed.limit ?? "?"}) — ` +
+        `records beyond the page were never pulled; re-run with a later ?since= until it stops truncating before calling the backfill complete`,
+    );
+  }
 
   const result = {
     ok: errors.length === 0,
     pulled: items.length,
     ...summary,
+    feed,
     errors,
     refusals,
-    ...(warning ? { warning } : {}),
+    // Kept singular alongside the list so an operator (or a script) reading the
+    // old field still sees the loudest problem rather than nothing.
+    ...(warnings.length ? { warning: warnings[0], warnings } : {}),
   };
   console.log("[answers-backfill]", JSON.stringify(result));
   return NextResponse.json(result);

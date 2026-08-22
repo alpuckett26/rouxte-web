@@ -53,6 +53,13 @@ export interface CandidateLead {
   customer_name: string | null;
   external_ref: string | null;
   external_source: string | null;
+  /**
+   * Not used by the adopt decision — carried because upsertLead selects it in
+   * the same query, to decide whether the spine may clear a suppression
+   * (rouxte-web#18). Optional so callers constructing candidates for the
+   * address logic alone need not supply it.
+   */
+  do_not_contact_source?: string | null;
 }
 
 export type AdoptDecision =
