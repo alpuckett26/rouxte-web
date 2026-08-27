@@ -55,7 +55,7 @@ There is no test suite — verify behavior by running the dev server (web) or `n
 ### Workspace layout
 
 - `app/` — Next.js pages and API routes (no `src/` wrapper)
-- `app/api/` — ~97 Next.js route handlers, one folder per resource
+- `app/api/` — Next.js route handlers, one folder per resource (exact list: `surface.json`, never a number written here)
 - `app/components/` — client components grouped by domain (`map/`, `leads/`, `manager/`, `dashboard/`, `ai/`, `onboarding/`, `payroll/`, `training/`, `quotes/`, `smartpitch/`, `notifications/`, `store/`, `resources/`, `card/`, `meetings/`, `ui/`)
 - `lib/supabase/` — three web Supabase clients + the universal API client (see below)
 - `lib/types/index.ts` — all shared TypeScript types/interfaces (also re-exported by mobile)
@@ -82,9 +82,31 @@ All API routes auth-check with `supabase.auth.getUser()` first. RLS on Postgres 
 
 ### Auth & routing
 
-Next.js 16 currently uses `middleware.ts` at the repo root. **Note:** Next.js 16.1+ deprecates `middleware.ts` in favor of `proxy.ts` — the build warns but still works. Renaming is a future cleanup. `middleware.ts` delegates to `lib/supabase/middleware.ts` which refreshes the session and redirects unauthenticated requests away from protected routes. Public paths: `/auth`, `/o/`, `/optout`, `/invite`, `/offline`, `/r/`, `/api/`, `/`.
+Next.js 16 currently uses `middleware.ts` at the repo root. **Note:** Next.js 16.1+ deprecates `middleware.ts` in favor of `proxy.ts` — the build warns but still works. Renaming is a future cleanup. `middleware.ts` delegates to `lib/supabase/middleware.ts` which refreshes the session and redirects unauthenticated requests away from protected routes.
+
+**The public-path allowlist is deliberately NOT restated here.** It lives in one place — `isPublicPath` in `lib/supabase/middleware.ts` — and is republished, read off that source, in `surface.json` (`middleware.prefixes`). A copy in prose is a copy that drifts: the list this file used to carry had gone five entries stale. Read the manifest.
+
+Note that `/api/` is allowlisted wholesale, so **middleware is not an auth layer for API routes** — each handler's own guard is the only one. `surface.json` reports that per method.
 
 Onboarding gate: after login, web users hit `/onboarding/check` which reads `onboarding_step` and redirects through the sequence: `confirmed → promo → profile → documents → dashboard`. Admins skip the `documents` step. The mobile app mirrors this flow in `mobile/src/screens/onboarding/`.
+
+### Surface manifest (rouxte-web#21)
+
+`surface.json` at the repo root is the generated list of **every HTTP surface this app serves** — path, method, guards, and whether it is public — plus a rollup by path segment. It is produced by `scripts/generate-surface.mjs`, which reads the App Router tree and each handler's own source. Nobody maintains it by hand.
+
+```bash
+npm run surface        # regenerate the committed snapshot (git-tracked files only)
+npm run surface:check  # exit 1 if the surface drifted — safe to wire into CI
+```
+
+`prebuild` regenerates it on every build, so the manifest served in a deployment cannot disagree with what that deployment serves. Served at `GET /api/ops/surface` — auth is `Authorization: Bearer $CRON_SECRET`, or `X-Answers-Secret: $ANSWERS_BUILD_SECRET` (the secret the spine already holds), or a super-admin session.
+
+Two rules that come with it:
+
+- **Answer questions about this repo's surface by reading the manifest, not from memory.** That is the whole reason it exists. A one-shot session that recalls its own routes gets them wrong.
+- **A claim about another seat's surface cites that seat's manifest, or is marked UNMEASURED.** Say "absent, not zero" — the manifest names which env vars it consulted for `hosts` precisely so an empty list is distinguishable from an unset one.
+
+The generator's failure mode is deliberately one-directional: an unrecognised guard pattern reads as `[]`, i.e. **public**. It over-reports exposure (noisy, gets investigated) rather than under-reporting it (silent, ships a hole). If you add a new guard style, add it to `GUARD_PATTERNS`.
 
 ### Role hierarchy
 

@@ -1,0 +1,2907 @@
+{
+  "seat": "rouxte",
+  "repo": "alpuckett26/rouxte-web",
+  "hosts": [],
+  "hosts_consulted": [
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_SITE_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "VERCEL_URL"
+  ],
+  "hosts_unset": [
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_SITE_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+    "VERCEL_URL"
+  ],
+  "generated_at": "2026-08-27T01:55:51.700Z",
+  "commit": "79b5e8529f7358210c920262278ee4b0f53c8295",
+  "source": "next app router — app/ directory, git-tracked files only",
+  "generator": "scripts/generate-surface.mjs",
+  "middleware": {
+    "prefixes": [
+      "/auth",
+      "/o/",
+      "/optout",
+      "/invite",
+      "/offline",
+      "/r/",
+      "/api/",
+      "/demo",
+      "/delete-account",
+      "/privacy",
+      "/terms",
+      "/billing/bridge"
+    ],
+    "exact": [
+      "/"
+    ],
+    "source": "lib/supabase/middleware.ts:isPublicPath",
+    "note": "Next.js middleware redirects anonymous requests to /auth for any path outside this allowlist. /api/* is allowlisted wholesale, so every API route's real guard is the one inside its own handler."
+  },
+  "segment_rule": "first path segment; /api/* grouped at depth 2",
+  "counts": {
+    "routes": 235,
+    "handlers": 175,
+    "pages": 60,
+    "public": 27
+  },
+  "segments": [
+    {
+      "segment": "/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/admin/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/analytics/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/api/account/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/admin/",
+      "count": 6,
+      "public": 0,
+      "guards": [
+        "super-admin",
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/ai/",
+      "count": 4,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/analytics/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/answers/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "cron-secret",
+        "shared-secret:X-Answers-Secret"
+      ]
+    },
+    {
+      "segment": "/api/auth/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/api/billing/",
+      "count": 5,
+      "public": 1,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/bonus-board/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/bonus-goals/",
+      "count": 3,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/card/",
+      "count": 2,
+      "public": 2,
+      "guards": []
+    },
+    {
+      "segment": "/api/coach/",
+      "count": 9,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/compensation/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/cron/",
+      "count": 5,
+      "public": 0,
+      "guards": [
+        "cron-secret"
+      ]
+    },
+    {
+      "segment": "/api/dashboard/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/fcc/",
+      "count": 6,
+      "public": 5,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/funnel/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/api/invites/",
+      "count": 4,
+      "public": 1,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/leaderboard/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/leads/",
+      "count": 19,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/logs/",
+      "count": 4,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/manager/",
+      "count": 32,
+      "public": 0,
+      "guards": [
+        "session",
+        "manager-role"
+      ]
+    },
+    {
+      "segment": "/api/me/",
+      "count": 6,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/meetings/",
+      "count": 5,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/notifications/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/onboarding/",
+      "count": 7,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/ops/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session",
+        "cron-secret",
+        "shared-secret:X-Answers-Secret"
+      ]
+    },
+    {
+      "segment": "/api/optout/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/api/org/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/packages/",
+      "count": 3,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/payroll/",
+      "count": 8,
+      "public": 0,
+      "guards": [
+        "session",
+        "manager-role"
+      ]
+    },
+    {
+      "segment": "/api/qr-codes/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/quotes/",
+      "count": 5,
+      "public": 1,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/rep/",
+      "count": 5,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/sales-goals/",
+      "count": 3,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/sales-tiers/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/smoke/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/store/",
+      "count": 4,
+      "public": 0,
+      "guards": [
+        "session",
+        "hmac-signature"
+      ]
+    },
+    {
+      "segment": "/api/tags/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/team/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/training/",
+      "count": 5,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/api/zip-addresses/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "session"
+      ]
+    },
+    {
+      "segment": "/auth/",
+      "count": 3,
+      "public": 3,
+      "guards": []
+    },
+    {
+      "segment": "/billing/",
+      "count": 2,
+      "public": 1,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/card/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/coach/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/dashboard/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/delete-account/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/demo/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/getting-started/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/invite/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/leaderboard/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/leads/",
+      "count": 3,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/manager/",
+      "count": 17,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/map/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/meetings/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/migration/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/o/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/offline/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/onboarding/",
+      "count": 6,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/optout/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/payroll/",
+      "count": 2,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/pricing/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/privacy/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/quote/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/r/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/settings/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/store/",
+      "count": 3,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    },
+    {
+      "segment": "/terms/",
+      "count": 1,
+      "public": 1,
+      "guards": []
+    },
+    {
+      "segment": "/training/",
+      "count": 1,
+      "public": 0,
+      "guards": [
+        "middleware:session-redirect"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/page.tsx"
+    },
+    {
+      "path": "/admin",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/admin/page.tsx"
+    },
+    {
+      "path": "/admin/orgs/:org_id",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/admin/orgs/[org_id]/page.tsx"
+    },
+    {
+      "path": "/analytics",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/analytics/page.tsx"
+    },
+    {
+      "path": "/api/account/delete",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/account/delete/route.ts"
+    },
+    {
+      "path": "/api/admin/impersonate",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "super-admin"
+      ],
+      "public": false,
+      "file": "app/api/admin/impersonate/route.ts"
+    },
+    {
+      "path": "/api/admin/orgs",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "super-admin"
+      ],
+      "public": false,
+      "file": "app/api/admin/orgs/route.ts"
+    },
+    {
+      "path": "/api/admin/orgs/:org_id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "super-admin"
+      ],
+      "public": false,
+      "file": "app/api/admin/orgs/[org_id]/route.ts"
+    },
+    {
+      "path": "/api/admin/orgs/:org_id/force-renewal",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "super-admin"
+      ],
+      "public": false,
+      "file": "app/api/admin/orgs/[org_id]/force-renewal/route.ts"
+    },
+    {
+      "path": "/api/admin/training/generate-quizzes",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/admin/training/generate-quizzes/route.ts"
+    },
+    {
+      "path": "/api/admin/users/:user_id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "super-admin"
+      ],
+      "public": false,
+      "file": "app/api/admin/users/[user_id]/route.ts"
+    },
+    {
+      "path": "/api/ai/chat",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/ai/chat/route.ts"
+    },
+    {
+      "path": "/api/ai/parse-comp-guide",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/ai/parse-comp-guide/route.ts"
+    },
+    {
+      "path": "/api/ai/prompt",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/ai/prompt/route.ts"
+    },
+    {
+      "path": "/api/ai/usage",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/ai/usage/route.ts"
+    },
+    {
+      "path": "/api/analytics/sales-history",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/analytics/sales-history/route.ts"
+    },
+    {
+      "path": "/api/answers/backfill",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "cron-secret"
+      ],
+      "public": false,
+      "file": "app/api/answers/backfill/route.ts"
+    },
+    {
+      "path": "/api/answers/load",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "shared-secret:X-Answers-Secret"
+      ],
+      "public": false,
+      "file": "app/api/answers/load/route.ts"
+    },
+    {
+      "path": "/api/auth/demo",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/auth/demo/route.ts"
+    },
+    {
+      "path": "/api/billing/cancel",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/billing/cancel/route.ts"
+    },
+    {
+      "path": "/api/billing/start-trial",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/billing/start-trial/route.ts"
+    },
+    {
+      "path": "/api/billing/status",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/billing/status/route.ts"
+    },
+    {
+      "path": "/api/billing/tiers",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/billing/tiers/route.ts"
+    },
+    {
+      "path": "/api/billing/update-card",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/billing/update-card/route.ts"
+    },
+    {
+      "path": "/api/bonus-board",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/bonus-board/route.ts"
+    },
+    {
+      "path": "/api/bonus-goals",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/bonus-goals/route.ts"
+    },
+    {
+      "path": "/api/bonus-goals",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/bonus-goals/route.ts"
+    },
+    {
+      "path": "/api/bonus-goals",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/bonus-goals/route.ts"
+    },
+    {
+      "path": "/api/card/:userId/vcf",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/card/[userId]/vcf/route.ts"
+    },
+    {
+      "path": "/api/card/exchange",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/card/exchange/route.ts"
+    },
+    {
+      "path": "/api/coach/competitors",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/competitors/route.ts"
+    },
+    {
+      "path": "/api/coach/competitors",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/competitors/route.ts"
+    },
+    {
+      "path": "/api/coach/competitors/:id",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/competitors/[id]/route.ts"
+    },
+    {
+      "path": "/api/coach/competitors/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/competitors/[id]/route.ts"
+    },
+    {
+      "path": "/api/coach/qa",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/qa/route.ts"
+    },
+    {
+      "path": "/api/coach/qa",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/qa/route.ts"
+    },
+    {
+      "path": "/api/coach/qa/:id",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/qa/[id]/route.ts"
+    },
+    {
+      "path": "/api/coach/qa/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/qa/[id]/route.ts"
+    },
+    {
+      "path": "/api/coach/seed-from-docs",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/coach/seed-from-docs/route.ts"
+    },
+    {
+      "path": "/api/compensation/me",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/compensation/me/route.ts"
+    },
+    {
+      "path": "/api/cron/answers-sync",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "cron-secret"
+      ],
+      "public": false,
+      "file": "app/api/cron/answers-sync/route.ts"
+    },
+    {
+      "path": "/api/cron/billing-renewal",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "cron-secret"
+      ],
+      "public": false,
+      "file": "app/api/cron/billing-renewal/route.ts"
+    },
+    {
+      "path": "/api/cron/competitor-refresh",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "cron-secret"
+      ],
+      "public": false,
+      "file": "app/api/cron/competitor-refresh/route.ts"
+    },
+    {
+      "path": "/api/cron/lead-expiry",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "cron-secret"
+      ],
+      "public": false,
+      "file": "app/api/cron/lead-expiry/route.ts"
+    },
+    {
+      "path": "/api/cron/outreach-dispatch",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "cron-secret"
+      ],
+      "public": false,
+      "file": "app/api/cron/outreach-dispatch/route.ts"
+    },
+    {
+      "path": "/api/dashboard",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/dashboard/route.ts"
+    },
+    {
+      "path": "/api/fcc/availability",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/fcc/availability/route.ts"
+    },
+    {
+      "path": "/api/fcc/batch-check",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/fcc/batch-check/route.ts"
+    },
+    {
+      "path": "/api/fcc/blocks",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/fcc/blocks/route.ts"
+    },
+    {
+      "path": "/api/fcc/check",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/fcc/check/route.ts"
+    },
+    {
+      "path": "/api/fcc/coverage",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/fcc/coverage/route.ts"
+    },
+    {
+      "path": "/api/fcc/tiles/:z/:x/:y",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/fcc/tiles/[z]/[x]/[y]/route.ts"
+    },
+    {
+      "path": "/api/funnel/submit",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/funnel/submit/route.ts"
+    },
+    {
+      "path": "/api/invites",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/invites/route.ts"
+    },
+    {
+      "path": "/api/invites",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/invites/route.ts"
+    },
+    {
+      "path": "/api/invites/:token",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/invites/[token]/route.ts"
+    },
+    {
+      "path": "/api/invites/:token",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/invites/[token]/route.ts"
+    },
+    {
+      "path": "/api/leaderboard",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leaderboard/route.ts"
+    },
+    {
+      "path": "/api/leads",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/route.ts"
+    },
+    {
+      "path": "/api/leads",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/route.ts"
+    },
+    {
+      "path": "/api/leads/:id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/route.ts"
+    },
+    {
+      "path": "/api/leads/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/assign",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/assign/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/dnk",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/dnk/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/log-sale",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/log-sale/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/note",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/note/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/note",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/note/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/notes",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/notes/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/tags",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/tags/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/tags",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/tags/route.ts"
+    },
+    {
+      "path": "/api/leads/:id/tags/:tagId",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/[id]/tags/[tagId]/route.ts"
+    },
+    {
+      "path": "/api/leads/bbox-addresses",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/bbox-addresses/route.ts"
+    },
+    {
+      "path": "/api/leads/bulk-assign",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/bulk-assign/route.ts"
+    },
+    {
+      "path": "/api/leads/fiber-heatmap",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/fiber-heatmap/route.ts"
+    },
+    {
+      "path": "/api/leads/import",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/import/route.ts"
+    },
+    {
+      "path": "/api/leads/import-bdc",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/import-bdc/route.ts"
+    },
+    {
+      "path": "/api/leads/import-bdc",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/leads/import-bdc/route.ts"
+    },
+    {
+      "path": "/api/logs",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/logs/route.ts"
+    },
+    {
+      "path": "/api/logs",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/logs/route.ts"
+    },
+    {
+      "path": "/api/logs/:id/signoff",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/logs/[id]/signoff/route.ts"
+    },
+    {
+      "path": "/api/logs/export",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/logs/export/route.ts"
+    },
+    {
+      "path": "/api/manager/clearance",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/clearance/route.ts"
+    },
+    {
+      "path": "/api/manager/clearance",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/clearance/route.ts"
+    },
+    {
+      "path": "/api/manager/documents",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/documents/route.ts"
+    },
+    {
+      "path": "/api/manager/documents",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/documents/route.ts"
+    },
+    {
+      "path": "/api/manager/documents/:id",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/documents/[id]/route.ts"
+    },
+    {
+      "path": "/api/manager/documents/:id/content",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/documents/[id]/content/route.ts"
+    },
+    {
+      "path": "/api/manager/funnels",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/funnels/route.ts"
+    },
+    {
+      "path": "/api/manager/goals",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/goals/route.ts"
+    },
+    {
+      "path": "/api/manager/leads/pull",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/leads/pull/route.ts"
+    },
+    {
+      "path": "/api/manager/leads/pull-history",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/leads/pull-history/route.ts"
+    },
+    {
+      "path": "/api/manager/leads/rep-leads",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/leads/rep-leads/route.ts"
+    },
+    {
+      "path": "/api/manager/leads/weekly-perf",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/leads/weekly-perf/route.ts"
+    },
+    {
+      "path": "/api/manager/members/:userId",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/members/[userId]/route.ts"
+    },
+    {
+      "path": "/api/manager/members/:userId",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/members/[userId]/route.ts"
+    },
+    {
+      "path": "/api/manager/my-team",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/my-team/route.ts"
+    },
+    {
+      "path": "/api/manager/onboarding",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/onboarding/route.ts"
+    },
+    {
+      "path": "/api/manager/org-members",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/org-members/route.ts"
+    },
+    {
+      "path": "/api/manager/readiness",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/readiness/route.ts"
+    },
+    {
+      "path": "/api/manager/readiness",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/readiness/route.ts"
+    },
+    {
+      "path": "/api/manager/readiness/items",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/readiness/items/route.ts"
+    },
+    {
+      "path": "/api/manager/readiness/items",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/readiness/items/route.ts"
+    },
+    {
+      "path": "/api/manager/rep-locations",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/rep-locations/route.ts"
+    },
+    {
+      "path": "/api/manager/reps/:user_id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/reps/[user_id]/route.ts"
+    },
+    {
+      "path": "/api/manager/sales-queue",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/sales-queue/route.ts"
+    },
+    {
+      "path": "/api/manager/sales-queue/:id",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/sales-queue/[id]/route.ts"
+    },
+    {
+      "path": "/api/manager/shadow-sessions",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/shadow-sessions/route.ts"
+    },
+    {
+      "path": "/api/manager/shadow-sessions",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/shadow-sessions/route.ts"
+    },
+    {
+      "path": "/api/manager/shadow-sessions/:id",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/shadow-sessions/[id]/route.ts"
+    },
+    {
+      "path": "/api/manager/shadow-sessions/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/shadow-sessions/[id]/route.ts"
+    },
+    {
+      "path": "/api/manager/teams",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session",
+        "manager-role"
+      ],
+      "public": false,
+      "file": "app/api/manager/teams/route.ts"
+    },
+    {
+      "path": "/api/manager/teams",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session",
+        "manager-role"
+      ],
+      "public": false,
+      "file": "app/api/manager/teams/route.ts"
+    },
+    {
+      "path": "/api/manager/training-progress",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/manager/training-progress/route.ts"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/me/route.ts"
+    },
+    {
+      "path": "/api/me/chain",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/me/chain/route.ts"
+    },
+    {
+      "path": "/api/me/phone",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/me/phone/route.ts"
+    },
+    {
+      "path": "/api/me/phone",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/me/phone/route.ts"
+    },
+    {
+      "path": "/api/me/push-token",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/me/push-token/route.ts"
+    },
+    {
+      "path": "/api/me/push-token",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/me/push-token/route.ts"
+    },
+    {
+      "path": "/api/meetings",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/meetings/route.ts"
+    },
+    {
+      "path": "/api/meetings",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/meetings/route.ts"
+    },
+    {
+      "path": "/api/meetings/:id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/meetings/[id]/route.ts"
+    },
+    {
+      "path": "/api/meetings/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/meetings/[id]/route.ts"
+    },
+    {
+      "path": "/api/meetings/:id/token",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/meetings/[id]/token/route.ts"
+    },
+    {
+      "path": "/api/notifications",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/notifications/route.ts"
+    },
+    {
+      "path": "/api/notifications/read-all",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/notifications/read-all/route.ts"
+    },
+    {
+      "path": "/api/onboarding/admin-setup",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/admin-setup/route.ts"
+    },
+    {
+      "path": "/api/onboarding/complete-step",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/complete-step/route.ts"
+    },
+    {
+      "path": "/api/onboarding/complete-step",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/complete-step/route.ts"
+    },
+    {
+      "path": "/api/onboarding/documents",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/documents/route.ts"
+    },
+    {
+      "path": "/api/onboarding/documents/:templateId/submit",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/documents/[templateId]/submit/route.ts"
+    },
+    {
+      "path": "/api/onboarding/documents/complete",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/documents/complete/route.ts"
+    },
+    {
+      "path": "/api/onboarding/status",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/onboarding/status/route.ts"
+    },
+    {
+      "path": "/api/ops/surface",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session",
+        "cron-secret",
+        "shared-secret:X-Answers-Secret"
+      ],
+      "public": false,
+      "file": "app/api/ops/surface/route.ts"
+    },
+    {
+      "path": "/api/optout",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/optout/route.ts"
+    },
+    {
+      "path": "/api/org/settings",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/org/settings/route.ts"
+    },
+    {
+      "path": "/api/org/settings",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/org/settings/route.ts"
+    },
+    {
+      "path": "/api/packages",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/packages/route.ts"
+    },
+    {
+      "path": "/api/packages",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/packages/route.ts"
+    },
+    {
+      "path": "/api/packages/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/packages/[id]/route.ts"
+    },
+    {
+      "path": "/api/payroll/chargebacks",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/chargebacks/route.ts"
+    },
+    {
+      "path": "/api/payroll/chargebacks",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/chargebacks/route.ts"
+    },
+    {
+      "path": "/api/payroll/periods",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/periods/route.ts"
+    },
+    {
+      "path": "/api/payroll/periods",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session",
+        "manager-role"
+      ],
+      "public": false,
+      "file": "app/api/payroll/periods/route.ts"
+    },
+    {
+      "path": "/api/payroll/periods/:id/generate",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/periods/[id]/generate/route.ts"
+    },
+    {
+      "path": "/api/payroll/stubs",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/stubs/route.ts"
+    },
+    {
+      "path": "/api/payroll/stubs/:id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/stubs/[id]/route.ts"
+    },
+    {
+      "path": "/api/payroll/stubs/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/payroll/stubs/[id]/route.ts"
+    },
+    {
+      "path": "/api/qr-codes",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/qr-codes/route.ts"
+    },
+    {
+      "path": "/api/qr-codes",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/qr-codes/route.ts"
+    },
+    {
+      "path": "/api/quotes",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/quotes/route.ts"
+    },
+    {
+      "path": "/api/quotes",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/quotes/route.ts"
+    },
+    {
+      "path": "/api/quotes/:id",
+      "method": "DELETE",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/quotes/[id]/route.ts"
+    },
+    {
+      "path": "/api/quotes/:id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/api/quotes/[id]/route.ts"
+    },
+    {
+      "path": "/api/quotes/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/quotes/[id]/route.ts"
+    },
+    {
+      "path": "/api/rep/knocks",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/rep/knocks/route.ts"
+    },
+    {
+      "path": "/api/rep/location",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/rep/location/route.ts"
+    },
+    {
+      "path": "/api/rep/sales",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/rep/sales/route.ts"
+    },
+    {
+      "path": "/api/rep/smartpitch",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/rep/smartpitch/route.ts"
+    },
+    {
+      "path": "/api/rep/smartpitch",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/rep/smartpitch/route.ts"
+    },
+    {
+      "path": "/api/sales-goals",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/sales-goals/route.ts"
+    },
+    {
+      "path": "/api/sales-goals",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/sales-goals/route.ts"
+    },
+    {
+      "path": "/api/sales-goals/progress",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/sales-goals/progress/route.ts"
+    },
+    {
+      "path": "/api/sales-tiers",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/sales-tiers/route.ts"
+    },
+    {
+      "path": "/api/sales-tiers",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/sales-tiers/route.ts"
+    },
+    {
+      "path": "/api/smoke/notifications",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/smoke/notifications/route.ts"
+    },
+    {
+      "path": "/api/store/badge",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/store/badge/route.ts"
+    },
+    {
+      "path": "/api/store/badge",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/store/badge/route.ts"
+    },
+    {
+      "path": "/api/store/badge/upload",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/store/badge/upload/route.ts"
+    },
+    {
+      "path": "/api/store/webhook",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "hmac-signature"
+      ],
+      "public": false,
+      "file": "app/api/store/webhook/route.ts"
+    },
+    {
+      "path": "/api/tags",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/tags/route.ts"
+    },
+    {
+      "path": "/api/team/members",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/team/members/route.ts"
+    },
+    {
+      "path": "/api/training",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/training/route.ts"
+    },
+    {
+      "path": "/api/training/:id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/training/[id]/route.ts"
+    },
+    {
+      "path": "/api/training/:id/quiz",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/training/[id]/quiz/route.ts"
+    },
+    {
+      "path": "/api/training/:id/quiz",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/training/[id]/quiz/route.ts"
+    },
+    {
+      "path": "/api/training/progress",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/training/progress/route.ts"
+    },
+    {
+      "path": "/api/zip-addresses",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/zip-addresses/route.ts"
+    },
+    {
+      "path": "/auth",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/auth/page.tsx"
+    },
+    {
+      "path": "/auth/callback",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [],
+      "public": true,
+      "file": "app/auth/callback/route.ts"
+    },
+    {
+      "path": "/auth/verify",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/auth/verify/page.tsx"
+    },
+    {
+      "path": "/billing",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/billing/page.tsx"
+    },
+    {
+      "path": "/billing/bridge",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/billing/bridge/page.tsx"
+    },
+    {
+      "path": "/card/:userId",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/card/[userId]/page.tsx"
+    },
+    {
+      "path": "/coach",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/coach/page.tsx"
+    },
+    {
+      "path": "/dashboard",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/dashboard/page.tsx"
+    },
+    {
+      "path": "/delete-account",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/delete-account/page.tsx"
+    },
+    {
+      "path": "/demo",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/demo/page.tsx"
+    },
+    {
+      "path": "/getting-started",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/getting-started/page.tsx"
+    },
+    {
+      "path": "/invite/:token",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/invite/[token]/page.tsx"
+    },
+    {
+      "path": "/leaderboard",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/leaderboard/page.tsx"
+    },
+    {
+      "path": "/leads",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/leads/page.tsx"
+    },
+    {
+      "path": "/leads/:id",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/leads/[id]/page.tsx"
+    },
+    {
+      "path": "/leads/new",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/leads/new/page.tsx"
+    },
+    {
+      "path": "/manager/coach",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/coach/page.tsx"
+    },
+    {
+      "path": "/manager/compensation",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/compensation/page.tsx"
+    },
+    {
+      "path": "/manager/compliance",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/compliance/page.tsx"
+    },
+    {
+      "path": "/manager/goals",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/goals/page.tsx"
+    },
+    {
+      "path": "/manager/import-bdc",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/import-bdc/page.tsx"
+    },
+    {
+      "path": "/manager/leads",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/leads/page.tsx"
+    },
+    {
+      "path": "/manager/onboarding",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/onboarding/page.tsx"
+    },
+    {
+      "path": "/manager/payroll",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/payroll/page.tsx"
+    },
+    {
+      "path": "/manager/people",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/people/page.tsx"
+    },
+    {
+      "path": "/manager/queue",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/queue/page.tsx"
+    },
+    {
+      "path": "/manager/quotes",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/quotes/page.tsx"
+    },
+    {
+      "path": "/manager/reps/:user_id",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/reps/[user_id]/page.tsx"
+    },
+    {
+      "path": "/manager/resources",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/resources/page.tsx"
+    },
+    {
+      "path": "/manager/smartpitch",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/smartpitch/page.tsx"
+    },
+    {
+      "path": "/manager/team",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/team/page.tsx"
+    },
+    {
+      "path": "/manager/teams",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/teams/page.tsx"
+    },
+    {
+      "path": "/manager/teams/:team_id",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/manager/teams/[team_id]/page.tsx"
+    },
+    {
+      "path": "/map",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/map/page.tsx"
+    },
+    {
+      "path": "/meetings",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/meetings/page.tsx"
+    },
+    {
+      "path": "/migration",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/migration/page.tsx"
+    },
+    {
+      "path": "/o/:code",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/o/[code]/page.tsx"
+    },
+    {
+      "path": "/offline",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/offline/page.tsx"
+    },
+    {
+      "path": "/onboarding/admin-setup",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/onboarding/admin-setup/page.tsx"
+    },
+    {
+      "path": "/onboarding/check",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/onboarding/check/page.tsx"
+    },
+    {
+      "path": "/onboarding/confirmed",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/onboarding/confirmed/page.tsx"
+    },
+    {
+      "path": "/onboarding/documents",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/onboarding/documents/page.tsx"
+    },
+    {
+      "path": "/onboarding/profile",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/onboarding/profile/page.tsx"
+    },
+    {
+      "path": "/onboarding/promo",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/onboarding/promo/page.tsx"
+    },
+    {
+      "path": "/optout/:code",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/optout/[code]/page.tsx"
+    },
+    {
+      "path": "/payroll",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/payroll/page.tsx"
+    },
+    {
+      "path": "/payroll/stubs/:id/print",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/payroll/stubs/[id]/print/page.tsx"
+    },
+    {
+      "path": "/pricing",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/pricing/page.tsx"
+    },
+    {
+      "path": "/privacy",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/privacy/page.tsx"
+    },
+    {
+      "path": "/quote/:id",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/quote/[id]/page.tsx"
+    },
+    {
+      "path": "/r/:slug",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/r/[slug]/page.tsx"
+    },
+    {
+      "path": "/settings",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/settings/page.tsx"
+    },
+    {
+      "path": "/store",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/store/page.tsx"
+    },
+    {
+      "path": "/store/badge",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/store/badge/page.tsx"
+    },
+    {
+      "path": "/store/badge/success",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/store/badge/success/page.tsx"
+    },
+    {
+      "path": "/terms",
+      "method": "GET",
+      "kind": "page",
+      "guards": [],
+      "public": true,
+      "file": "app/terms/page.tsx"
+    },
+    {
+      "path": "/training",
+      "method": "GET",
+      "kind": "page",
+      "guards": [
+        "middleware:session-redirect"
+      ],
+      "public": false,
+      "file": "app/training/page.tsx"
+    }
+  ]
+}
