@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/generate-surface.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "surface": "node scripts/generate-surface.mjs --tracked",
+    "surface:check": "node scripts/generate-surface.mjs --tracked --check"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
