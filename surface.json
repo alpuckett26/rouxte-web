@@ -16,7 +16,7 @@
   ],
   "generated_at": "2026-08-27T01:55:51.700Z",
   "commit": "79b5e8529f7358210c920262278ee4b0f53c8295",
-  "source": "next app router — app/ directory, git-tracked files only",
+  "source": "next app router \u00e2\u20ac\u201d app/ directory, git-tracked files only",
   "generator": "scripts/generate-surface.mjs",
   "middleware": {
     "prefixes": [
@@ -1909,18 +1909,6 @@
       ],
       "public": false,
       "file": "app/api/onboarding/status/route.ts"
-    },
-    {
-      "path": "/api/ops/surface",
-      "method": "GET",
-      "kind": "handler",
-      "guards": [
-        "session",
-        "cron-secret",
-        "shared-secret:X-Answers-Secret"
-      ],
-      "public": false,
-      "file": "app/api/ops/surface/route.ts"
     },
     {
       "path": "/api/optout",
