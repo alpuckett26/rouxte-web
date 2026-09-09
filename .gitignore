@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# war-room scratch — feed dumps, heartbeat/say payloads, ad-hoc probe output.
+# Not committed, and not deleted either: another seat may be mid-cycle on them.
+# They were also burying real untracked work in `git status` (app/api/appointments/,
+# supabase/migrations/043_*.sql were invisible under 200+ dot-prefixed dumps),
+# and a bulk `git add -A` under that noise would commit a room transcript — or
+# silently add untracked route files, which the surface manifest reads as shipped.
+.f*.json
+.hb*.json
+.pg*.json
+.rm*.json
+.say*.json
+.rx*
+.room-scratch/
