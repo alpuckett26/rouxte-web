@@ -1,0 +1,42 @@
+name: Web CI
+
+# The surface manifest's promise (rouxte-web#21) is that it "cannot disagree
+# with what is served". `prebuild` regenerates it on every build, which holds
+# for anything that gets deployed — but a PR that adds a route and is never
+# built can still land a stale snapshot on main. This job is what makes the
+# promise enforceable at the repo level rather than at the deploy boundary.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  web:
+    name: Surface manifest + types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Fails (exit 1, "manifest is stale") if app/ serves anything the
+      # committed surface.json does not list, or vice versa. --tracked so
+      # untracked local work never counts as shipped.
+      - name: Surface manifest is current
+        run: npm run surface:check
+
+      - name: Types
+        run: npx tsc --noEmit
+
+# Deliberately NOT gated here: `npm run lint`. Measured 2026-09-09 on main
+# (7f0ed93): 238 problems — 156 errors, 82 warnings, all pre-existing. Gating
+# on it would land this job red on arrival. Cleaning it is its own lane; the
+# number is recorded so the next seat does not have to re-run it to find out.
