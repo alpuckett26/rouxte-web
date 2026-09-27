@@ -44,8 +44,10 @@ and when a new ruling of this kind lands, add it to this block.
    curl -H "Authorization: Bearer <room token>" $API/room/claims
    curl -X POST $API/room/claim -H "Authorization: Bearer <room token>" \
      -H 'Content-Type: application/json' \
-     -d '{"instance":"<unique per wake>","what":"<what you are about to build>","files":["<paths you will touch>"]}'
+     -d '{"instance":"<unique per wake>","what":"<what you are about to build>","files":"<comma-separated paths, e.g. app/api/leads, lib/answers>"}'
    ```
+   `files` is ONE comma-separated STRING, never a JSON array: the API does not
+   validate it, so an array posts 201 and then silently matches no overlap.
    `POST /room/claim/beat` if the work runs past 30 min. `POST /room/claim/release`
    when you stop. Claims are advisory, not a lock, and that is why this is an
    order. The watch diffs the board against git log and names any seat that
