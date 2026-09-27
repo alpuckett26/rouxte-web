@@ -28,6 +28,58 @@ Rouxte is the sales layer of a four-product stack around the Anseur
    the bus), then `POST /room/heartbeat` + `POST /room/say` against the
    Answers API (`Authorization: Bearer <token>`).
 
+### Standing orders — every session, every wake (rouxte-web#28)
+
+These are rulings that change what a session must DO. Each one reached this
+repo first as a bus issue, and a bus issue is read once, by whoever was on
+shift that day. They are written here so that every session gets them.
+Canonical text: `PIPELINE-ROLES.md` in the Answers repo. It wins on conflicts,
+and when a new ruling of this kind lands, add it to this block.
+`$API` = `https://answers-api-lncb.onrender.com`; `<room token>` =
+`platform/.handoff/room-keys/rouxte.token`.
+
+5. **CHECK IN BEFORE YOU WRITE A LINE OF CODE** (Aaron ruling 2026-09-26).
+   Do this last, right before work starts:
+   ```bash
+   curl -H "Authorization: Bearer <room token>" $API/room/claims
+   curl -X POST $API/room/claim -H "Authorization: Bearer <room token>" \
+     -H 'Content-Type: application/json' \
+     -d '{"instance":"<unique per wake>","what":"<what you are about to build>","files":["<paths you will touch>"]}'
+   ```
+   `POST /room/claim/beat` if the work runs past 30 min. `POST /room/claim/release`
+   when you stop. Claims are advisory, not a lock, and that is why this is an
+   order. The watch diffs the board against git log and names any seat that
+   committed without checking in. An empty board is not proof that nobody is
+   working. Also check mtimes: a seat that never checked in can still be live
+   in this tree. If another instance holds your files, take a piece that
+   doesn't overlap and say why in the commit.
+6. **Report what you spend** (Aaron ruling 2026-09-26, rouxte-web#27). This
+   covers hosting, model calls, APIs, domains, tools, and anything else that
+   leaves a bill:
+   ```bash
+   curl -X POST $API/internal/spend -H "X-Internal-Secret: $ANSWERS_INTERNAL_SECRET" \
+     -H 'Content-Type: application/json' \
+     -d '{"seat":"rouxte","rail":"<vercel|supabase|anthropic|…>","usd":N,"note":"…"}'
+   ```
+   Use the seat id `rouxte`. For an old invoice, pass `occurred_at`.
+   Estimates are fine if the note says so. Silence is not, because the ledger
+   reads it as *unreported*, not *zero*. File only your own spend; if you think
+   another seat has an unfiled cost, raise it in the war room.
+   `GET $API/internal/spend/ledger?days=7` shows the raw rows.
+7. **GroBigga is second in command** (Aaron ruling 2026-09-24, rouxte-web#26).
+   When the spine is silent, Gro holds the watch, chases open work, and rules
+   on lane disputes. Answer Gro the way you would answer the spine. Rank is
+   not control: Gro requests, it never writes in this tree. If it does, report
+   the breach in the war room.
+8. **This repo merges its own clean work** (ruling 2026-09-24/#7827). A CLEAN,
+   MERGEABLE PR that has passed CI is not waiting on Aaron. The merge was never
+   his gate. Merge it and post the merge SHA from main to the thread.
+   Production deploy, secrets, and spend stay human gates.
+9. **`git add <file>` stages the WHOLE file**, including another session's
+   uncommitted edits inside it. Scoping the commit by path does not help when
+   two sessions are editing the same file. Read `git diff --cached` before
+   every commit. If you see edits you didn't make, stop and leave them out.
+
 ## Commands
 
 ```bash
