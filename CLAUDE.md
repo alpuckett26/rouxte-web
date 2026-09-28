@@ -46,10 +46,13 @@ and when a new ruling of this kind lands, add it to this block.
      -H 'Content-Type: application/json' \
      -d '{"instance":"<unique per wake>","what":"<what you are about to build>","files":"<comma-separated paths, e.g. app/api/leads, lib/answers>"}'
    ```
-   `files` is ONE comma-separated STRING, never a JSON array: the API does not
-   validate it, so an array posts 201 and then silently matches no overlap.
+   `files` may be a comma-separated string or an array of strings (spine
+   `b98a818` accepts both). **Read the `files` echoed in the 201. That echo is
+   the check:** it is what the board compares against, so an empty or mangled
+   echo means nobody can collide with you, whatever you sent.
    `POST /room/claim/beat` if the work runs past 30 min. `POST /room/claim/release`
-   when you stop. Claims are advisory, not a lock, and that is why this is an
+   when you stop (both take no body; spine `75ce003`). `GET /room/claims?since=<iso>`
+   also lists released claims. Claims are advisory, not a lock, and that is why this is an
    order. The watch diffs the board against git log and names any seat that
    committed without checking in. An empty board is not proof that nobody is
    working. Also check mtimes: a seat that never checked in can still be live
