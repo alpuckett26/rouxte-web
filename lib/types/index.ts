@@ -285,6 +285,129 @@ export interface RepStats {
   conversion_pct: number;
 }
 
+// ─── Setter → Closer → Sale (migration 043) ───────────────────────────────────
+
+/**
+ * What job a person is doing. Deliberately separate from `UserRole`, which
+ * means AUTHORITY and is wired into RLS on every table. One person can hold
+ * both a setter and a closer deployment.
+ */
+export type SalesFunction = "setter" | "closer" | "field_rep" | "team_lead";
+
+export type AppointmentOutcome =
+  | "closed"
+  | "lost"
+  | "no_show"
+  | "rescheduled"
+  | "cancelled";
+
+export interface RepDeployment {
+  id: string;
+  org_id: string;
+  user_id: string;
+  team_id: string | null;
+  sales_function: SalesFunction;
+  territory: string | null;
+  program: string | null;
+  is_active: boolean;
+  started_at: string;
+  ended_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SalesAppointment {
+  id: string;
+  org_id: string;
+  lead_id: string;
+  setter_id: string;
+  /** Null = booked into the pool, not yet claimed by a closer. */
+  closer_id: string | null;
+  /** FK to the existing `meetings` row (the Daily room), never a copy of it. */
+  meeting_id: string | null;
+  scheduled_at: string;
+  duration_minutes: number;
+  qualification_notes: string;
+  decision_maker: string | null;
+  decision_maker_present: boolean | null;
+  pain_points: string[];
+  known_objections: string[];
+  /** 1–5. Null means the setter did not rate it — which is not the same as 1. */
+  estimated_fit: number | null;
+  /** Null while pending. */
+  outcome: AppointmentOutcome | null;
+  outcome_notes: string | null;
+  outcome_at: string | null;
+  outcome_by: string | null;
+  rescheduled_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** An appointment joined to the few lead/person fields a queue row needs. */
+export interface AppointmentQueueItem extends SalesAppointment {
+  lead: {
+    id: string;
+    customer_name: string | null;
+    address: string;
+    phone: string | null;
+    status: LeadStatus;
+  } | null;
+  setter_name: string | null;
+  closer_name: string | null;
+  meeting_url: string | null;
+}
+
+export interface SaleAttribution {
+  id: string;
+  org_id: string;
+  lead_id: string;
+  appointment_id: string | null;
+  log_id: string | null;
+  user_id: string;
+  sales_function: SalesFunction;
+  /** 0 < share <= 1; the set for one sale sums to exactly 1 (DB-enforced). */
+  share: number;
+  share_source: "explicit" | "default_equal_split";
+  created_by: string | null;
+  created_at: string;
+}
+
+/**
+ * `competitor_intel` (migration 012). The table predates this file and had no
+ * type; the prep brief is the first consumer that needs one. `org_id` is
+ * nullable because a row with no org is shared global intel.
+ */
+export interface CompetitorIntel {
+  id: string;
+  org_id: string | null;
+  competitor: string;
+  plan_name: string;
+  monthly_price: number | null;
+  download_mbps: number | null;
+  upload_mbps: number | null;
+  contract_required: boolean;
+  /** Null = unlimited. */
+  data_cap_gb: number | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** GET /api/appointments/[id]/brief — assembled, never stored. */
+export interface AppointmentBrief {
+  appointment: SalesAppointment;
+  lead: Lead | null;
+  setter_name: string | null;
+  closer_name: string | null;
+  meeting_url: string | null;
+  notes: LeadNote[];
+  status_history: LeadStatusHistory[];
+  competitor_intel: CompetitorIntel[];
+  prior_appointments: SalesAppointment[];
+}
+
 // ─── API helpers ──────────────────────────────────────────────────────────────
 
 export interface ApiError {
