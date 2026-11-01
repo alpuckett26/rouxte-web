@@ -118,6 +118,8 @@ function middlewareAllowsAnonymous(path, mw) {
 
 const GUARD_PATTERNS = [
   [/auth\s*\.\s*getUser\s*\(/, "session"],
+  // lib/appointments/actor.ts — loadActor() wraps auth.getUser() and 401s.
+  [/loadActor\s*\(/, "session"],
   [/requireSuperAdmin\s*\(/, "super-admin"],
   [/requireManager\s*\(/, "manager-role"],
   [/process\.env\.CRON_SECRET/, "cron-secret"],

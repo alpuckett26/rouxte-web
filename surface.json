@@ -14,8 +14,8 @@
     "VERCEL_PROJECT_PRODUCTION_URL",
     "VERCEL_URL"
   ],
-  "generated_at": "2026-08-27T01:55:51.700Z",
-  "commit": "79b5e8529f7358210c920262278ee4b0f53c8295",
+  "generated_at": "2026-11-01T00:24:45.616Z",
+  "commit": "64b15f3b6c90e3c5bce39e82a2c058562910f8d7",
   "source": "next app router — app/ directory, git-tracked files only",
   "generator": "scripts/generate-surface.mjs",
   "middleware": {
@@ -41,8 +41,8 @@
   },
   "segment_rule": "first path segment; /api/* grouped at depth 2",
   "counts": {
-    "routes": 235,
-    "handlers": 175,
+    "routes": 241,
+    "handlers": 181,
     "pages": 60,
     "public": 27
   },
@@ -109,6 +109,14 @@
       "guards": [
         "cron-secret",
         "shared-secret:X-Answers-Secret"
+      ]
+    },
+    {
+      "segment": "/api/appointments/",
+      "count": 6,
+      "public": 0,
+      "guards": [
+        "session"
       ]
     },
     {
@@ -779,6 +787,66 @@
       ],
       "public": false,
       "file": "app/api/answers/load/route.ts"
+    },
+    {
+      "path": "/api/appointments",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/appointments/route.ts"
+    },
+    {
+      "path": "/api/appointments",
+      "method": "POST",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/appointments/route.ts"
+    },
+    {
+      "path": "/api/appointments/:id",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/appointments/[id]/route.ts"
+    },
+    {
+      "path": "/api/appointments/:id",
+      "method": "PATCH",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/appointments/[id]/route.ts"
+    },
+    {
+      "path": "/api/appointments/:id/brief",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/appointments/[id]/brief/route.ts"
+    },
+    {
+      "path": "/api/appointments/queue",
+      "method": "GET",
+      "kind": "handler",
+      "guards": [
+        "session"
+      ],
+      "public": false,
+      "file": "app/api/appointments/queue/route.ts"
     },
     {
       "path": "/api/auth/demo",
