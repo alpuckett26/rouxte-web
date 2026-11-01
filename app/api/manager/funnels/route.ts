@@ -56,5 +56,7 @@ export async function GET() {
     };
   }).sort((a, b) => b.hot_count - a.hot_count || b.total_submissions - a.total_submissions);
 
-  return NextResponse.json({ data });
+  // Org-wide backup power ad page — leads land unassigned in the org pool.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.com";
+  return NextResponse.json({ data, org_backup_url: `${appUrl}/power/${profile.org_id}` });
 }

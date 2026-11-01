@@ -29,11 +29,13 @@ function timeAgo(ts: string | null): string {
 export default function SmartPitchManagerPanel() {
   const [rows, setRows]   = useState<FunnelRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backupUrl, setBackupUrl] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch("/api/manager/funnels")
       .then(r => r.json())
-      .then(d => { setRows(d.data ?? []); setLoading(false); });
+      .then(d => { setRows(d.data ?? []); setBackupUrl(d.org_backup_url ?? ""); setLoading(false); });
   }, []);
 
   if (loading) {
@@ -52,6 +54,28 @@ export default function SmartPitchManagerPanel() {
           {rows.length} rep{rows.length !== 1 ? "s" : ""} with active funnels
         </p>
       </div>
+
+      {backupUrl && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/40 px-5 py-4">
+          <p className="text-sm font-semibold text-gray-900">🔋 Org-wide Backup Power page</p>
+          <p className="text-xs text-gray-500 mt-1 mb-3">
+            Use this link in Meta and Google ads. Leads land unassigned in your org&apos;s lead pool and managers get an alert to dispatch them.
+            Add UTM tags (e.g. <code>?utm_source=meta&amp;utm_campaign=storm</code>) — they&apos;re saved on each lead.
+          </p>
+          <div className="flex gap-2">
+            <span className="flex-1 min-w-0 truncate rounded-xl bg-white border border-gray-200 px-3 py-2 text-xs text-gray-500">{backupUrl}</span>
+            <button
+              onClick={async () => { await navigator.clipboard.writeText(backupUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+              {copied ? "✓ Copied" : "Copy"}
+            </button>
+            <a href={backupUrl} target="_blank" rel="noopener noreferrer"
+              className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-600">
+              Preview →
+            </a>
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center">

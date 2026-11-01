@@ -37,6 +37,12 @@ export default function QuotesScreen({ navigation }: Props) {
           >
             <Text weight="semibold" tone="brand">+ Wireless</Text>
           </Pressable>
+          <Pressable
+            style={[styles.newBtn, { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }]}
+            onPress={() => navigation.navigate('BackupSizing')}
+          >
+            <Text weight="semibold" tone="brand">Backup sizing</Text>
+          </Pressable>
         </View>
       </View>
 

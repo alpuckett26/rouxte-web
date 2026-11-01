@@ -176,6 +176,9 @@ PRINTFUL_VARIANT_BADGE_1       # optional, defaults 443891
 FCC_USERNAME                   # FCC BDC sync scripts
 FCC_API_TOKEN
 SEED_ORG_ID                    # local seed scripts only
+NEXT_PUBLIC_META_PIXEL_ID      # optional: Meta Pixel on public ad pages (/power/*, /r/*/backup)
+NEXT_PUBLIC_GOOGLE_TAG_ID      # optional: Google tag (AW-… or G-…) on the same pages
+NEXT_PUBLIC_GOOGLE_ADS_LEAD_SEND_TO # optional: Google Ads Lead conversion, "AW-…/label"
 ```
 
 **Mobile app** (`mobile/.env.development` and `mobile/.env.production`, loaded by `react-native-config`):
