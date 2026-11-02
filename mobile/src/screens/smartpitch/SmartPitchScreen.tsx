@@ -42,8 +42,14 @@ export default function SmartPitchScreen() {
   const { funnel, stats, recent, qr_data_url } = q.data;
   const funnelUrl = q.data.funnel_url ?? `${config.api.baseUrl}/r/${funnel.slug}`;
 
+  const backupUrl = q.data.backup_url ?? `${funnelUrl}/backup`;
+
   function share() {
     Share.share({ message: `Check out our internet plans: ${funnelUrl}` });
+  }
+
+  function shareBackup() {
+    Share.share({ message: `Keep your power on during outages — see if a home battery or generator fits your home: ${backupUrl}` });
   }
 
   return (
@@ -60,6 +66,17 @@ export default function SmartPitchScreen() {
         <Text variant="caption" tone="mute" style={{ marginTop: 8 }}>YOUR LINK</Text>
         <Text tone="brand" weight="medium" style={{ marginTop: 2 }} numberOfLines={1}>{funnelUrl}</Text>
         <Button title="Share link" onPress={share} style={{ marginTop: 12 }} />
+      </Card>
+
+      {/* Backup power ad page */}
+      <Card style={{ marginTop: 12, alignItems: 'center' }}>
+        {q.data.backup_qr_data_url && <Image source={{ uri: q.data.backup_qr_data_url }} style={styles.qr} />}
+        <Text variant="caption" tone="mute" style={{ marginTop: 8 }}>BACKUP POWER PAGE</Text>
+        <Text tone="brand" weight="medium" style={{ marginTop: 2 }} numberOfLines={1}>{backupUrl}</Text>
+        <Text variant="caption" tone="dim" style={{ marginTop: 4, textAlign: 'center' }}>
+          Batteries and standby generators. Submissions land in your leads.
+        </Text>
+        <Button title="Share backup page" onPress={shareBackup} style={{ marginTop: 12 }} />
       </Card>
 
       {/* Stats */}
@@ -109,7 +126,7 @@ function SubmissionRow({ sub }: { sub: FunnelSubmission }) {
             {sub.lead_temperature && <Badge label={sub.lead_temperature.toUpperCase()} color={tempColor as never} dot />}
           </View>
           {sub.phone && <Text variant="caption" tone="dim">{sub.phone}</Text>}
-          {sub.service_interest && <Text variant="caption" tone="mute" style={{ marginTop: 2 }}>Interest: {sub.service_interest}</Text>}
+          {sub.service_interest && <Text variant="caption" tone="mute" style={{ marginTop: 2 }}>Interest: {sub.service_interest === 'backup_power' ? 'Backup power' : sub.service_interest}</Text>}
           {sub.current_provider && <Text variant="caption" tone="mute">Current: {sub.current_provider}</Text>}
           {sub.recommended_pitch && (
             <Text variant="caption" tone="brand" style={{ marginTop: 4, fontStyle: 'italic' }}>"{sub.recommended_pitch}"</Text>

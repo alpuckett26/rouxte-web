@@ -29,9 +29,12 @@ export async function GET() {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://rouxte.com";
   const funnelUrl = `${appUrl}/r/${funnel.slug}`;
+  const backupUrl = `${funnelUrl}/backup`;
+  const qrOpts = { width: 200, margin: 1, color: { dark: "#0a0f1e", light: "#ffffff" } };
 
-  const [qrDataUrl, submissionsResult] = await Promise.all([
-    QRCode.toDataURL(funnelUrl, { width: 200, margin: 1, color: { dark: "#0a0f1e", light: "#ffffff" } }),
+  const [qrDataUrl, backupQrDataUrl, submissionsResult] = await Promise.all([
+    QRCode.toDataURL(funnelUrl, qrOpts),
+    QRCode.toDataURL(backupUrl, qrOpts),
     admin
       .from("funnel_submissions")
       .select("id, customer_name, phone, lead_score, lead_temperature, recommended_pitch, service_interest, current_provider, switch_timeline, created_at")
@@ -48,7 +51,9 @@ export async function GET() {
     cold:  submissions.filter(s => s.lead_temperature === "cold").length,
   };
 
-  return NextResponse.json({ funnel, stats, recent: submissions, qr_data_url: qrDataUrl, funnel_url: funnelUrl });
+  return NextResponse.json({ funnel, stats, recent: submissions, qr_data_url: qrDataUrl, funnel_url: funnelUrl,
+    backup_url: backupUrl, backup_qr_data_url: backupQrDataUrl,
+  });
 }
 
 export async function POST(request: NextRequest) {

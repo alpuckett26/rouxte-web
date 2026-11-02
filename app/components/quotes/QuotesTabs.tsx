@@ -3,8 +3,9 @@
 import { useState } from "react";
 import QuoteBuilder from "./QuoteBuilder";
 import FiberQuoteBuilder from "./FiberQuoteBuilder";
+import BackupSizingCalculator from "./BackupSizingCalculator";
 
-type Tab = "wireless" | "fiber";
+type Tab = "wireless" | "fiber" | "backup";
 
 export default function QuotesTabs() {
   const [tab, setTab] = useState<Tab>("wireless");
@@ -30,9 +31,18 @@ export default function QuotesTabs() {
           }`}>
           Fiber / Internet
         </button>
+        <button
+          onClick={() => setTab("backup")}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+            tab === "backup"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}>
+          Backup Power
+        </button>
       </div>
 
-      {tab === "wireless" ? <QuoteBuilder /> : <FiberQuoteBuilder />}
+      {tab === "wireless" ? <QuoteBuilder /> : tab === "fiber" ? <FiberQuoteBuilder /> : <BackupSizingCalculator />}
     </div>
   );
 }

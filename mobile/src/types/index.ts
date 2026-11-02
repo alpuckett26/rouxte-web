@@ -43,6 +43,7 @@ export type QuotesStackParamList = {
   NewFiberQuote: { customerId?: string; leadId?: string };
   NewWirelessQuote: { customerId?: string; leadId?: string };
   QuoteDetail: { quoteId: string };
+  BackupSizing: undefined;
 };
 
 export type MoreStackParamList = {

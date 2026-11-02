@@ -5,6 +5,7 @@ import QuotesScreen from '@/screens/quotes/QuotesScreen';
 import NewFiberQuoteScreen from '@/screens/quotes/NewFiberQuoteScreen';
 import NewWirelessQuoteScreen from '@/screens/quotes/NewWirelessQuoteScreen';
 import QuoteDetailScreen from '@/screens/quotes/QuoteDetailScreen';
+import BackupSizingScreen from '@/screens/quotes/BackupSizingScreen';
 import type { QuotesStackParamList } from '@/types';
 
 const Stack = createNativeStackNavigator<QuotesStackParamList>();
@@ -23,6 +24,7 @@ export default function QuotesNavigator() {
       <Stack.Screen name="NewFiberQuote"     component={NewFiberQuoteScreen}       options={{ title: 'Fiber quote' }} />
       <Stack.Screen name="NewWirelessQuote"  component={NewWirelessQuoteScreen}    options={{ title: 'Wireless quote' }} />
       <Stack.Screen name="QuoteDetail"       component={QuoteDetailScreen}         options={{ title: 'Quote' }} />
+      <Stack.Screen name="BackupSizing"      component={BackupSizingScreen}        options={{ title: 'Backup power sizing' }} />
     </Stack.Navigator>
   );
 }

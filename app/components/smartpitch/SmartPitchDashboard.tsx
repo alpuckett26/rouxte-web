@@ -36,6 +36,7 @@ const TEMP_LABEL: Record<string, string> = { hot: "🔥 Hot", warm: "♨️ Warm
 
 const SERVICE_LABELS: Record<string, string> = {
   fiber: "Fiber", wireless: "Wireless", bundle: "Bundle", business: "Business", unsure: "Not sure",
+  backup_power: "Backup power",
 };
 
 function timeAgo(ts: string): string {
@@ -54,8 +55,10 @@ export default function SmartPitchDashboard() {
   const [recent, setRecent] = useState<Submission[]>([]);
   const [qr, setQr]         = useState<string | null>(null);
   const [funnelUrl, setFunnelUrl] = useState<string>("");
+  const [backupUrl, setBackupUrl] = useState<string>("");
+  const [backupQr, setBackupQr]   = useState<string | null>(null);
   const [creating, setCreating]   = useState(false);
-  const [copied, setCopied]       = useState(false);
+  const [copied, setCopied]       = useState<string | null>(null);
   const [expanded, setExpanded]   = useState<string | null>(null);
   const [loading, setLoading]     = useState(true);
 
@@ -69,6 +72,8 @@ export default function SmartPitchDashboard() {
       setRecent(data.recent ?? []);
       setQr(data.qr_data_url);
       setFunnelUrl(data.funnel_url ?? "");
+      setBackupUrl(data.backup_url ?? "");
+      setBackupQr(data.backup_qr_data_url ?? null);
     }
     setLoading(false);
   }
@@ -82,10 +87,10 @@ export default function SmartPitchDashboard() {
     setCreating(false);
   }
 
-  async function copyLink() {
-    await navigator.clipboard.writeText(funnelUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function copyLink(url: string) {
+    await navigator.clipboard.writeText(url);
+    setCopied(url);
+    setTimeout(() => setCopied(null), 2000);
   }
 
   if (loading) {
@@ -136,10 +141,10 @@ export default function SmartPitchDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={copyLink}
+                    onClick={() => copyLink(funnelUrl)}
                     className="flex-1 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    {copied ? "✓ Copied!" : "Copy Link"}
+                    {copied === funnelUrl ? "✓ Copied!" : "Copy Link"}
                   </button>
                   <a
                     href={funnelUrl}
@@ -153,6 +158,43 @@ export default function SmartPitchDashboard() {
               </div>
             </div>
           </div>
+
+          {backupUrl && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/40 px-5 py-5">
+              <div className="flex gap-5 items-start">
+                {backupQr && (
+                  <div className="flex-shrink-0 rounded-xl overflow-hidden border border-gray-100 p-2 bg-white shadow-sm">
+                    <img src={backupQr} alt="Backup power QR code" className="h-24 w-24" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 mb-1">🔋 Backup Power page</p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Ad-style page for home batteries and standby generators. Use it in ads, posts and texts — every submission lands in your leads.
+                  </p>
+                  <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 px-3 py-2 mb-3">
+                    <span className="text-xs text-gray-500 truncate flex-1">{backupUrl}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => copyLink(backupUrl)}
+                      className="flex-1 rounded-xl border border-gray-200 bg-white py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      {copied === backupUrl ? "✓ Copied!" : "Copy Link"}
+                    </button>
+                    <a
+                      href={backupUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 rounded-xl bg-amber-500 py-2 text-xs font-semibold text-white text-center hover:bg-amber-600 transition-colors"
+                    >
+                      Preview →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {stats && (
             <div className="grid grid-cols-4 gap-3">

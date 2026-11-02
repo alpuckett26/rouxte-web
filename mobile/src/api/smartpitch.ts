@@ -19,6 +19,8 @@ export interface SmartPitchData {
   recent: FunnelSubmission[];
   qr_data_url: string | null;
   funnel_url?: string;
+  backup_url?: string;
+  backup_qr_data_url?: string | null;
 }
 
 export const smartpitchApi = {

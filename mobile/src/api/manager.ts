@@ -77,5 +77,5 @@ export const managerApi = {
   teams:       () => api.get<{ data: TeamWithStats[] }>('/api/manager/teams'),
   createTeam:  (name: string) =>
     api.post<{ data: TeamWithStats }>('/api/manager/teams', { name }),
-  funnels:     () => api.get<{ data: FunnelStats[] }>('/api/manager/funnels'),
+  funnels:     () => api.get<{ data: FunnelStats[]; org_backup_url?: string }>('/api/manager/funnels'),
 };

@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Share } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { managerApi, type FunnelStats } from '@/api/manager';
-import { Screen, Text, Card, Badge, Skeleton } from '@/components/ui';
+import { Screen, Text, Card, Badge, Skeleton, Button } from '@/components/ui';
 import { colors } from '@/lib/colors';
 
 export default function ManagerSmartPitchScreen() {
@@ -34,6 +34,21 @@ export default function ManagerSmartPitchScreen() {
         <Stat label="Hot"            value={totals.hot}  color="red"             />
         <Stat label="Warm"           value={totals.warm} color="orange"          />
       </View>
+
+      {q.data?.org_backup_url && (
+        <Card style={{ marginTop: 14 }}>
+          <Text variant="caption" tone="mute">ORG-WIDE BACKUP POWER PAGE</Text>
+          <Text tone="brand" weight="medium" style={{ marginTop: 2 }} numberOfLines={1}>{q.data.org_backup_url}</Text>
+          <Text variant="caption" tone="dim" style={{ marginTop: 4 }}>
+            For Meta and Google ads. Leads land unassigned in the org pool for you to dispatch.
+          </Text>
+          <Button
+            title="Share link"
+            onPress={() => Share.share({ message: q.data!.org_backup_url! })}
+            style={{ marginTop: 10 }}
+          />
+        </Card>
+      )}
 
       <Text variant="caption" tone="dim" style={styles.section}>BY REP</Text>
       {q.isLoading ? (
